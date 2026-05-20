@@ -24,7 +24,7 @@ npm run db:migrate       # apply pending migrations
 npm run db:studio        # Drizzle Studio GUI
 
 # GraphQL codegen
-npm run generate:schema  # write src/__generated__/schema.graphql from Drizzle schema (needs PGLITE_DATA_DIR or DATABASE_URL)
+npm run generate:schema  # write src/__generated__/schema.graphql from Drizzle schema (no DB required — uses in-memory PGlite)
 npm run codegen:server   # regenerate server resolver types from schema.graphql
 npm run codegen          # generate:schema → codegen:server → client typed operations
 
