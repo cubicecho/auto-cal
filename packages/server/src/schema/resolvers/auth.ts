@@ -11,12 +11,11 @@ export function applyAuthResolvers(mutationFields: Fields): void {
   mutationFields.requestMagicLink!.resolve = async (
     _parent,
     args: { email: string },
-    _context: Context,
+    context: Context,
   ) => {
     const email = z.string().email().parse(args.email).toLowerCase();
     const token = await signMagicToken(email);
-    const baseUrl = process.env.APP_URL ?? 'http://localhost:3000';
-    const magicLink = `${baseUrl}/auth/verify?token=${token}`;
+    const magicLink = `${context.appBaseUrl}/auth/verify?token=${token}`;
 
     if (process.env.NODE_ENV === 'production') {
       console.log(`[auth] Magic link for ${email}: ${magicLink}`);

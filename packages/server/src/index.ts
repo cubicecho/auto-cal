@@ -19,12 +19,13 @@ import type { Context } from './context.ts';
 import { icalHandler } from './ical-route.ts';
 import { schema } from './schema/index.ts';
 
-async function buildContext(rawToken?: string): Promise<Context> {
+async function buildContext(rawToken?: string, appBaseUrl?: string): Promise<Context> {
   const loaders = createLoaders(db);
-  if (!rawToken) return { db, loaders };
+  const baseUrl = appBaseUrl ?? process.env.APP_URL ?? 'http://localhost:3000';
+  if (!rawToken) return { db, loaders, appBaseUrl: baseUrl };
 
   const payload = await verifyToken(rawToken);
-  if (payload?.sub) return { db, userId: payload.sub, loaders };
+  if (payload?.sub) return { db, userId: payload.sub, loaders, appBaseUrl: baseUrl };
 
   if (isApiKey(rawToken)) {
     const hash = hashApiKey(rawToken);
@@ -50,6 +51,7 @@ async function buildContext(rawToken?: string): Promise<Context> {
         userId: key.userId,
         apiKey: { id: key.id, scopes: key.scopes },
         loaders,
+        appBaseUrl: baseUrl,
       };
     }
   }
@@ -58,9 +60,9 @@ async function buildContext(rawToken?: string): Promise<Context> {
     process.env.NODE_ENV !== 'production' &&
     /^[0-9a-f-]{36}$/i.test(rawToken)
   )
-    return { db, userId: rawToken, loaders };
+    return { db, userId: rawToken, loaders, appBaseUrl: baseUrl };
 
-  return { db, loaders };
+  return { db, loaders, appBaseUrl: baseUrl };
 }
 
 const app = express();
@@ -117,7 +119,12 @@ app.use(
       const rawToken = authHeader?.startsWith('Bearer ')
         ? authHeader.slice(7)
         : undefined;
-      return buildContext(rawToken);
+      const appBaseUrl =
+        process.env.NODE_ENV === 'production'
+          ? (process.env.APP_URL ?? `${req.protocol}://${req.get('host')}`)
+          : (req.get('origin') ?? `${req.protocol}://${req.get('host')}`);
+
+      return buildContext(rawToken, appBaseUrl);
     },
   }),
 );

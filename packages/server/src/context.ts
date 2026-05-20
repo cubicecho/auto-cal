@@ -6,6 +6,7 @@ export interface Context {
   userId?: string; // undefined = not authenticated
   apiKey?: { id: string; scopes: ApiKeyScope[] };
   loaders: ReturnType<typeof createLoaders>;
+  appBaseUrl: string;
 }
 
 export function createLoaders(db: DB) {
