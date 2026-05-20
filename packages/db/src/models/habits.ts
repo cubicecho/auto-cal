@@ -17,6 +17,7 @@ export const habits = pgTable('habits', {
     .references(() => activityTypes.id, { onDelete: 'restrict' }),
   frequencyCount: integer('frequency_count').notNull(),
   frequencyUnit: text('frequency_unit').notNull().$type<FrequencyUnit>(),
+  minTimeBetweenInstances: integer('min_time_between_instances'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

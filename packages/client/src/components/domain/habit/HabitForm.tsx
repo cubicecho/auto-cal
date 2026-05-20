@@ -107,6 +107,7 @@ const habitSchema = z.object({
     .min(1, 'Must be at least 1')
     .max(30, 'Max 30'),
   frequencyUnit: z.string().min(1, 'Frequency unit is required'),
+  minTimeBetweenInstances: z.number().int().min(0).nullable(),
 });
 
 type HabitFormValues = z.infer<typeof habitSchema>;
@@ -147,6 +148,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
       estimatedLength: String(habit?.estimatedLength ?? 30),
       frequencyCount: habit?.frequencyCount ?? 1,
       frequencyUnit: habit?.frequencyUnit ?? 'week',
+      minTimeBetweenInstances: habit?.minTimeBetweenInstances ?? null,
     } as HabitFormValues,
     validators: {
       onChange: habitSchema,
@@ -164,6 +166,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
               estimatedLength: Number(value.estimatedLength),
               frequencyCount: value.frequencyCount,
               frequencyUnit: value.frequencyUnit,
+              minTimeBetweenInstances: value.minTimeBetweenInstances,
             },
           },
         });
@@ -178,6 +181,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
               estimatedLength: Number(value.estimatedLength),
               frequencyCount: value.frequencyCount,
               frequencyUnit: value.frequencyUnit,
+              minTimeBetweenInstances: value.minTimeBetweenInstances,
             },
           },
         });
@@ -297,6 +301,32 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
                 )}
               </form.AppField>
             </div>
+
+            {/* Minimum time between instances */}
+            <form.AppField name="minTimeBetweenInstances">
+              {(field) => (
+                <Field>
+                  <FieldLabel>Min hours between sessions (optional)</FieldLabel>
+                  <FieldControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="e.g. 24"
+                      value={field.state.value ?? ''}
+                      onBlur={field.handleBlur}
+                      onChange={(e) =>
+                        field.handleChange(
+                          e.target.value === ''
+                            ? null
+                            : e.target.valueAsNumber,
+                        )
+                      }
+                    />
+                  </FieldControl>
+                  <FieldError />
+                </Field>
+              )}
+            </form.AppField>
 
             <DialogFooter>
               <form.Subscribe

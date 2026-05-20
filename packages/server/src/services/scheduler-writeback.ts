@@ -258,12 +258,25 @@ export async function runSchedulerWriteback(
       }
     }
 
+    // Build pre-scheduled times from all instances placed in prior weeks
+    // so the gap constraint is enforced across period boundaries
+    const preScheduledHabitTimes = new Map<string, Date[]>();
+    for (const c of newTentativeCompletions) {
+      if (c.scheduledAt) {
+        const times = preScheduledHabitTimes.get(c.habitId) ?? [];
+        times.push(c.scheduledAt);
+        preScheduledHabitTimes.set(c.habitId, times);
+      }
+    }
+
     const items = computeSchedule(
       weekStartStr,
       userTimeBlocks,
       todoPool,
       habitInstances,
       activityTypeMap,
+      'UTC',
+      preScheduledHabitTimes,
     );
 
     const placedTodoIds = new Set(

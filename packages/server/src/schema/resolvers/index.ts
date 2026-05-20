@@ -169,6 +169,7 @@ const extensionSDL = `
     activityTypeId: ID!
     frequencyCount: Int!
     frequencyUnit: String!
+    minTimeBetweenInstances: Int
   }
 
   input CreateTimeBlockArgs {
@@ -188,6 +189,7 @@ const extensionSDL = `
     activityTypeId: ID
     frequencyCount: Int
     frequencyUnit: String
+    minTimeBetweenInstances: Int
   }
 
   input UpdateTimeBlockArgs {

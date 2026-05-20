@@ -20,6 +20,7 @@ export const HABIT_LIST_FRAGMENT = graphql(`
     }
     frequencyCount
     frequencyUnit
+    minTimeBetweenInstances
     createdAt
   }
 `);

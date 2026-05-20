@@ -1,0 +1,1 @@
+ALTER TABLE "habits" ADD COLUMN "min_time_between_instances" integer;

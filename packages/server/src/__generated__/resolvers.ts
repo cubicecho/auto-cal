@@ -250,6 +250,7 @@ export type CreateHabitArgs = {
   estimatedLength?: InputMaybe<Scalars['Int']['input']>;
   frequencyCount: Scalars['Int']['input'];
   frequencyUnit: Scalars['String']['input'];
+  minTimeBetweenInstances?: InputMaybe<Scalars['Int']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
   title: Scalars['String']['input'];
 };
@@ -274,6 +275,7 @@ export type CreateHabitInput = {
   frequencyCount: Scalars['Int']['input'];
   frequencyUnit: Scalars['String']['input'];
   id?: InputMaybe<Scalars['String']['input']>;
+  minTimeBetweenInstances?: InputMaybe<Scalars['Int']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
   title: Scalars['String']['input'];
   /** DateTime */
@@ -468,6 +470,7 @@ export type Habit = {
   frequencyCount: Scalars['Int']['output'];
   frequencyUnit: Scalars['String']['output'];
   id: Scalars['String']['output'];
+  minTimeBetweenInstances: Maybe<Scalars['Int']['output']>;
   priority: Scalars['Int']['output'];
   title: Scalars['String']['output'];
   /** DateTime */
@@ -561,6 +564,7 @@ export type HabitFilters = {
   frequencyCount?: InputMaybe<StringFilter>;
   frequencyUnit?: InputMaybe<StringFilter>;
   id?: InputMaybe<IdFilter>;
+  minTimeBetweenInstances?: InputMaybe<StringFilter>;
   priority?: InputMaybe<StringFilter>;
   title?: InputMaybe<StringFilter>;
   updatedAt?: InputMaybe<DateTimeFilter>;
@@ -575,6 +579,7 @@ export type HabitFiltersOr = {
   frequencyCount?: InputMaybe<StringFilter>;
   frequencyUnit?: InputMaybe<StringFilter>;
   id?: InputMaybe<IdFilter>;
+  minTimeBetweenInstances?: InputMaybe<StringFilter>;
   priority?: InputMaybe<StringFilter>;
   title?: InputMaybe<StringFilter>;
   updatedAt?: InputMaybe<DateTimeFilter>;
@@ -589,6 +594,7 @@ export type HabitOrderBy = {
   frequencyCount?: InputMaybe<InnerOrder>;
   frequencyUnit?: InputMaybe<InnerOrder>;
   id?: InputMaybe<InnerOrder>;
+  minTimeBetweenInstances?: InputMaybe<InnerOrder>;
   priority?: InputMaybe<InnerOrder>;
   title?: InputMaybe<InnerOrder>;
   updatedAt?: InputMaybe<InnerOrder>;
@@ -1300,6 +1306,12 @@ export type StringFilterOr = {
   notLike?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type Subscription = {
+  __typename?: 'Subscription';
+  myTodoListsUpdated: TodoListEvent;
+  myTodosUpdated: TodoEvent;
+};
+
 export type TimeBlock = {
   __typename?: 'TimeBlock';
   activityType: Maybe<ActivityType>;
@@ -1399,6 +1411,19 @@ export type TodoUserArgs = {
   where?: InputMaybe<UserFilters>;
 };
 
+export type TodoEvent = {
+  __typename?: 'TodoEvent';
+  deletedId: Maybe<Scalars['ID']['output']>;
+  todo: Maybe<Todo>;
+  type: TodoEventType;
+};
+
+export enum TodoEventType {
+  Created = 'created',
+  Deleted = 'deleted',
+  Updated = 'updated'
+}
+
 export type TodoFilters = {
   OR?: InputMaybe<Array<TodoFiltersOr>>;
   completedAt?: InputMaybe<DateTimeFilter>;
@@ -1466,6 +1491,13 @@ export type TodoListTodosArgs = {
 
 export type TodoListUserArgs = {
   where?: InputMaybe<UserFilters>;
+};
+
+export type TodoListEvent = {
+  __typename?: 'TodoListEvent';
+  deletedId: Maybe<Scalars['ID']['output']>;
+  todoList: Maybe<TodoList>;
+  type: TodoEventType;
 };
 
 export type TodoListFilters = {
@@ -1570,6 +1602,7 @@ export type UpdateHabitArgs = {
   frequencyCount?: InputMaybe<Scalars['Int']['input']>;
   frequencyUnit?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
+  minTimeBetweenInstances?: InputMaybe<Scalars['Int']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
   title?: InputMaybe<Scalars['String']['input']>;
 };
@@ -1594,6 +1627,7 @@ export type UpdateHabitInput = {
   frequencyCount?: InputMaybe<Scalars['Int']['input']>;
   frequencyUnit?: InputMaybe<Scalars['String']['input']>;
   id?: InputMaybe<Scalars['String']['input']>;
+  minTimeBetweenInstances?: InputMaybe<Scalars['Int']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
   title?: InputMaybe<Scalars['String']['input']>;
   /** DateTime */
@@ -1928,14 +1962,18 @@ export type ResolversTypes = {
   String: ResolverTypeWrapper<Scalars['String']['output']>;
   StringFilter: StringFilter;
   StringFilterOr: StringFilterOr;
+  Subscription: ResolverTypeWrapper<Record<PropertyKey, never>>;
   TimeBlock: ResolverTypeWrapper<TimeBlock>;
   TimeBlockFilters: TimeBlockFilters;
   TimeBlockFiltersOr: TimeBlockFiltersOr;
   TimeBlockOrderBy: TimeBlockOrderBy;
   Todo: ResolverTypeWrapper<Todo>;
+  TodoEvent: ResolverTypeWrapper<TodoEvent>;
+  TodoEventType: TodoEventType;
   TodoFilters: TodoFilters;
   TodoFiltersOr: TodoFiltersOr;
   TodoList: ResolverTypeWrapper<TodoList>;
+  TodoListEvent: ResolverTypeWrapper<TodoListEvent>;
   TodoListFilters: TodoListFilters;
   TodoListFiltersOr: TodoListFiltersOr;
   TodoListOrderBy: TodoListOrderBy;
@@ -2023,14 +2061,17 @@ export type ResolversParentTypes = {
   String: Scalars['String']['output'];
   StringFilter: StringFilter;
   StringFilterOr: StringFilterOr;
+  Subscription: Record<PropertyKey, never>;
   TimeBlock: TimeBlock;
   TimeBlockFilters: TimeBlockFilters;
   TimeBlockFiltersOr: TimeBlockFiltersOr;
   TimeBlockOrderBy: TimeBlockOrderBy;
   Todo: Todo;
+  TodoEvent: TodoEvent;
   TodoFilters: TodoFilters;
   TodoFiltersOr: TodoFiltersOr;
   TodoList: TodoList;
+  TodoListEvent: TodoListEvent;
   TodoListFilters: TodoListFilters;
   TodoListFiltersOr: TodoListFiltersOr;
   TodoListOrderBy: TodoListOrderBy;
@@ -2111,6 +2152,7 @@ export type HabitResolvers<ContextType = Context, ParentType extends ResolversPa
   frequencyCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   frequencyUnit?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  minTimeBetweenInstances?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   priority?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
@@ -2285,6 +2327,11 @@ export type StatsOverviewResolvers<ContextType = Context, ParentType extends Res
   weightedScore?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
 };
 
+export type SubscriptionResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Subscription'] = ResolversParentTypes['Subscription']> = {
+  myTodoListsUpdated?: SubscriptionResolver<ResolversTypes['TodoListEvent'], "myTodoListsUpdated", ParentType, ContextType>;
+  myTodosUpdated?: SubscriptionResolver<ResolversTypes['TodoEvent'], "myTodosUpdated", ParentType, ContextType>;
+};
+
 export type TimeBlockResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TimeBlock'] = ResolversParentTypes['TimeBlock']> = {
   activityType?: Resolver<Maybe<ResolversTypes['ActivityType']>, ParentType, ContextType, Partial<TimeBlockActivityTypeArgs>>;
   activityTypeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -2318,6 +2365,12 @@ export type TodoResolvers<ContextType = Context, ParentType extends ResolversPar
   userId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
+export type TodoEventResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TodoEvent'] = ResolversParentTypes['TodoEvent']> = {
+  deletedId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  todo?: Resolver<Maybe<ResolversTypes['Todo']>, ParentType, ContextType>;
+  type?: Resolver<ResolversTypes['TodoEventType'], ParentType, ContextType>;
+};
+
 export type TodoListResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TodoList'] = ResolversParentTypes['TodoList']> = {
   activityType?: Resolver<Maybe<ResolversTypes['ActivityType']>, ParentType, ContextType, Partial<TodoListActivityTypeArgs>>;
   activityTypeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -2331,6 +2384,12 @@ export type TodoListResolvers<ContextType = Context, ParentType extends Resolver
   updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType, Partial<TodoListUserArgs>>;
   userId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type TodoListEventResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TodoListEvent'] = ResolversParentTypes['TodoListEvent']> = {
+  deletedId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  todoList?: Resolver<Maybe<ResolversTypes['TodoList']>, ParentType, ContextType>;
+  type?: Resolver<ResolversTypes['TodoEventType'], ParentType, ContextType>;
 };
 
 export type TodoStatSummaryResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TodoStatSummary'] = ResolversParentTypes['TodoStatSummary']> = {
@@ -2382,9 +2441,12 @@ export type Resolvers<ContextType = Context> = {
   RequestMagicLinkResult?: RequestMagicLinkResultResolvers<ContextType>;
   ScheduledItem?: ScheduledItemResolvers<ContextType>;
   StatsOverview?: StatsOverviewResolvers<ContextType>;
+  Subscription?: SubscriptionResolvers<ContextType>;
   TimeBlock?: TimeBlockResolvers<ContextType>;
   Todo?: TodoResolvers<ContextType>;
+  TodoEvent?: TodoEventResolvers<ContextType>;
   TodoList?: TodoListResolvers<ContextType>;
+  TodoListEvent?: TodoListEventResolvers<ContextType>;
   TodoStatSummary?: TodoStatSummaryResolvers<ContextType>;
   User?: UserResolvers<ContextType>;
   UserProfile?: UserProfileResolvers<ContextType>;

@@ -46,6 +46,7 @@ type Task = {
   estimatedLength: number;
   activityTypeId: string | null;
   isOverdue?: boolean;
+  minTimeBetweenInstances?: number; // hours; only relevant for habit tasks
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -192,6 +193,7 @@ export function computeSchedule(
   habits: Array<Habit & { instanceIndex: number }>,
   activityTypeMap: Map<string, ActivityType>,
   timezone = 'UTC',
+  preScheduledHabitTimes?: Map<string, Date[]>,
 ): ScheduledItem[] {
   // 1. Expand all time blocks into slots for this week
   const allSlots = timeBlocks.flatMap((b) => expandSlots(weekStartStr, b));
@@ -241,13 +243,25 @@ export function computeSchedule(
       priority: h.priority,
       estimatedLength: h.estimatedLength,
       activityTypeId: h.activityTypeId,
+      minTimeBetweenInstances: h.minTimeBetweenInstances ?? 0,
     }));
 
   const sortedTasks = sortTasks([...todoTasks, ...habitTasks]);
 
   // 4. Schedule each task into the first fitting slot
-  // For habits, prefer spreading instances across different days
+  // For habits: prefer spreading instances across different days (intra-week)
+  // and enforce minTimeBetweenInstances gap (cross-week via preScheduledHabitTimes)
   const habitDatesUsed = new Map<string, Set<string>>(); // habitBaseId → Set<dateStr>
+
+  // Seeded from prior weeks for cross-period gap enforcement
+  const habitScheduledTimes = new Map<string, Date[]>(
+    preScheduledHabitTimes
+      ? [...preScheduledHabitTimes.entries()].map(([id, times]) => [
+          id,
+          [...times],
+        ])
+      : [],
+  );
 
   const results: ScheduledItem[] = [];
 
@@ -295,21 +309,34 @@ export function computeSchedule(
 
     // Determine if this is a habit instance and extract the base ID
     const isHabit = task.kind === 'habit';
-    // Habit instance IDs are "baseId-N" — base ID is everything before the last dash-number
     const habitBaseId = isHabit ? task.id.replace(/-\d+$/, '') : null;
-
-    // For habit instances, get the set of dates already used by this habit
+    const minGapMs = ((task.minTimeBetweenInstances ?? 0) * 60 * 60 * 1000);
+    const priorTimes = habitBaseId
+      ? (habitScheduledTimes.get(habitBaseId) ?? [])
+      : [];
     const usedDates = habitBaseId
       ? (habitDatesUsed.get(habitBaseId) ?? new Set<string>())
       : null;
 
-    // First pass: prefer a slot on a date this habit hasn't been placed yet
+    // Returns true if placing at (slot, startMins) respects the minimum gap
+    const respectsGap = (slot: Slot, startMins: number): boolean => {
+      if (minGapMs <= 0 || priorTimes.length === 0) return true;
+      const candidateMs = new Date(
+        localToUtcIso(slot.dateStr, startMins, timezone),
+      ).getTime();
+      return priorTimes.every(
+        (t) => Math.abs(candidateMs - t.getTime()) >= minGapMs,
+      );
+    };
+
     let chosenSlot: Slot | null = null;
     let chosenStart: number | null = null;
+
+    // Pass 1 (habits): prefer a slot on a new date that also respects the gap
     if (isHabit && usedDates) {
       for (const slot of slots) {
         const start = effectiveSlotStart(slot, now, task.estimatedLength);
-        if (start !== null && !usedDates.has(slot.dateStr)) {
+        if (start !== null && !usedDates.has(slot.dateStr) && respectsGap(slot, start)) {
           chosenSlot = slot;
           chosenStart = start;
           break;
@@ -317,8 +344,21 @@ export function computeSchedule(
       }
     }
 
-    // Fallback: any slot with future capacity sufficient for this task
-    if (!chosenSlot) {
+    // Pass 2 (habits with gap constraint): any slot that respects the gap
+    if (!chosenSlot && isHabit && minGapMs > 0) {
+      for (const slot of slots) {
+        const start = effectiveSlotStart(slot, now, task.estimatedLength);
+        if (start !== null && respectsGap(slot, start)) {
+          chosenSlot = slot;
+          chosenStart = start;
+          break;
+        }
+      }
+    }
+
+    // Pass 3: any slot — for todos, and habits with no gap constraint
+    // Habits with an unmet gap constraint are left unscheduled (not placed here)
+    if (!chosenSlot && (!isHabit || minGapMs === 0)) {
       for (const slot of slots) {
         const start = effectiveSlotStart(slot, now, task.estimatedLength);
         if (start !== null) {
@@ -343,13 +383,20 @@ export function computeSchedule(
 
     const taskStartMins = chosenStart;
     const taskEndMins = taskStartMins + task.estimatedLength;
-    // Advance usedMinutes to after this task (accounting for any gap skipped past now)
     chosenSlot.usedMinutes = taskEndMins - chosenSlot.startMinutes;
 
-    // Record the date used for this habit base ID
-    if (habitBaseId && usedDates) {
-      usedDates.add(chosenSlot.dateStr);
-      habitDatesUsed.set(habitBaseId, usedDates);
+    // Record date and time for this habit instance
+    if (habitBaseId) {
+      if (usedDates) {
+        usedDates.add(chosenSlot.dateStr);
+        habitDatesUsed.set(habitBaseId, usedDates);
+      }
+      const scheduledUtc = new Date(
+        localToUtcIso(chosenSlot.dateStr, taskStartMins, timezone),
+      );
+      const times = habitScheduledTimes.get(habitBaseId) ?? [];
+      times.push(scheduledUtc);
+      habitScheduledTimes.set(habitBaseId, times);
     }
 
     results.push({

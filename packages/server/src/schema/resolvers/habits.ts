@@ -24,6 +24,7 @@ const UpdateHabitInput = z.object({
   activityTypeId: z.string().uuid().optional(),
   frequencyCount: z.number().int().positive().min(1).max(30).optional(),
   frequencyUnit: z.enum(['week', 'month'] as const).optional(),
+  minTimeBetweenInstances: z.number().int().min(0).nullable().optional(),
 });
 
 export function applyHabitResolvers(
@@ -207,6 +208,7 @@ export function applyHabitResolvers(
         activityTypeId: input.activityTypeId,
         frequencyCount: input.frequencyCount,
         frequencyUnit: input.frequencyUnit,
+        minTimeBetweenInstances: input.minTimeBetweenInstances ?? null,
       })
       .returning();
     if (!habit) throw new Error('Failed to create habit');
@@ -263,6 +265,9 @@ export function applyHabitResolvers(
         }),
         ...(input.frequencyUnit !== undefined && {
           frequencyUnit: input.frequencyUnit,
+        }),
+        ...(input.minTimeBetweenInstances !== undefined && {
+          minTimeBetweenInstances: input.minTimeBetweenInstances,
         }),
         updatedAt: new Date(),
       })

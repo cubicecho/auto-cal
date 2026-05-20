@@ -361,6 +361,7 @@ input CreateHabitInput {
   activityTypeId: String!
   frequencyCount: Int!
   frequencyUnit: String!
+  minTimeBetweenInstances: Int
 
   """DateTime"""
   createdAt: DateTime
@@ -379,6 +380,7 @@ input UpdateHabitInput {
   activityTypeId: String
   frequencyCount: Int
   frequencyUnit: String
+  minTimeBetweenInstances: Int
 
   """DateTime"""
   createdAt: DateTime
@@ -397,6 +399,7 @@ input HabitFilters {
   activityTypeId: IdFilter
   frequencyCount: StringFilter
   frequencyUnit: StringFilter
+  minTimeBetweenInstances: StringFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
   OR: [HabitFiltersOr!]
@@ -412,6 +415,7 @@ input HabitFiltersOr {
   activityTypeId: IdFilter
   frequencyCount: StringFilter
   frequencyUnit: StringFilter
+  minTimeBetweenInstances: StringFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -426,6 +430,7 @@ input HabitOrderBy {
   activityTypeId: InnerOrder
   frequencyCount: InnerOrder
   frequencyUnit: InnerOrder
+  minTimeBetweenInstances: InnerOrder
   createdAt: InnerOrder
   updatedAt: InnerOrder
 }
@@ -868,6 +873,7 @@ type Habit {
   activityTypeId: String!
   frequencyCount: Int!
   frequencyUnit: String!
+  minTimeBetweenInstances: Int
 
   """DateTime"""
   createdAt: DateTime!
@@ -1201,6 +1207,7 @@ input CreateHabitArgs {
   activityTypeId: ID!
   frequencyCount: Int!
   frequencyUnit: String!
+  minTimeBetweenInstances: Int
 }
 
 input CreateTimeBlockArgs {
@@ -1220,6 +1227,7 @@ input UpdateHabitArgs {
   activityTypeId: ID
   frequencyCount: Int
   frequencyUnit: String
+  minTimeBetweenInstances: Int
 }
 
 input UpdateTimeBlockArgs {
@@ -1246,6 +1254,29 @@ input MyCreateApiKeyInput {
   name: String!
   scopes: [String!]!
   expiresAt: String
+}
+
+enum TodoEventType {
+  created
+  updated
+  deleted
+}
+
+type TodoListEvent {
+  type: TodoEventType!
+  todoList: TodoList
+  deletedId: ID
+}
+
+type TodoEvent {
+  type: TodoEventType!
+  todo: Todo
+  deletedId: ID
+}
+
+type Subscription {
+  myTodoListsUpdated: TodoListEvent!
+  myTodosUpdated: TodoEvent!
 }
 
 type RequestMagicLinkResult {

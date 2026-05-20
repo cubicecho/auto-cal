@@ -12,10 +12,10 @@ const config: CodegenConfig = {
   ),
   documents: [
     path.resolve(__dirname, 'packages/client/src/**/*.{tsx,ts}'),
-    // Exclude generated output and auth routes that use raw gql (not typed codegen)
+    path.resolve(__dirname, 'packages/client/app/**/*.{tsx,ts}'),
+    // Exclude generated output and auth pages that use raw gql (not typed codegen)
     `!${path.resolve(__dirname, 'packages/client/src/__generated__/**')}`,
-    `!${path.resolve(__dirname, 'packages/client/src/routes/login.tsx')}`,
-    `!${path.resolve(__dirname, 'packages/client/src/routes/auth.verify.tsx')}`,
+    `!${path.resolve(__dirname, 'packages/client/app/auth/**')}`,
   ],
   ignoreNoDocuments: true,
   generates: {
