@@ -87,7 +87,7 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
         className="flex flex-col"
         style={{
           backgroundColor: list.activityType
-            ? hexToRgba(list.activityType.color, 0.2)
+            ? hexToRgba(list.activityType.color, 0.15)
             : undefined,
         }}
       >
