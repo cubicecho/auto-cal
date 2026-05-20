@@ -316,9 +316,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
                       onBlur={field.handleBlur}
                       onChange={(e) =>
                         field.handleChange(
-                          e.target.value === ''
-                            ? null
-                            : e.target.valueAsNumber,
+                          e.target.value === '' ? null : e.target.valueAsNumber,
                         )
                       }
                     />

@@ -310,7 +310,7 @@ export function computeSchedule(
     // Determine if this is a habit instance and extract the base ID
     const isHabit = task.kind === 'habit';
     const habitBaseId = isHabit ? task.id.replace(/-\d+$/, '') : null;
-    const minGapMs = ((task.minTimeBetweenInstances ?? 0) * 60 * 60 * 1000);
+    const minGapMs = (task.minTimeBetweenInstances ?? 0) * 60 * 60 * 1000;
     const priorTimes = habitBaseId
       ? (habitScheduledTimes.get(habitBaseId) ?? [])
       : [];
@@ -336,7 +336,11 @@ export function computeSchedule(
     if (isHabit && usedDates) {
       for (const slot of slots) {
         const start = effectiveSlotStart(slot, now, task.estimatedLength);
-        if (start !== null && !usedDates.has(slot.dateStr) && respectsGap(slot, start)) {
+        if (
+          start !== null &&
+          !usedDates.has(slot.dateStr) &&
+          respectsGap(slot, start)
+        ) {
           chosenSlot = slot;
           chosenStart = start;
           break;

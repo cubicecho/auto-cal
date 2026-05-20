@@ -9,11 +9,11 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import * as schema from '@auto-cal/db/schema';
 import { relations } from '@auto-cal/db/relations';
+import * as schema from '@auto-cal/db/schema';
 import { PGlite } from '@electric-sql/pglite';
-import { drizzle } from 'drizzle-orm/pglite';
 import { buildSchema } from '@vantreeseba/drizzle-graphql';
+import { drizzle } from 'drizzle-orm/pglite';
 import { printSchema } from 'graphql';
 import { applyCustomResolvers } from './src/schema/resolvers/index.ts';
 

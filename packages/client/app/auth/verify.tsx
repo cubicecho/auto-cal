@@ -25,6 +25,7 @@ export default function VerifyPage() {
     },
   });
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: verify is intentionally omitted — useMutation returns a new ref each render and the useRef guard ensures the mutation fires exactly once
   useEffect(() => {
     if (queryToken && !called.current) {
       called.current = true;

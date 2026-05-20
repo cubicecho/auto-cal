@@ -1,6 +1,6 @@
 import { db } from '@auto-cal/db';
 import { buildSchema } from '@vantreeseba/drizzle-graphql';
-import { type GraphQLObjectType, type GraphQLSchema } from 'graphql';
+import type { GraphQLObjectType, GraphQLSchema } from 'graphql';
 import { applyCustomResolvers } from './resolvers/index.ts';
 
 const { schema: drizzleSchema, entities } = buildSchema(db, {

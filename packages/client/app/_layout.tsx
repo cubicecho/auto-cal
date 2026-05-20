@@ -11,7 +11,9 @@ function useDarkMode() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const stored = storage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const prefersDark = window.matchMedia(
+      '(prefers-color-scheme: dark)',
+    ).matches;
     const dark = stored ? stored === 'dark' : prefersDark;
     document.documentElement.classList.toggle('dark', dark);
   }, []);

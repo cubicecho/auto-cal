@@ -19,13 +19,17 @@ import type { Context } from './context.ts';
 import { icalHandler } from './ical-route.ts';
 import { schema } from './schema/index.ts';
 
-async function buildContext(rawToken?: string, appBaseUrl?: string): Promise<Context> {
+async function buildContext(
+  rawToken?: string,
+  appBaseUrl?: string,
+): Promise<Context> {
   const loaders = createLoaders(db);
   const baseUrl = appBaseUrl ?? process.env.APP_URL ?? 'http://localhost:3000';
   if (!rawToken) return { db, loaders, appBaseUrl: baseUrl };
 
   const payload = await verifyToken(rawToken);
-  if (payload?.sub) return { db, userId: payload.sub, loaders, appBaseUrl: baseUrl };
+  if (payload?.sub)
+    return { db, userId: payload.sub, loaders, appBaseUrl: baseUrl };
 
   if (isApiKey(rawToken)) {
     const hash = hashApiKey(rawToken);
