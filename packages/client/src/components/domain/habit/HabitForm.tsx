@@ -26,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
+import { useEffect } from 'react';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -189,6 +190,22 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
       onOpenChange(false);
     },
   });
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on habit?.id — we reset when a different habit is selected, not on every individual field change; form.reset is stable
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        title: habit?.title ?? '',
+        description: habit?.description ?? '',
+        activityTypeId: habit?.activityType?.id ?? '',
+        priority: String(habit?.priority ?? 0),
+        estimatedLength: String(habit?.estimatedLength ?? 30),
+        frequencyCount: habit?.frequencyCount ?? 1,
+        frequencyUnit: habit?.frequencyUnit ?? 'week',
+        minTimeBetweenInstances: habit?.minTimeBetweenInstances ?? null,
+      });
+    }
+  }, [open, habit?.id]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
