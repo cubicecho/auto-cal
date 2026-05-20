@@ -5,25 +5,10 @@ services:
       - "4000:4000"
     environment:
       - NODE_ENV=production
-      # Use DATABASE_URL for Postgres, or PGLITE_DATA_DIR for embedded
       - DATABASE_URL=postgresql://autocal:autocal@postgres:5432/autocal
     depends_on:
       postgres:
         condition: service_healthy
-    profiles:
-      - postgres
-
-  auto-cal-embedded:
-    build: .
-    ports:
-      - "4000:4000"
-    volumes:
-      - auto-cal-pgdata:/app/pgdata
-    environment:
-      - NODE_ENV=production
-      - PGLITE_DATA_DIR=/app/pgdata
-    profiles:
-      - embedded
 
   postgres:
     image: postgres:16-alpine
@@ -38,9 +23,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    profiles:
-      - postgres
 
 volumes:
-  auto-cal-pgdata:
   postgres-data:

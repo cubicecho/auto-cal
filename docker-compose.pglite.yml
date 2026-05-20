@@ -1,0 +1,13 @@
+services:
+  auto-cal:
+    build: .
+    ports:
+      - "4000:4000"
+    volumes:
+      - auto-cal-data:/app/pgdata
+    environment:
+      - NODE_ENV=production
+      - PGLITE_DATA_DIR=/app/pgdata
+
+volumes:
+  auto-cal-data:
