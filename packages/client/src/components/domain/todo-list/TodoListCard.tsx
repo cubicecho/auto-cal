@@ -19,6 +19,13 @@ import { Pencil, Plus } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 import { TodoListForm } from './TodoListForm';
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = Number.parseInt(hex.slice(1, 3), 16);
+  const g = Number.parseInt(hex.slice(3, 5), 16);
+  const b = Number.parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 const QUICK_CREATE_TODO = graphql(`
   mutation QuickCreateTodo($input: CreateTodoArgs!) {
     myCreateTodo(input: $input) {
@@ -76,7 +83,14 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
 
   return (
     <>
-      <Card className="flex flex-col">
+      <Card
+        className="flex flex-col"
+        style={{
+          backgroundColor: list.activityType
+            ? hexToRgba(list.activityType.color, 0.2)
+            : undefined,
+        }}
+      >
         <CardHeader className="space-y-1 pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
