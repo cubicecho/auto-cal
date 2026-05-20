@@ -16,9 +16,7 @@ jobs:
           node-version: '24'
           cache: 'npm'
       - run: npm ci
-      - run: npm run codegen:server
       - run: npm run codegen
-      - run: cd packages/client && npx @tanstack/router-cli generate
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
