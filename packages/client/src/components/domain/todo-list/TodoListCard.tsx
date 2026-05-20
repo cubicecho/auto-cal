@@ -7,6 +7,7 @@ import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { TodoItem } from '@/components/domain/todo/TodoItem';
 import { Button } from '@/components/ui/button';
 import {
+  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -17,13 +18,6 @@ import { useMutation } from '@apollo/client/react';
 import { Pencil, Plus } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 import { TodoListForm } from './TodoListForm';
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = Number.parseInt(hex.slice(1, 3), 16);
-  const g = Number.parseInt(hex.slice(3, 5), 16);
-  const b = Number.parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 const QUICK_CREATE_TODO = graphql(`
   mutation QuickCreateTodo($input: CreateTodoArgs!) {
@@ -82,12 +76,12 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
 
   return (
     <>
-      <div
-        className="rounded-lg border text-card-foreground shadow-sm flex flex-col"
+      <Card
+        className="flex flex-col"
         style={{
           backgroundColor: list.activityType
-            ? hexToRgba(list.activityType.color, 0.2)
-            : 'hsl(var(--card))',
+            ? `color-mix(in srgb, ${list.activityType.color} 30%, hsl(var(--background)))`
+            : undefined,
         }}
       >
         <CardHeader className="space-y-1 pb-3">
@@ -166,7 +160,7 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
             </Button>
           )}
         </CardContent>
-      </div>
+      </Card>
 
       <TodoListForm
         {...(editingList ? { list } : {})}
