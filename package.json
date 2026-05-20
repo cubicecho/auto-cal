@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "npm run dev -w @auto-cal/server",
-    "dev:client": "cd packages/client && EXPO_NO_DEVTOOLS=1 npx expo start --web",
+    "dev:client": "cd packages/client && EXPO_NO_DEVTOOLS=1 npx expo start",
     "build": "npm run codegen && npm run build:client && npm run build:server",
     "build:client": "cd packages/client && npx expo export --platform web",
     "build:server": "npm run build -w @auto-cal/server",
