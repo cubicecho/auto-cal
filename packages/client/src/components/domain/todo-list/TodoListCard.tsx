@@ -78,11 +78,11 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
     <>
       <Card
         className="flex flex-col"
-        style={{
-          backgroundColor: list.activityType
-            ? `color-mix(in srgb, ${list.activityType.color} 30%, hsl(var(--background)))`
-            : undefined,
-        }}
+        style={
+          list.activityType
+            ? { backgroundColor: `${list.activityType.color}18` }
+            : undefined
+        }
       >
         <CardHeader className="space-y-1 pb-3">
           <div className="flex items-start justify-between gap-2">
