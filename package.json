@@ -20,7 +20,8 @@
     "db:migrate": "npm run db:migrate -w @auto-cal/db",
     "db:seed": "npm run db:seed -w @auto-cal/db",
     "db:studio": "npm run db:studio -w @auto-cal/db",
-    "codegen": "npm run codegen:server && npm run codegen:client",
+    "generate:schema": "PGLITE_DATA_DIR=/tmp/auto-cal-schema-gen node --experimental-strip-types packages/server/generate_schema.ts",
+    "codegen": "npm run generate:schema && npm run codegen:server && npm run codegen:client",
     "codegen:client": "graphql-codegen --config codegen.ts",
     "codegen:server": "graphql-codegen-esm --config codegen.server.ts",
     "test": "vitest"
