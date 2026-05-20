@@ -2,7 +2,7 @@ import { storage } from '@/storage';
 import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface VerifyMagicLinkResult {
   verifyMagicLink: { token: string; userId: string };
@@ -21,6 +21,7 @@ export default function VerifyPage() {
   const router = useRouter();
   const { token: queryToken } = useLocalSearchParams<{ token?: string }>();
 
+  const called = useRef(false);
   const [verify, { error }] = useMutation<VerifyMagicLinkResult>(
     VERIFY_MAGIC_LINK,
     {
@@ -32,10 +33,11 @@ export default function VerifyPage() {
   );
 
   useEffect(() => {
-    if (queryToken) {
+    if (queryToken && !called.current) {
+      called.current = true;
       verify({ variables: { token: queryToken } });
     }
-  }, [queryToken, verify]);
+  }, [queryToken]);
 
   if (error) {
     return (
@@ -46,7 +48,7 @@ export default function VerifyPage() {
               ? 'This link has expired. Please request a new one.'
               : 'Invalid magic link.'}
           </p>
-          <a href="/login" className="mt-2 block text-sm underline">
+          <a href="/auth/login" className="mt-2 block text-sm underline">
             Back to login
           </a>
         </div>

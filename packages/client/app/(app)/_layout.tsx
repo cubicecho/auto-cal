@@ -49,7 +49,7 @@ function WebLayout() {
 
   function handleLogout() {
     storage.removeItem('auth_token');
-    router.replace('/login');
+    router.replace('/auth/login');
   }
 
   return (
@@ -132,16 +132,10 @@ function NativeLayout() {
 }
 
 export default function AppLayout() {
-  const token = storage.getItem('auth_token');
-
-  if (!token) return <Redirect href="/login" />;
-
+  const pathname = usePathname();
   const onboardingDone = storage.getItem('onboarding_done');
-  const isOnboardingPath =
-    typeof window !== 'undefined' &&
-    window.location?.pathname?.startsWith('/onboarding');
 
-  if (!onboardingDone && !isOnboardingPath) {
+  if (!onboardingDone && !pathname.startsWith('/onboarding')) {
     return <Redirect href="/onboarding" />;
   }
 

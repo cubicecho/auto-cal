@@ -32,7 +32,7 @@ const errorLink = new ErrorLink(({ error }) => {
     );
     if (needsLogin) {
       storage.removeItem('auth_token');
-      if (Platform.OS === 'web') window.location.replace('/login');
+      if (Platform.OS === 'web') window.location.replace('/auth/login');
     }
   }
 });
