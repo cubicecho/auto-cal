@@ -19,14 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Field,
-  FieldControl,
-  FieldError,
-  FieldLabel,
-  Form,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { FieldWrapper, Form } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
 import { Check } from 'lucide-react';
@@ -268,9 +261,9 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
 
             <form.AppField name="listId">
               {(field) => (
-                <Field>
-                  <FieldLabel>List</FieldLabel>
-                  <FieldControl>
+                <FieldWrapper
+                  label="List"
+                  control={
                     <TodoListSelect
                       value={field.state.value || undefined}
                       onValueChange={(v, list) => {
@@ -279,9 +272,8 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
                       }}
                       onBlur={field.handleBlur}
                     />
-                  </FieldControl>
-                  <FieldError />
-                </Field>
+                  }
+                />
               )}
             </form.AppField>
 
@@ -309,18 +301,10 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
 
             <form.AppField name="dueAt">
               {(field) => (
-                <Field>
-                  <FieldLabel>Due date (optional)</FieldLabel>
-                  <FieldControl>
-                    <Input
-                      type="datetime-local"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                  </FieldControl>
-                  <FieldError />
-                </Field>
+                <field.InputField
+                  label="Due date (optional)"
+                  type="datetime-local"
+                />
               )}
             </form.AppField>
 

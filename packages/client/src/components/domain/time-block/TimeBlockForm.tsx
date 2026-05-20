@@ -16,14 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Field,
-  FieldControl,
-  FieldError,
-  FieldLabel,
-  Form,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { FieldWrapper, Form } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
 import { cn } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
@@ -185,17 +178,16 @@ export function TimeBlockForm({
             {/* Activity Type */}
             <form.AppField name="activityTypeId">
               {(field) => (
-                <Field>
-                  <FieldLabel>Activity Type</FieldLabel>
-                  <FieldControl>
+                <FieldWrapper
+                  label="Activity Type"
+                  control={
                     <ActivityTypeSelect
                       value={field.state.value || undefined}
                       onValueChange={(v) => field.handleChange(v ?? '')}
                       onBlur={field.handleBlur}
                     />
-                  </FieldControl>
-                  <FieldError />
-                </Field>
+                  }
+                />
               )}
             </form.AppField>
 
@@ -279,60 +271,24 @@ export function TimeBlockForm({
             <div className="grid grid-cols-2 gap-4">
               {/* Start Time */}
               <form.AppField name="startTime">
-                {(field) => (
-                  <Field>
-                    <FieldLabel>Start Time</FieldLabel>
-                    <FieldControl>
-                      <Input
-                        type="time"
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                      />
-                    </FieldControl>
-                    <FieldError />
-                  </Field>
-                )}
+                {(field) => <field.InputField label="Start Time" type="time" />}
               </form.AppField>
 
               {/* End Time */}
               <form.AppField name="endTime">
-                {(field) => (
-                  <Field>
-                    <FieldLabel>End Time</FieldLabel>
-                    <FieldControl>
-                      <Input
-                        type="time"
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                      />
-                    </FieldControl>
-                    <FieldError />
-                  </Field>
-                )}
+                {(field) => <field.InputField label="End Time" type="time" />}
               </form.AppField>
             </div>
 
             {/* Priority */}
             <form.AppField name="priority">
               {(field) => (
-                <Field>
-                  <FieldLabel>Priority (0 = lowest)</FieldLabel>
-                  <FieldControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) =>
-                        field.handleChange(Number(e.target.value))
-                      }
-                    />
-                  </FieldControl>
-                  <FieldError />
-                </Field>
+                <field.InputField
+                  label="Priority (0 = lowest)"
+                  type="number"
+                  min={0}
+                  max={100}
+                />
               )}
             </form.AppField>
 

@@ -13,13 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Field,
-  FieldControl,
-  FieldError,
-  FieldLabel,
-  Form,
-} from '@/components/ui/form';
+import { FieldWrapper, Form } from '@/components/ui/form';
 import {
   Select,
   SelectContent,
@@ -133,9 +127,9 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
             <div className="grid grid-cols-2 gap-4">
               <form.AppField name="priority">
                 {(field) => (
-                  <Field>
-                    <FieldLabel>Priority</FieldLabel>
-                    <FieldControl>
+                  <FieldWrapper
+                    label="Priority"
+                    control={
                       <Select
                         value={String(field.state.value)}
                         onValueChange={(v) => field.handleChange(Number(v))}
@@ -151,25 +145,23 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
                           ))}
                         </SelectContent>
                       </Select>
-                    </FieldControl>
-                    <FieldError />
-                  </Field>
+                    }
+                  />
                 )}
               </form.AppField>
 
               <form.AppField name="listId">
                 {(field) => (
-                  <Field>
-                    <FieldLabel>List</FieldLabel>
-                    <FieldControl>
+                  <FieldWrapper
+                    label="List"
+                    control={
                       <TodoListSelect
                         value={field.state.value || undefined}
                         onValueChange={(v) => field.handleChange(v ?? '')}
                         onBlur={field.handleBlur}
                       />
-                    </FieldControl>
-                    <FieldError />
-                  </Field>
+                    }
+                  />
                 )}
               </form.AppField>
             </div>

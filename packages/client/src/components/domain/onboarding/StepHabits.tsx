@@ -14,21 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Field,
-  FieldControl,
-  FieldError,
-  FieldLabel,
-  Form,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { FieldWrapper, Form } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { ArrowLeft, ArrowRight, Plus, SkipForward } from 'lucide-react';
@@ -133,47 +119,24 @@ export function StepHabits({ onBack, onNext, onSkip }: StepHabitsProps) {
             <div className="grid grid-cols-2 gap-4">
               <form.AppField name="frequencyCount">
                 {(field) => (
-                  <Field>
-                    <FieldLabel>Times per</FieldLabel>
-                    <FieldControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={30}
-                        value={field.state.value}
-                        onChange={(e) =>
-                          field.handleChange(Number(e.target.value))
-                        }
-                        onBlur={field.handleBlur}
-                      />
-                    </FieldControl>
-                    <FieldError />
-                  </Field>
+                  <field.InputField
+                    label="Times per"
+                    type="number"
+                    min={1}
+                    max={30}
+                  />
                 )}
               </form.AppField>
 
               <form.AppField name="frequencyUnit">
                 {(field) => (
-                  <Field>
-                    <FieldLabel>Period</FieldLabel>
-                    <FieldControl>
-                      <Select
-                        value={field.state.value}
-                        onValueChange={(v) =>
-                          field.handleChange(v as 'week' | 'month')
-                        }
-                      >
-                        <SelectTrigger onBlur={field.handleBlur}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="week">Week</SelectItem>
-                          <SelectItem value="month">Month</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FieldControl>
-                    <FieldError />
-                  </Field>
+                  <field.SelectField
+                    label="Period"
+                    options={[
+                      { label: 'Week', value: 'week' },
+                      { label: 'Month', value: 'month' },
+                    ]}
+                  />
                 )}
               </form.AppField>
             </div>
@@ -181,17 +144,16 @@ export function StepHabits({ onBack, onNext, onSkip }: StepHabitsProps) {
             {/* Activity type */}
             <form.AppField name="activityTypeId">
               {(field) => (
-                <Field>
-                  <FieldLabel>Activity type</FieldLabel>
-                  <FieldControl>
+                <FieldWrapper
+                  label="Activity type"
+                  control={
                     <ActivityTypeSelect
                       value={field.state.value || undefined}
                       onValueChange={(v) => field.handleChange(v ?? '')}
                       onBlur={field.handleBlur}
                     />
-                  </FieldControl>
-                  <FieldError />
-                </Field>
+                  }
+                />
               )}
             </form.AppField>
 

@@ -14,14 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Field,
-  FieldControl,
-  FieldError,
-  FieldLabel,
-  Form,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { FieldWrapper, Form } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -132,26 +125,25 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
             {/* Activity type */}
             <form.AppField name="activityTypeId">
               {(field) => (
-                <Field>
-                  <FieldLabel>Activity type</FieldLabel>
-                  <FieldControl>
+                <FieldWrapper
+                  label="Activity type"
+                  control={
                     <ActivityTypeSelect
                       value={field.state.value || undefined}
                       onValueChange={(v) => field.handleChange(v ?? '')}
                       onBlur={field.handleBlur}
                     />
-                  </FieldControl>
-                  <FieldError />
-                </Field>
+                  }
+                />
               )}
             </form.AppField>
 
             {/* Days of week */}
             <form.AppField name="daysOfWeek">
               {(field) => (
-                <Field>
-                  <FieldLabel>Days</FieldLabel>
-                  <FieldControl>
+                <FieldWrapper
+                  label="Days"
+                  control={
                     <div className="space-y-2">
                       <div className="flex gap-1">
                         {DAY_NAMES.map((name, i) => {
@@ -200,46 +192,19 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
                         </Button>
                       </div>
                     </div>
-                  </FieldControl>
-                  <FieldError />
-                </Field>
+                  }
+                />
               )}
             </form.AppField>
 
             {/* Start / End time */}
             <div className="grid grid-cols-2 gap-4">
               <form.AppField name="startTime">
-                {(field) => (
-                  <Field>
-                    <FieldLabel>Start time</FieldLabel>
-                    <FieldControl>
-                      <Input
-                        type="time"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                      />
-                    </FieldControl>
-                    <FieldError />
-                  </Field>
-                )}
+                {(field) => <field.InputField label="Start time" type="time" />}
               </form.AppField>
 
               <form.AppField name="endTime">
-                {(field) => (
-                  <Field>
-                    <FieldLabel>End time</FieldLabel>
-                    <FieldControl>
-                      <Input
-                        type="time"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                      />
-                    </FieldControl>
-                    <FieldError />
-                  </Field>
-                )}
+                {(field) => <field.InputField label="End time" type="time" />}
               </form.AppField>
             </div>
 

@@ -18,13 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Field,
-  FieldControl,
-  FieldError,
-  FieldLabel,
-  Form,
-} from '@/components/ui/form';
+import { FieldWrapper, Form } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
 import { Trash2 } from 'lucide-react';
@@ -206,17 +200,16 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
 
             <form.AppField name="activityTypeId">
               {(field) => (
-                <Field>
-                  <FieldLabel>Activity Type</FieldLabel>
-                  <FieldControl>
+                <FieldWrapper
+                  label="Activity Type"
+                  control={
                     <ActivityTypeSelect
                       value={field.state.value || undefined}
                       onValueChange={(v) => field.handleChange(v ?? '')}
                       onBlur={field.handleBlur}
                     />
-                  </FieldControl>
-                  <FieldError />
-                </Field>
+                  }
+                />
               )}
             </form.AppField>
 

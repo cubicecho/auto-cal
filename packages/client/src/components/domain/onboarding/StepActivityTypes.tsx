@@ -13,13 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Field,
-  FieldControl,
-  FieldError,
-  FieldLabel,
-  Form,
-} from '@/components/ui/form';
+import { FieldWrapper, Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -112,9 +106,9 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
             {/* Color */}
             <form.AppField name="color">
               {(field) => (
-                <Field>
-                  <FieldLabel>Color</FieldLabel>
-                  <FieldControl>
+                <FieldWrapper
+                  label="Color"
+                  control={
                     <div className="flex items-center gap-3">
                       <input
                         type="color"
@@ -131,9 +125,8 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
                         className="font-mono"
                       />
                     </div>
-                  </FieldControl>
-                  <FieldError />
-                </Field>
+                  }
+                />
               )}
             </form.AppField>
 
