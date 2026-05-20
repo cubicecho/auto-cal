@@ -81,6 +81,24 @@ try {
 }
 ```
 
+**GraphQL operations in the client must use the typed `graphql()` helper — never raw `gql`:**
+```typescript
+// ✅ correct
+import { graphql } from '@/__generated__/index.js';
+const MY_QUERY = graphql(`query Foo { ... }`);
+
+// ❌ wrong — loses type safety
+import { gql } from '@apollo/client';
+const MY_QUERY = gql`query Foo { ... }`;
+```
+After adding or changing any operation, re-run `npm run codegen` to regenerate types.
+The generated files in `__generated__/` are gitignored — do not commit them.
+
+## Finding files, text or other code. 
+
+Prefer using an LSP and finding definitions, references, etc through it instead of using grep.
+You can scan the project to detect what LSP makes the most sense to start with.
+
 ## Running Commands
 
 Prefer scripts defined in `package.json` (e.g. `npm run db:generate`, `npm run typecheck`) over ad-hoc tool invocations (`npx drizzle-kit ...`, `npx tsc ...`). The scripts wrap env loading, workspace targeting, and flag conventions — bypassing them tends to break on env vars or surface different errors than the rest of the team sees.

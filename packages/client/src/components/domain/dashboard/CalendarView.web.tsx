@@ -3,7 +3,6 @@ import type {
   TimeBlock_CalendarViewFragment,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
-import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import {
   addDays,
@@ -72,23 +71,23 @@ graphql(`
   }
 `);
 
-const PIN_TODO = gql`
+const PIN_TODO = graphql(`
   mutation PinTodo($input: UpdateTodoArgs!) {
     myUpdateTodo(input: $input) { id scheduledAt manuallyScheduled }
   }
-`;
+`);
 
-const COMPLETE_HABIT = gql`
+const COMPLETE_HABIT = graphql(`
   mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {
-    myCompleteHabit(input: $input) { id completedAt }
+    myCompleteHabit(input: $input) { __typename id completedAt }
   }
-`;
+`);
 
-const COMPLETE_TODO = gql`
+const COMPLETE_TODO = graphql(`
   mutation CompleteTodoFromCalendar($id: ID!) {
-    myCompleteTodo(id: $id) { id completedAt }
+    myCompleteTodo(id: $id) { __typename id completedAt }
   }
-`;
+`);
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -373,7 +372,7 @@ export function CalendarView({
     // event.id format: "scheduled-todo-{id}"
     const match = event.id.match(/^scheduled-todo-(.+)$/);
     if (!match) return;
-    const todoId = match[1];
+    const todoId = match[1] ?? '';
     const newStart = start instanceof Date ? start : new Date(start);
     // Send naive local datetime (no Z) so the server stores local time, not UTC
     pinTodo({

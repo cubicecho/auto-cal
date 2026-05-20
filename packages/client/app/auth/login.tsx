@@ -1,35 +1,28 @@
+import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
-import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { type SubmitEvent, useState } from 'react';
 
-interface RequestMagicLinkResult {
-  requestMagicLink: { ok: boolean; magicLink: string | null };
-}
-
-const REQUEST_MAGIC_LINK = gql`
+const REQUEST_MAGIC_LINK = graphql(`
   mutation RequestMagicLink($email: String!) {
     requestMagicLink(email: $email) {
       ok
       magicLink
     }
   }
-`;
+`);
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [magicLink, setMagicLink] = useState<string | null>(null);
 
-  const [requestLink, { loading, error }] = useMutation<RequestMagicLinkResult>(
-    REQUEST_MAGIC_LINK,
-    {
-      onCompleted(data) {
-        setMagicLink(data.requestMagicLink.magicLink ?? null);
-        setSubmitted(true);
-      },
+  const [requestLink, { loading, error }] = useMutation(REQUEST_MAGIC_LINK, {
+    onCompleted(data) {
+      setMagicLink(data.requestMagicLink.magicLink ?? null);
+      setSubmitted(true);
     },
-  );
+  });
 
   function handleSubmit(e: SubmitEvent) {
     e.preventDefault();

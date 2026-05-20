@@ -20,7 +20,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { priorityLabel } from '@/lib/utils';
-import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { Link } from 'expo-router';
 import { AlertTriangle, Check, Pencil, Trash2, Undo2 } from 'lucide-react';
@@ -50,14 +49,14 @@ export const TODO_LIST_FRAGMENT = graphql(`
   }
 `);
 
-const UPDATE_TODO_LENGTH = gql`
+const UPDATE_TODO_LENGTH = graphql(`
   mutation UpdateTodoEstimatedLength($input: UpdateTodoArgs!) {
     myUpdateTodo(input: $input) {
       id
       estimatedLength
     }
   }
-`;
+`);
 
 const UNCOMPLETE_TODO = graphql(`
   mutation UncompleteTodo($id: ID!) {
@@ -68,11 +67,11 @@ const UNCOMPLETE_TODO = graphql(`
   }
 `);
 
-const DELETE_TODO = gql`
+const DELETE_TODO = graphql(`
   mutation DeleteTodo($id: ID!) {
     myDeleteTodo(id: $id)
   }
-`;
+`);
 
 type Todo = Todo_TodoListFragment;
 

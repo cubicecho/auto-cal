@@ -13,9 +13,8 @@ const config: CodegenConfig = {
   documents: [
     path.resolve(__dirname, 'packages/client/src/**/*.{tsx,ts}'),
     path.resolve(__dirname, 'packages/client/app/**/*.{tsx,ts}'),
-    // Exclude generated output and auth pages that use raw gql (not typed codegen)
+    // Exclude generated output
     `!${path.resolve(__dirname, 'packages/client/src/__generated__/**')}`,
-    `!${path.resolve(__dirname, 'packages/client/app/auth/**')}`,
   ],
   ignoreNoDocuments: true,
   generates: {

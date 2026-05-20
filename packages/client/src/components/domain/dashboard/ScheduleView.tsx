@@ -8,7 +8,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { priorityLabel } from '@/lib/utils';
-import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import {
   addDays,
@@ -41,23 +40,25 @@ graphql(`
   }
 `);
 
-const COMPLETE_HABIT = gql`
+const COMPLETE_HABIT = graphql(`
   mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {
     myCompleteHabit(input: $input) {
+      __typename
       id
       completedAt
     }
   }
-`;
+`);
 
-const COMPLETE_TODO = gql`
+const COMPLETE_TODO = graphql(`
   mutation CompleteTodoFromSchedule($id: ID!) {
     myCompleteTodo(id: $id) {
+      __typename
       id
       completedAt
     }
   }
-`;
+`);
 
 function groupByDay(
   items: ScheduledItem_ScheduleViewFragment[],

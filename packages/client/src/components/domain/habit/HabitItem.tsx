@@ -1,4 +1,5 @@
 import type { Habit_HabitListFragment } from '@/__generated__/graphql.js';
+import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -8,18 +9,17 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
-import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { Pencil } from 'lucide-react';
 
-const UPDATE_HABIT_LENGTH = gql`
+const UPDATE_HABIT_LENGTH = graphql(`
   mutation UpdateHabitEstimatedLength($input: UpdateHabitArgs!) {
     myUpdateHabit(input: $input) {
       id
       estimatedLength
     }
   }
-`;
+`);
 
 type Habit = Habit_HabitListFragment;
 

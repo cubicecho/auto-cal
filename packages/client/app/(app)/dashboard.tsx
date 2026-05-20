@@ -2,7 +2,6 @@ import { graphql } from '@/__generated__/index.js';
 import { CalendarView } from '@/components/domain/dashboard/CalendarView';
 import { ScheduleView } from '@/components/domain/dashboard/ScheduleView';
 import { WeekNavigator } from '@/components/domain/dashboard/WeekNavigator';
-import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { addDays, addMonths, addWeeks, format, startOfMonth } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -27,11 +26,11 @@ const MY_SCHEDULE = graphql(`
   }
 `);
 
-const UPDATE_PROFILE = gql`
+const UPDATE_PROFILE = graphql(`
   mutation UpdateProfile($timezone: String!) {
     myUpdateProfile(timezone: $timezone)
   }
-`;
+`);
 
 type CalendarViewMode = 'day' | 'week' | 'month';
 

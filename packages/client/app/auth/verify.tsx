@@ -1,36 +1,29 @@
+import { graphql } from '@/__generated__/index.js';
 import { storage } from '@/storage';
-import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
-interface VerifyMagicLinkResult {
-  verifyMagicLink: { token: string; userId: string };
-}
-
-const VERIFY_MAGIC_LINK = gql`
+const VERIFY_MAGIC_LINK = graphql(`
   mutation VerifyMagicLink($token: String!) {
     verifyMagicLink(token: $token) {
       token
       userId
     }
   }
-`;
+`);
 
 export default function VerifyPage() {
   const router = useRouter();
   const { token: queryToken } = useLocalSearchParams<{ token?: string }>();
 
   const called = useRef(false);
-  const [verify, { error }] = useMutation<VerifyMagicLinkResult>(
-    VERIFY_MAGIC_LINK,
-    {
-      onCompleted(data) {
-        storage.setItem('auth_token', data.verifyMagicLink.token);
-        router.replace('/(app)/dashboard');
-      },
+  const [verify, { error }] = useMutation(VERIFY_MAGIC_LINK, {
+    onCompleted(data) {
+      storage.setItem('auth_token', data.verifyMagicLink.token);
+      router.replace('/(app)/dashboard');
     },
-  );
+  });
 
   useEffect(() => {
     if (queryToken && !called.current) {
