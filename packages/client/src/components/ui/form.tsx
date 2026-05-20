@@ -165,7 +165,8 @@ type InputFieldProps = {
 } & React.ComponentProps<'input'>;
 
 function InputField({ label, ...props }: InputFieldProps) {
-  const field = useFieldContext<string>(); // Access field data from context
+  // biome-ignore lint/suspicious/noExplicitAny: field stores string | number | null depending on the schema
+  const field = useFieldContext<any>();
 
   return (
     <FieldWrapper
@@ -173,9 +174,17 @@ function InputField({ label, ...props }: InputFieldProps) {
       control={
         <Input
           {...props}
-          value={field.state.value}
+          value={field.state.value ?? ''}
           onBlur={field.handleBlur}
-          onChange={(e) => field.handleChange(e.target.value)}
+          onChange={(e) => {
+            if (props.type === 'number') {
+              field.handleChange(
+                e.target.value === '' ? null : e.target.valueAsNumber,
+              );
+            } else {
+              field.handleChange(e.target.value);
+            }
+          }}
         />
       }
     />

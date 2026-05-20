@@ -16,14 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Field,
-  FieldControl,
-  FieldError,
-  FieldLabel,
-  Form,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { FieldWrapper, Form } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
 import { useEffect } from 'react';
@@ -244,17 +237,16 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
             {/* Activity Type */}
             <form.AppField name="activityTypeId">
               {(field) => (
-                <Field>
-                  <FieldLabel>Activity Type</FieldLabel>
-                  <FieldControl>
+                <FieldWrapper
+                  label="Activity Type"
+                  control={
                     <ActivityTypeSelect
                       value={field.state.value || undefined}
                       onValueChange={(v) => field.handleChange(v ?? '')}
                       onBlur={field.handleBlur}
                     />
-                  </FieldControl>
-                  <FieldError />
-                </Field>
+                  }
+                />
               )}
             </form.AppField>
 
@@ -288,22 +280,12 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
               {/* Frequency Count */}
               <form.AppField name="frequencyCount">
                 {(field) => (
-                  <Field>
-                    <FieldLabel>Times</FieldLabel>
-                    <FieldControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={30}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) =>
-                          field.handleChange(e.target.valueAsNumber)
-                        }
-                      />
-                    </FieldControl>
-                    <FieldError />
-                  </Field>
+                  <field.InputField
+                    label="Times"
+                    type="number"
+                    min={1}
+                    max={30}
+                  />
                 )}
               </form.AppField>
 
@@ -322,24 +304,12 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
             {/* Minimum time between instances */}
             <form.AppField name="minTimeBetweenInstances">
               {(field) => (
-                <Field>
-                  <FieldLabel>Min hours between sessions (optional)</FieldLabel>
-                  <FieldControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="e.g. 24"
-                      value={field.state.value ?? ''}
-                      onBlur={field.handleBlur}
-                      onChange={(e) =>
-                        field.handleChange(
-                          e.target.value === '' ? null : e.target.valueAsNumber,
-                        )
-                      }
-                    />
-                  </FieldControl>
-                  <FieldError />
-                </Field>
+                <field.InputField
+                  label="Min hours between sessions (optional)"
+                  type="number"
+                  min={0}
+                  placeholder="e.g. 24"
+                />
               )}
             </form.AppField>
 
