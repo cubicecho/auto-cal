@@ -58,11 +58,7 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
             <CardTitle className="text-lg">{habit.title}</CardTitle>
             <CardDescription>
               {habit.activityType && (
-                <span className="inline-flex items-center gap-1">
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: habit.activityType.color }}
-                  />
+                <span>
                   {habit.activityType.name}
                   {' • '}
                 </span>

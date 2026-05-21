@@ -88,15 +88,7 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
         <CardHeader className="space-y-1 pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <CardTitle className="flex items-center gap-2 text-base">
-                {list.activityType && (
-                  <span
-                    className="inline-block h-3 w-3 shrink-0 rounded-full"
-                    style={{ backgroundColor: list.activityType.color }}
-                  />
-                )}
-                <span className="truncate">{list.name}</span>
-              </CardTitle>
+              <CardTitle className="text-base truncate">{list.name}</CardTitle>
               {list.description && (
                 <CardDescription className="line-clamp-2 text-xs">
                   {list.description}

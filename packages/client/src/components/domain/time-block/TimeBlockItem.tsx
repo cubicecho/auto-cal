@@ -38,18 +38,8 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-lg flex items-center gap-2">
-              {timeBlock.activityType ? (
-                <>
-                  <span
-                    className="inline-block h-3 w-3 rounded-full"
-                    style={{ backgroundColor: timeBlock.activityType.color }}
-                  />
-                  {timeBlock.activityType.name}
-                </>
-              ) : (
-                'Unassigned'
-              )}
+            <CardTitle className="text-lg">
+              {timeBlock.activityType?.name ?? 'Unassigned'}
             </CardTitle>
             <CardDescription>
               {timeBlock.daysOfWeek

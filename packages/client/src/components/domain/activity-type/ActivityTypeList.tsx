@@ -93,10 +93,6 @@ export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
                 style={{ backgroundColor: hexToRgba(item.color, 0.15) }}
               >
                 <div className="flex items-center gap-3">
-                  <span
-                    className="inline-block h-4 w-4 rounded-full border border-border"
-                    style={{ backgroundColor: item.color }}
-                  />
                   <span className="text-sm font-medium">{item.name}</span>
                   {stats && (
                     <span className="text-xs text-muted-foreground">
