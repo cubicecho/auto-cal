@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
+import { hexToRgba } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Pencil } from 'lucide-react';
 
@@ -43,8 +44,13 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
 
   return (
     <Card
-      className="cursor-pointer hover:bg-muted/50 transition-colors"
+      className="cursor-pointer transition-colors"
       onClick={() => onSelect(habit)}
+      style={{
+        backgroundColor: habit.activityType
+          ? hexToRgba(habit.activityType.color, 0.15)
+          : undefined,
+      }}
     >
       <CardHeader>
         <div className="flex items-start justify-between">

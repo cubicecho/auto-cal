@@ -14,17 +14,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { hexToRgba } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Pencil, Plus } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 import { TodoListForm } from './TodoListForm';
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = Number.parseInt(hex.slice(1, 3), 16);
-  const g = Number.parseInt(hex.slice(3, 5), 16);
-  const b = Number.parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 const QUICK_CREATE_TODO = graphql(`
   mutation QuickCreateTodo($input: CreateTodoArgs!) {

@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { hexToRgba } from '@/lib/utils';
 import { Pencil } from 'lucide-react';
 
 type TimeBlock = TimeBlock_TimeBlockListFragment;
@@ -27,7 +28,13 @@ type TimeBlockItemProps = {
 
 export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
   return (
-    <Card>
+    <Card
+      style={{
+        backgroundColor: timeBlock.activityType
+          ? hexToRgba(timeBlock.activityType.color, 0.15)
+          : undefined,
+      }}
+    >
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
