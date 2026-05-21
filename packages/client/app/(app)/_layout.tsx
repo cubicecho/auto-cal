@@ -5,7 +5,7 @@ import {
   Link,
   Redirect,
   Slot,
-  Stack,
+  Tabs,
   usePathname,
   useRouter,
 } from 'expo-router';
@@ -126,9 +126,29 @@ function WebLayout() {
   );
 }
 
-// TODO: replace Stack with Tabs for a proper mobile nav layout.
 function NativeLayout() {
-  return <Stack screenOptions={{ headerShown: true }} />;
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: true,
+        tabBarActiveTintColor: '#6366f1',
+        tabBarInactiveTintColor: '#6b7280',
+      }}
+    >
+      <Tabs.Screen name="index" options={{ href: null }} />
+      <Tabs.Screen name="dashboard" options={{ href: null }} />
+      <Tabs.Screen name="onboarding" options={{ href: null }} />
+      <Tabs.Screen name="stats" options={{ href: null }} />
+      <Tabs.Screen name="todo-lists" options={{ title: 'Todos' }} />
+      <Tabs.Screen name="habits" options={{ title: 'Habits' }} />
+      <Tabs.Screen name="time-blocks" options={{ title: 'Time Blocks' }} />
+      <Tabs.Screen
+        name="activity-types"
+        options={{ title: 'Activity Types' }}
+      />
+      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
+    </Tabs>
+  );
 }
 
 export default function AppLayout() {
