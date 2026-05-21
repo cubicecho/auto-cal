@@ -6,7 +6,7 @@ import type {
 type ActivityTypeStats = GetActivityTypeStatsQuery['activityTypeStats'][number];
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
-import { hexToRgba } from '@/lib/utils';
+import { hexToDesaturated } from '@/lib/utils';
 import { Pencil, Plus, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { ActivityTypeForm } from './ActivityTypeForm';
@@ -90,7 +90,7 @@ export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
               <div
                 key={item.id}
                 className="flex items-center justify-between rounded-md border px-3 py-2"
-                style={{ backgroundColor: hexToRgba(item.color, 0.15) }}
+                style={{ backgroundColor: hexToDesaturated(item.color) }}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium">{item.name}</span>

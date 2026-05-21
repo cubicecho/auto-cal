@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { hexToRgba } from '@/lib/utils';
+import { hexToDesaturated } from '@/lib/utils';
 import { Pencil } from 'lucide-react';
 
 type TimeBlock = TimeBlock_TimeBlockListFragment;
@@ -31,7 +31,7 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
     <Card
       style={{
         backgroundColor: timeBlock.activityType
-          ? hexToRgba(timeBlock.activityType.color, 0.15)
+          ? hexToDesaturated(timeBlock.activityType.color)
           : undefined,
       }}
     >

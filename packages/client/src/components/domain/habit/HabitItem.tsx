@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
-import { hexToRgba } from '@/lib/utils';
+import { hexToDesaturated } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Pencil } from 'lucide-react';
 
@@ -48,7 +48,7 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
       onClick={() => onSelect(habit)}
       style={{
         backgroundColor: habit.activityType
-          ? hexToRgba(habit.activityType.color, 0.15)
+          ? hexToDesaturated(habit.activityType.color)
           : undefined,
       }}
     >
