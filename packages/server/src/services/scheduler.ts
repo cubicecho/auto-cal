@@ -6,7 +6,7 @@ export type TodoWithActivityType = Todo & { activityTypeId: string | null };
 
 // ─── Output Types ────────────────────────────────────────────────────────────
 
-export type ScheduledItemKind = 'todo' | 'habit';
+export type ScheduledItemKind = 'todo' | 'habit' | 'pomodoro';
 
 export type ScheduledItem = {
   kind: ScheduledItemKind;
@@ -415,6 +415,101 @@ export function computeSchedule(
       isScheduled: true,
       isOverdue: task.isOverdue ?? false,
     });
+  }
+
+  // 5. Pomodoro auto-fill: fill remaining slot capacity with pomodoro units
+  //    for habits that have pomodoroEnabled = true. Sorted by priority DESC so
+  //    higher-priority habits claim remaining time first.
+  const pomodoroHabits = habits
+    .filter(
+      (
+        h,
+      ): h is typeof h & {
+        pomodoroEnabled: true;
+        pomodoroUnitLength: number;
+        pomodoroShortBreakLength: number;
+        pomodoroUnitsBeforeLongBreak: number;
+        pomodoroLongBreakLength: number;
+      } =>
+        h.pomodoroEnabled === true &&
+        h.pomodoroUnitLength != null &&
+        h.pomodoroShortBreakLength != null &&
+        h.pomodoroUnitsBeforeLongBreak != null &&
+        h.pomodoroLongBreakLength != null,
+    )
+    .sort((a, b) => b.priority - a.priority);
+
+  // De-duplicate by habit base ID (only the highest-instanceIndex matters for fill)
+  const seenPomodoroHabitIds = new Set<string>();
+  const uniquePomodoroHabits = pomodoroHabits.filter((h) => {
+    if (seenPomodoroHabitIds.has(h.id)) return false;
+    seenPomodoroHabitIds.add(h.id);
+    return true;
+  });
+
+  for (const habit of uniquePomodoroHabits) {
+    const slots = slotsByActivityType.get(habit.activityTypeId ?? '');
+    if (!slots) continue;
+
+    const activityType = habit.activityTypeId
+      ? (activityTypeMap.get(habit.activityTypeId) ?? null)
+      : null;
+
+    const slotDayMidnightCache = new Map<string, number>();
+
+    for (const slot of slots) {
+      let cursor = slot.startMinutes + slot.usedMinutes;
+      const slotEnd = slot.startMinutes + slot.totalMinutes;
+
+      // Advance cursor past current time
+      if (!slotDayMidnightCache.has(slot.dateStr)) {
+        slotDayMidnightCache.set(
+          slot.dateStr,
+          new Date(`${slot.dateStr}T00:00:00`).getTime(),
+        );
+      }
+      const midnightMs = slotDayMidnightCache.get(slot.dateStr) ?? 0;
+      const nowMins = (now.getTime() - midnightMs) / (1000 * 60);
+      cursor = Math.max(cursor, Math.ceil(nowMins));
+
+      let unitCountInCycle = 0;
+      let pomodoroIndex = 0;
+
+      while (cursor + habit.pomodoroUnitLength <= slotEnd) {
+        const unitStart = cursor;
+        const unitEnd = cursor + habit.pomodoroUnitLength;
+
+        results.push({
+          kind: 'pomodoro',
+          id: `${habit.id}-pom-${slot.dateStr}-${pomodoroIndex}`,
+          title: `${habit.title} (${pomodoroIndex + 1})`,
+          priority: habit.priority,
+          estimatedLength: habit.pomodoroUnitLength,
+          activityTypeId: habit.activityTypeId,
+          activityType,
+          scheduledStart: localToUtcIso(slot.dateStr, unitStart, timezone),
+          scheduledEnd: localToUtcIso(slot.dateStr, unitEnd, timezone),
+          isScheduled: true,
+          isOverdue: false,
+        });
+
+        pomodoroIndex++;
+        unitCountInCycle++;
+
+        const isLongBreak =
+          unitCountInCycle >= habit.pomodoroUnitsBeforeLongBreak;
+        const breakLength = isLongBreak
+          ? habit.pomodoroLongBreakLength
+          : habit.pomodoroShortBreakLength;
+
+        if (isLongBreak) unitCountInCycle = 0;
+
+        cursor = unitEnd + breakLength;
+      }
+
+      // Consume the remaining slot so no other pomodoro habit double-fills it
+      slot.usedMinutes = slotEnd - slot.startMinutes;
+    }
   }
 
   return results;
