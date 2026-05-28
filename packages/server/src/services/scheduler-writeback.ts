@@ -250,6 +250,7 @@ export async function runSchedulerWriteback(
     > = [];
     for (const h of userHabits) {
       if (!h.activityTypeId) continue;
+      if (h.pomodoroEnabled) continue; // pomodoro habits fill time via auto-fill, not instances
       const counts = h.frequencyUnit === 'week' ? weekCounts : monthCounts;
       const done = counts.get(h.id) ?? 0;
       const deficit = h.frequencyCount - done;

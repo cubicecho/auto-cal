@@ -482,7 +482,7 @@ export function computeSchedule(
         results.push({
           kind: 'pomodoro',
           id: `${habit.id}-pom-${slot.dateStr}-${pomodoroIndex}`,
-          title: `${habit.title} (${pomodoroIndex + 1})`,
+          title: `${habit.title} - pom ${pomodoroIndex + 1}`,
           priority: habit.priority,
           estimatedLength: habit.pomodoroUnitLength,
           activityTypeId: habit.activityTypeId,

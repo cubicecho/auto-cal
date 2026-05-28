@@ -323,65 +323,13 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
               )}
             </form.AppField>
 
-            {/* Priority + Duration — two columns */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Priority */}
-              <form.AppField name="priority">
-                {(field) => (
-                  <field.SelectField
-                    label="Priority"
-                    options={PRIORITY_OPTIONS}
-                    placeholder="Select priority"
-                  />
-                )}
-              </form.AppField>
-
-              {/* Estimated Length */}
-              <form.AppField name="estimatedLength">
-                {(field) => (
-                  <field.SelectField
-                    label="Duration"
-                    options={DURATION_OPTIONS}
-                    placeholder="Select duration"
-                  />
-                )}
-              </form.AppField>
-            </div>
-
-            {/* Frequency — count + unit side by side */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Frequency Count */}
-              <form.AppField name="frequencyCount">
-                {(field) => (
-                  <field.InputField
-                    label="Times"
-                    type="number"
-                    min={1}
-                    max={30}
-                  />
-                )}
-              </form.AppField>
-
-              {/* Frequency Unit */}
-              <form.AppField name="frequencyUnit">
-                {(field) => (
-                  <field.SelectField
-                    label="Frequency"
-                    options={FREQUENCY_UNIT_OPTIONS}
-                    placeholder="Select frequency"
-                  />
-                )}
-              </form.AppField>
-            </div>
-
-            {/* Minimum time between instances */}
-            <form.AppField name="minTimeBetweenInstances">
+            {/* Priority — always visible */}
+            <form.AppField name="priority">
               {(field) => (
-                <field.InputField
-                  label="Min hours between sessions (optional)"
-                  type="number"
-                  min={0}
-                  placeholder="e.g. 24"
+                <field.SelectField
+                  label="Priority"
+                  options={PRIORITY_OPTIONS}
+                  placeholder="Select priority"
                 />
               )}
             </form.AppField>
@@ -410,7 +358,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
               )}
             </form.AppField>
 
-            {/* Pomodoro config — only shown when enabled */}
+            {/* Scheduling fields (hidden when pomodoro mode is on) or pomodoro config */}
             <form.Subscribe selector={(s) => s.values.pomodoroEnabled}>
               {(pomodoroEnabled) =>
                 pomodoroEnabled ? (
@@ -465,7 +413,56 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
                       </form.AppField>
                     </div>
                   </div>
-                ) : null
+                ) : (
+                  <div className="space-y-4">
+                    {/* Duration */}
+                    <form.AppField name="estimatedLength">
+                      {(field) => (
+                        <field.SelectField
+                          label="Duration"
+                          options={DURATION_OPTIONS}
+                          placeholder="Select duration"
+                        />
+                      )}
+                    </form.AppField>
+
+                    {/* Frequency — count + unit side by side */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <form.AppField name="frequencyCount">
+                        {(field) => (
+                          <field.InputField
+                            label="Times"
+                            type="number"
+                            min={1}
+                            max={30}
+                          />
+                        )}
+                      </form.AppField>
+
+                      <form.AppField name="frequencyUnit">
+                        {(field) => (
+                          <field.SelectField
+                            label="Frequency"
+                            options={FREQUENCY_UNIT_OPTIONS}
+                            placeholder="Select frequency"
+                          />
+                        )}
+                      </form.AppField>
+                    </div>
+
+                    {/* Minimum time between instances */}
+                    <form.AppField name="minTimeBetweenInstances">
+                      {(field) => (
+                        <field.InputField
+                          label="Min hours between sessions (optional)"
+                          type="number"
+                          min={0}
+                          placeholder="e.g. 24"
+                        />
+                      )}
+                    </form.AppField>
+                  </div>
+                )
               }
             </form.Subscribe>
 
