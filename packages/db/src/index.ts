@@ -28,11 +28,24 @@ if (databaseUrl) {
   const dir = process.env.PGLITE_DATA_DIR;
   if (!dir) throw new Error('Set DATABASE_URL or PGLITE_DATA_DIR');
 
+  if (process.env.NODE_ENV === 'production') {
+    // PGLite drives PostgreSQL's internal event loop via setTimeout(fn, 0) —
+    // a busy-wait that saturates CPU even at idle. Use DATABASE_URL with a
+    // real Postgres instance in production (see docker-compose.yml).
+    console.warn(
+      '[auto-cal] WARNING: PGLite is not recommended for production. ' +
+        'Set DATABASE_URL to a real Postgres instance to eliminate idle CPU spin.',
+    );
+  }
+
   const { PGlite } = await import('@electric-sql/pglite');
   const { drizzle } = await import('drizzle-orm/pglite');
   const { migrate } = await import('drizzle-orm/pglite/migrator');
 
-  const client = new PGlite(dir);
+  // relaxedDurability reduces synchronous fsync calls, which lowers the
+  // frequency of the WASM "startPersist" timer at the cost of durability
+  // on hard crash (acceptable for development).
+  const client = new PGlite(dir, { relaxedDurability: true });
   await client.waitReady;
   // @ts-expect-error drizzle-orm 1.0-beta removed `schema` from DrizzlePgConfig types but it remains valid at runtime for relational queries
   db = drizzle({ client, schema, relations });
