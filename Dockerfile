@@ -42,4 +42,4 @@ ENV NODE_ENV=production
 ENV PORT=4000
 ENV PGLITE_DATA_DIR=/app/pgdata
 
-CMD ["sh", "-c", "cd packages/db && node --experimental-strip-types src/migrator.ts && cd /app && node --experimental-strip-types packages/server/src/index.ts"]
+CMD ["node", "--experimental-strip-types", "packages/server/src/index.ts"]

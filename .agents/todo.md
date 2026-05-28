@@ -128,7 +128,9 @@ Existing vitest suites:
 ---
 
 ### #16 — Postgres production path (dual-backend shipped, end-to-end test pending)
-**Status:** The driver switch is implemented — `packages/db/src/index.ts` selects `postgres.js` when `DATABASE_URL` is set, PGLite otherwise. `.env.example` and `docker-compose.yml` cover both modes.
+**Status:** The driver switch is implemented — `packages/db/src/index.ts` selects `postgres.js` when `DATABASE_URL` is set, PGLite otherwise. `docker-compose.yml` now defaults to the postgres backend.
+
+**PGLite idle CPU (investigated 2026-05-27):** PGLite's Emscripten WASM glue (`postgres.js`) drives PostgreSQL's event loop via `setTimeout(MainLoop.runner, 0)` — a busy-wait that fires every event loop tick. Real Postgres uses OS-level sleep; the WASM port cannot. This results in significant idle CPU in Docker. The server now logs a warning when `PGLITE_DATA_DIR` is set in production. `docker-compose.yml` defaults to the real Postgres backend to avoid this. `relaxedDurability: true` is set on the PGLite client to reduce fsync-triggered `startPersist` timer frequency.
 
 **What's left:**
 - Run migrations against a real Postgres instance and confirm there are no PGLite-specific oddities (e.g. array column behavior in `time_blocks.daysOfWeek`)
