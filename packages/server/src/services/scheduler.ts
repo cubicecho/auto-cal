@@ -508,7 +508,14 @@ export function computeSchedule(
 
         if (isLongBreak) unitCountInCycle = 0;
 
-        cursor = unitEnd + breakLength;
+        // Only consume the break gap when another full unit can follow it.
+        // If the break would push past the slot end, sit at unitEnd so the
+        // while condition can still fit one more unit without a leading break.
+        const nextWithBreak = unitEnd + breakLength;
+        cursor =
+          nextWithBreak + habit.pomodoroUnitLength <= slotEnd
+            ? nextWithBreak
+            : unitEnd;
       }
 
       // Consume the remaining slot so no other pomodoro habit double-fills it
