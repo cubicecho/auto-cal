@@ -94,6 +94,7 @@ const extensionSDL = `
   enum ScheduledItemKind {
     todo
     habit
+    pomodoro
   }
 
   type ScheduledItem {
@@ -170,6 +171,11 @@ const extensionSDL = `
     frequencyCount: Int!
     frequencyUnit: String!
     minTimeBetweenInstances: Int
+    pomodoroEnabled: Boolean
+    pomodoroUnitLength: Int
+    pomodoroShortBreakLength: Int
+    pomodoroUnitsBeforeLongBreak: Int
+    pomodoroLongBreakLength: Int
   }
 
   input CreateTimeBlockArgs {
@@ -190,6 +196,11 @@ const extensionSDL = `
     frequencyCount: Int
     frequencyUnit: String
     minTimeBetweenInstances: Int
+    pomodoroEnabled: Boolean
+    pomodoroUnitLength: Int
+    pomodoroShortBreakLength: Int
+    pomodoroUnitsBeforeLongBreak: Int
+    pomodoroLongBreakLength: Int
   }
 
   input UpdateTimeBlockArgs {

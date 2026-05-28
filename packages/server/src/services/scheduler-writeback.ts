@@ -250,6 +250,12 @@ export async function runSchedulerWriteback(
     > = [];
     for (const h of userHabits) {
       if (!h.activityTypeId) continue;
+      if (h.pomodoroEnabled) {
+        // Pomodoro habits don't use frequency-based instances — pass one entry
+        // so computeSchedule's pomodoro fill phase can see the habit config.
+        habitInstances.push({ ...h, instanceIndex: 0 });
+        continue;
+      }
       const counts = h.frequencyUnit === 'week' ? weekCounts : monthCounts;
       const done = counts.get(h.id) ?? 0;
       const deficit = h.frequencyCount - done;

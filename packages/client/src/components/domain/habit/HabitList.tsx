@@ -21,6 +21,11 @@ export const HABIT_LIST_FRAGMENT = graphql(`
     frequencyCount
     frequencyUnit
     minTimeBetweenInstances
+    pomodoroEnabled
+    pomodoroUnitLength
+    pomodoroShortBreakLength
+    pomodoroUnitsBeforeLongBreak
+    pomodoroLongBreakLength
     createdAt
   }
 `);

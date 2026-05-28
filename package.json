@@ -20,6 +20,7 @@
     "db:migrate": "npm run db:migrate -w @auto-cal/db",
     "db:seed": "npm run db:seed -w @auto-cal/db",
     "db:studio": "npm run db:studio -w @auto-cal/db",
+    "db:clean": "rm -rf pgdata",
     "generate:schema": "node --experimental-strip-types packages/server/generate_schema.ts",
     "codegen": "npm run generate:schema && npm run codegen:server && npm run codegen:client",
     "codegen:client": "graphql-codegen --config codegen.ts",

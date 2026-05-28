@@ -25,6 +25,29 @@ const UpdateHabitInput = z.object({
   frequencyCount: z.number().int().positive().min(1).max(30).optional(),
   frequencyUnit: z.enum(['week', 'month'] as const).optional(),
   minTimeBetweenInstances: z.number().int().min(0).nullable().optional(),
+  pomodoroEnabled: z.boolean().optional(),
+  pomodoroUnitLength: z.number().int().min(1).max(120).nullable().optional(),
+  pomodoroShortBreakLength: z
+    .number()
+    .int()
+    .min(1)
+    .max(60)
+    .nullable()
+    .optional(),
+  pomodoroUnitsBeforeLongBreak: z
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .nullable()
+    .optional(),
+  pomodoroLongBreakLength: z
+    .number()
+    .int()
+    .min(1)
+    .max(120)
+    .nullable()
+    .optional(),
 });
 
 export function applyHabitResolvers(
@@ -209,6 +232,12 @@ export function applyHabitResolvers(
         frequencyCount: input.frequencyCount,
         frequencyUnit: input.frequencyUnit,
         minTimeBetweenInstances: input.minTimeBetweenInstances ?? null,
+        pomodoroEnabled: input.pomodoroEnabled ?? false,
+        pomodoroUnitLength: input.pomodoroUnitLength ?? null,
+        pomodoroShortBreakLength: input.pomodoroShortBreakLength ?? null,
+        pomodoroUnitsBeforeLongBreak:
+          input.pomodoroUnitsBeforeLongBreak ?? null,
+        pomodoroLongBreakLength: input.pomodoroLongBreakLength ?? null,
       })
       .returning();
     if (!habit) throw new Error('Failed to create habit');
@@ -268,6 +297,21 @@ export function applyHabitResolvers(
         }),
         ...(input.minTimeBetweenInstances !== undefined && {
           minTimeBetweenInstances: input.minTimeBetweenInstances,
+        }),
+        ...(input.pomodoroEnabled !== undefined && {
+          pomodoroEnabled: input.pomodoroEnabled,
+        }),
+        ...(input.pomodoroUnitLength !== undefined && {
+          pomodoroUnitLength: input.pomodoroUnitLength,
+        }),
+        ...(input.pomodoroShortBreakLength !== undefined && {
+          pomodoroShortBreakLength: input.pomodoroShortBreakLength,
+        }),
+        ...(input.pomodoroUnitsBeforeLongBreak !== undefined && {
+          pomodoroUnitsBeforeLongBreak: input.pomodoroUnitsBeforeLongBreak,
+        }),
+        ...(input.pomodoroLongBreakLength !== undefined && {
+          pomodoroLongBreakLength: input.pomodoroLongBreakLength,
         }),
         updatedAt: new Date(),
       })

@@ -17,6 +17,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { FieldWrapper, Form } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
 import { useEffect } from 'react';
@@ -39,6 +41,11 @@ const CREATE_HABIT = graphql(`
       estimatedLength
       frequencyCount
       frequencyUnit
+      pomodoroEnabled
+      pomodoroUnitLength
+      pomodoroShortBreakLength
+      pomodoroUnitsBeforeLongBreak
+      pomodoroLongBreakLength
     }
   }
 `);
@@ -58,6 +65,11 @@ const UPDATE_HABIT = graphql(`
       estimatedLength
       frequencyCount
       frequencyUnit
+      pomodoroEnabled
+      pomodoroUnitLength
+      pomodoroShortBreakLength
+      pomodoroUnitsBeforeLongBreak
+      pomodoroLongBreakLength
     }
   }
 `);
@@ -89,20 +101,50 @@ const FREQUENCY_UNIT_OPTIONS = [
 
 // ─── Validation Schema ──────────────────────────────────────────────────────
 
-const habitSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Max 200 characters'),
-  description: z.string().max(2000, 'Max 2000 characters'),
-  activityTypeId: z.string().uuid('Activity type is required'),
-  priority: z.string().min(1, 'Priority is required'),
-  estimatedLength: z.string().min(1, 'Duration is required'),
-  frequencyCount: z
-    .number()
-    .int()
-    .min(1, 'Must be at least 1')
-    .max(30, 'Max 30'),
-  frequencyUnit: z.string().min(1, 'Frequency unit is required'),
-  minTimeBetweenInstances: z.number().int().min(0).nullable(),
+const pomodoroConfig = z.object({
+  pomodoroUnitLength: z.number().int().min(1).max(120),
+  pomodoroShortBreakLength: z.number().int().min(1).max(60),
+  pomodoroUnitsBeforeLongBreak: z.number().int().min(1).max(20),
+  pomodoroLongBreakLength: z.number().int().min(1).max(120),
 });
+
+const habitSchema = z
+  .object({
+    title: z
+      .string()
+      .min(1, 'Title is required')
+      .max(200, 'Max 200 characters'),
+    description: z.string().max(2000, 'Max 2000 characters'),
+    activityTypeId: z.string().uuid('Activity type is required'),
+    priority: z.string().min(1, 'Priority is required'),
+    estimatedLength: z.string().min(1, 'Duration is required'),
+    frequencyCount: z
+      .number()
+      .int()
+      .min(1, 'Must be at least 1')
+      .max(30, 'Max 30'),
+    frequencyUnit: z.string().min(1, 'Frequency unit is required'),
+    minTimeBetweenInstances: z.number().int().min(0).nullable(),
+    pomodoroEnabled: z.boolean(),
+    pomodoroUnitLength: z.number().int().min(1).max(120).nullable(),
+    pomodoroShortBreakLength: z.number().int().min(1).max(60).nullable(),
+    pomodoroUnitsBeforeLongBreak: z.number().int().min(1).max(20).nullable(),
+    pomodoroLongBreakLength: z.number().int().min(1).max(120).nullable(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.pomodoroEnabled) return;
+    const result = pomodoroConfig.safeParse({
+      pomodoroUnitLength: data.pomodoroUnitLength,
+      pomodoroShortBreakLength: data.pomodoroShortBreakLength,
+      pomodoroUnitsBeforeLongBreak: data.pomodoroUnitsBeforeLongBreak,
+      pomodoroLongBreakLength: data.pomodoroLongBreakLength,
+    });
+    if (!result.success) {
+      for (const issue of result.error.issues) {
+        ctx.addIssue({ ...issue, path: issue.path });
+      }
+    }
+  });
 
 type HabitFormValues = z.infer<typeof habitSchema>;
 
@@ -133,21 +175,45 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
     refetchQueries: ['GetMyHabits'],
   });
 
+  const defaultValues: HabitFormValues = {
+    title: habit?.title ?? '',
+    description: habit?.description ?? '',
+    activityTypeId: habit?.activityType?.id ?? '',
+    priority: String(habit?.priority ?? 0),
+    estimatedLength: String(habit?.estimatedLength ?? 30),
+    frequencyCount: habit?.frequencyCount ?? 1,
+    frequencyUnit: habit?.frequencyUnit ?? 'week',
+    minTimeBetweenInstances: habit?.minTimeBetweenInstances ?? null,
+    pomodoroEnabled: habit?.pomodoroEnabled ?? false,
+    pomodoroUnitLength: habit?.pomodoroUnitLength ?? 25,
+    pomodoroShortBreakLength: habit?.pomodoroShortBreakLength ?? 5,
+    pomodoroUnitsBeforeLongBreak: habit?.pomodoroUnitsBeforeLongBreak ?? 4,
+    pomodoroLongBreakLength: habit?.pomodoroLongBreakLength ?? 15,
+  };
+
   const form = useAppForm({
-    defaultValues: {
-      title: habit?.title ?? '',
-      description: habit?.description ?? '',
-      activityTypeId: habit?.activityType?.id ?? '',
-      priority: String(habit?.priority ?? 0),
-      estimatedLength: String(habit?.estimatedLength ?? 30),
-      frequencyCount: habit?.frequencyCount ?? 1,
-      frequencyUnit: habit?.frequencyUnit ?? 'week',
-      minTimeBetweenInstances: habit?.minTimeBetweenInstances ?? null,
-    } as HabitFormValues,
+    defaultValues,
     validators: {
       onChange: habitSchema,
     },
     onSubmit: async ({ value }) => {
+      const pomodoroFields = value.pomodoroEnabled
+        ? {
+            pomodoroEnabled: true,
+            pomodoroUnitLength: value.pomodoroUnitLength ?? 25,
+            pomodoroShortBreakLength: value.pomodoroShortBreakLength ?? 5,
+            pomodoroUnitsBeforeLongBreak:
+              value.pomodoroUnitsBeforeLongBreak ?? 4,
+            pomodoroLongBreakLength: value.pomodoroLongBreakLength ?? 15,
+          }
+        : {
+            pomodoroEnabled: false,
+            pomodoroUnitLength: null,
+            pomodoroShortBreakLength: null,
+            pomodoroUnitsBeforeLongBreak: null,
+            pomodoroLongBreakLength: null,
+          };
+
       if (isEdit && habit) {
         await updateHabit({
           variables: {
@@ -161,6 +227,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
               frequencyCount: value.frequencyCount,
               frequencyUnit: value.frequencyUnit,
               minTimeBetweenInstances: value.minTimeBetweenInstances,
+              ...pomodoroFields,
             },
           },
         });
@@ -176,6 +243,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
               frequencyCount: value.frequencyCount,
               frequencyUnit: value.frequencyUnit,
               minTimeBetweenInstances: value.minTimeBetweenInstances,
+              ...pomodoroFields,
             },
           },
         });
@@ -196,6 +264,11 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
         frequencyCount: habit?.frequencyCount ?? 1,
         frequencyUnit: habit?.frequencyUnit ?? 'week',
         minTimeBetweenInstances: habit?.minTimeBetweenInstances ?? null,
+        pomodoroEnabled: habit?.pomodoroEnabled ?? false,
+        pomodoroUnitLength: habit?.pomodoroUnitLength ?? 25,
+        pomodoroShortBreakLength: habit?.pomodoroShortBreakLength ?? 5,
+        pomodoroUnitsBeforeLongBreak: habit?.pomodoroUnitsBeforeLongBreak ?? 4,
+        pomodoroLongBreakLength: habit?.pomodoroLongBreakLength ?? 15,
       });
     }
   }, [open, habit?.id]);
@@ -250,68 +323,148 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
               )}
             </form.AppField>
 
-            {/* Priority + Duration — two columns */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Priority */}
-              <form.AppField name="priority">
-                {(field) => (
-                  <field.SelectField
-                    label="Priority"
-                    options={PRIORITY_OPTIONS}
-                    placeholder="Select priority"
-                  />
-                )}
-              </form.AppField>
-
-              {/* Estimated Length */}
-              <form.AppField name="estimatedLength">
-                {(field) => (
-                  <field.SelectField
-                    label="Duration"
-                    options={DURATION_OPTIONS}
-                    placeholder="Select duration"
-                  />
-                )}
-              </form.AppField>
-            </div>
-
-            {/* Frequency — count + unit side by side */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Frequency Count */}
-              <form.AppField name="frequencyCount">
-                {(field) => (
-                  <field.InputField
-                    label="Times"
-                    type="number"
-                    min={1}
-                    max={30}
-                  />
-                )}
-              </form.AppField>
-
-              {/* Frequency Unit */}
-              <form.AppField name="frequencyUnit">
-                {(field) => (
-                  <field.SelectField
-                    label="Frequency"
-                    options={FREQUENCY_UNIT_OPTIONS}
-                    placeholder="Select frequency"
-                  />
-                )}
-              </form.AppField>
-            </div>
-
-            {/* Minimum time between instances */}
-            <form.AppField name="minTimeBetweenInstances">
+            {/* Priority — always visible */}
+            <form.AppField name="priority">
               {(field) => (
-                <field.InputField
-                  label="Min hours between sessions (optional)"
-                  type="number"
-                  min={0}
-                  placeholder="e.g. 24"
+                <field.SelectField
+                  label="Priority"
+                  options={PRIORITY_OPTIONS}
+                  placeholder="Select priority"
                 />
               )}
             </form.AppField>
+
+            {/* Pomodoro toggle */}
+            <form.AppField name="pomodoroEnabled">
+              {(field) => (
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <Label
+                      htmlFor="pomodoro-toggle"
+                      className="text-sm font-medium"
+                    >
+                      Auto-generate pomodoros
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Fill remaining time with timed work units
+                    </p>
+                  </div>
+                  <Switch
+                    id="pomodoro-toggle"
+                    checked={field.state.value}
+                    onCheckedChange={(checked) => field.handleChange(checked)}
+                  />
+                </div>
+              )}
+            </form.AppField>
+
+            {/* Scheduling fields (hidden when pomodoro mode is on) or pomodoro config */}
+            <form.Subscribe selector={(s) => s.values.pomodoroEnabled}>
+              {(pomodoroEnabled) =>
+                pomodoroEnabled ? (
+                  <div className="space-y-3 rounded-lg border p-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Pomodoro Settings
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <form.AppField name="pomodoroUnitLength">
+                        {(field) => (
+                          <field.InputField
+                            label="Unit length (min)"
+                            type="number"
+                            min={1}
+                            max={120}
+                          />
+                        )}
+                      </form.AppField>
+
+                      <form.AppField name="pomodoroShortBreakLength">
+                        {(field) => (
+                          <field.InputField
+                            label="Short break (min)"
+                            type="number"
+                            min={1}
+                            max={60}
+                          />
+                        )}
+                      </form.AppField>
+
+                      <form.AppField name="pomodoroUnitsBeforeLongBreak">
+                        {(field) => (
+                          <field.InputField
+                            label="Units before long break"
+                            type="number"
+                            min={1}
+                            max={20}
+                          />
+                        )}
+                      </form.AppField>
+
+                      <form.AppField name="pomodoroLongBreakLength">
+                        {(field) => (
+                          <field.InputField
+                            label="Long break (min)"
+                            type="number"
+                            min={1}
+                            max={120}
+                          />
+                        )}
+                      </form.AppField>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Duration */}
+                    <form.AppField name="estimatedLength">
+                      {(field) => (
+                        <field.SelectField
+                          label="Duration"
+                          options={DURATION_OPTIONS}
+                          placeholder="Select duration"
+                        />
+                      )}
+                    </form.AppField>
+
+                    {/* Frequency — count + unit side by side */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <form.AppField name="frequencyCount">
+                        {(field) => (
+                          <field.InputField
+                            label="Times"
+                            type="number"
+                            min={1}
+                            max={30}
+                          />
+                        )}
+                      </form.AppField>
+
+                      <form.AppField name="frequencyUnit">
+                        {(field) => (
+                          <field.SelectField
+                            label="Frequency"
+                            options={FREQUENCY_UNIT_OPTIONS}
+                            placeholder="Select frequency"
+                          />
+                        )}
+                      </form.AppField>
+                    </div>
+
+                    {/* Minimum time between instances */}
+                    <form.AppField name="minTimeBetweenInstances">
+                      {(field) => (
+                        <field.InputField
+                          label="Min hours between sessions (optional)"
+                          type="number"
+                          min={0}
+                          placeholder="e.g. 24"
+                        />
+                      )}
+                    </form.AppField>
+                  </div>
+                )
+              }
+            </form.Subscribe>
 
             <DialogFooter>
               <form.Subscribe
