@@ -66,7 +66,7 @@ export const CreateHabitInput = z.object({
   activityTypeId: z.string().uuid(),
   frequencyCount: z.number().int().positive().min(1).max(30),
   frequencyUnit: z.enum(['week', 'month'] as const),
-  minTimeBetweenInstances: z.number().int().min(0).optional(),
+  minTimeBetweenInstances: z.number().int().min(0).nullable().optional(),
   pomodoroEnabled: z.boolean().optional(),
   pomodoroUnitLength: z.number().int().min(1).max(120).optional(),
   pomodoroShortBreakLength: z.number().int().min(1).max(60).optional(),
