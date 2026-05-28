@@ -14,14 +14,13 @@ The Dockerfile installs only production deps, then copies:
 - `packages/db` — TypeScript source + migration files
 - `packages/client/dist` — built static assets
 
-Migrations run on container start before the server process — the Dockerfile `CMD` is:
+Migrations run automatically when the server starts — `packages/db/src/index.ts` calls `migrate()` for whichever backend is active before exporting `db`. The Dockerfile `CMD` is:
 
 ```sh
-cd packages/db && node --experimental-strip-types src/migrator.ts \
-  && cd /app && node --experimental-strip-types packages/server/src/index.ts
+node --experimental-strip-types packages/server/src/index.ts
 ```
 
-`packages/db/src/migrator.ts` runs `drizzle-kit migrate` programmatically before the server boots.
+**Do not use the separate `src/migrator.ts` script in Docker.** When `DATABASE_URL` is set, postgres.js keeps its connection pool open after `migrate()` returns, so the migrator process never exits. The `&&`-chained CMD would hang forever before the server starts. `packages/db/src/index.ts` already handles migrations for both backends.
 
 ## Environment Variables
 
