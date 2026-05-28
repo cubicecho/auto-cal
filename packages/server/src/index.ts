@@ -17,7 +17,18 @@ import { verifyToken } from './auth.ts';
 import { createLoaders } from './context.ts';
 import type { Context } from './context.ts';
 import { icalHandler } from './ical-route.ts';
+import { authLog, log, wsLog } from './logger.ts';
 import { schema } from './schema/index.ts';
+
+process.on('uncaughtException', (err) => {
+  log.error('Uncaught exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  log.error('Unhandled promise rejection:', reason);
+  process.exit(1);
+});
 
 async function buildContext(
   rawToken?: string,
@@ -25,13 +36,19 @@ async function buildContext(
 ): Promise<Context> {
   const loaders = createLoaders(db);
   const baseUrl = appBaseUrl ?? process.env.APP_URL ?? 'http://localhost:3000';
-  if (!rawToken) return { db, loaders, appBaseUrl: baseUrl };
+  if (!rawToken) {
+    authLog.debug('No token — unauthenticated context');
+    return { db, loaders, appBaseUrl: baseUrl };
+  }
 
   const payload = await verifyToken(rawToken);
-  if (payload?.sub)
+  if (payload?.sub) {
+    authLog.debug('JWT verified for user', payload.sub);
     return { db, userId: payload.sub, loaders, appBaseUrl: baseUrl };
+  }
 
   if (isApiKey(rawToken)) {
+    authLog.debug('API key auth attempt');
     const hash = hashApiKey(rawToken);
     const now = new Date();
     const key = await db.query.apiKeys.findFirst({
@@ -46,10 +63,13 @@ async function buildContext(
         key.expiresAt === undefined ||
         key.expiresAt > now)
     ) {
+      authLog.debug('API key accepted for user', key.userId);
       db.update(apiKeys)
         .set({ lastUsedAt: now })
         .where(eq(apiKeys.id, key.id))
-        .catch(console.error);
+        .catch((err: unknown) =>
+          log.error('Failed to update API key lastUsedAt:', err),
+        );
       return {
         db,
         userId: key.userId,
@@ -58,27 +78,68 @@ async function buildContext(
         appBaseUrl: baseUrl,
       };
     }
+    authLog.warn('API key rejected (not found or expired)');
+  }
+
+  // Env-var bypass: accept one specific UUID in any environment.
+  // Set BYPASS_AUTH_UUID to the demo user ID to allow passwordless access.
+  const bypassUuid = process.env.BYPASS_AUTH_UUID;
+  if (bypassUuid && rawToken === bypassUuid) {
+    authLog.debug('BYPASS_AUTH_UUID auth for', rawToken);
+    return { db, userId: rawToken, loaders, appBaseUrl: baseUrl };
   }
 
   if (
     process.env.NODE_ENV !== 'production' &&
     /^[0-9a-f-]{36}$/i.test(rawToken)
-  )
+  ) {
+    authLog.debug('UUID fallback auth (dev only) for', rawToken);
     return { db, userId: rawToken, loaders, appBaseUrl: baseUrl };
+  }
 
+  authLog.debug('Token did not match any auth method — unauthenticated');
   return { db, loaders, appBaseUrl: baseUrl };
 }
 
+if (process.env.BYPASS_AUTH_UUID) {
+  log.warn(
+    'BYPASS_AUTH_UUID is set — magic-link auth bypassed for user',
+    process.env.BYPASS_AUTH_UUID,
+  );
+}
+
+log.info('Building GraphQL schema...');
 const app = express();
 const httpServer = http.createServer(app);
 
+log.info('Starting WebSocket server...');
 const wsServer = new WebSocketServer({ server: httpServer, path: '/graphql' });
+
+wsServer.on('connection', (_, req) => {
+  wsLog.debug('WebSocket connection from', req.socket.remoteAddress);
+});
+wsServer.on('error', (err) => {
+  wsLog.error('WebSocket server error:', err);
+});
+
 const serverCleanup = useServer(
   {
     schema,
     context: (ctx) => {
       const raw = ctx.connectionParams?.authorization as string | undefined;
       return buildContext(raw);
+    },
+    onConnect: (ctx) => {
+      wsLog.debug(
+        'GraphQL WS connect',
+        ctx.connectionParams ? '(with auth)' : '(no auth)',
+      );
+    },
+    onDisconnect: () => {
+      wsLog.debug('GraphQL WS disconnect');
+    },
+    onError: (_ctx, _msg, errors) => {
+      wsLog.error('GraphQL WS error:', errors);
     },
   },
   wsServer,
@@ -90,19 +151,31 @@ const server = new ApolloServer<Context>({
     ApolloServerPluginDrainHttpServer({ httpServer }),
     {
       async serverWillStart() {
+        log.info('Apollo Server starting...');
         return {
           async drainServer() {
+            log.info('Draining server...');
             await serverCleanup.dispose();
           },
         };
       },
     },
   ],
+  formatError(formattedError, error) {
+    log.error('GraphQL error:', formattedError.message, error);
+    return formattedError;
+  },
 });
 
+log.info('Starting Apollo Server...');
 await server.start();
+log.info('Apollo Server started');
+
+log.info('Seeding demo user...');
 await seedDemoUser();
+
 if (process.env.NODE_ENV !== 'production') {
+  log.info('Seeding demo data (non-production)...');
   await seedDemoData();
 }
 
@@ -110,7 +183,10 @@ const clientDist = path.resolve(process.cwd(), 'packages/client/dist');
 const clientDistExists = fs.existsSync(clientDist);
 
 if (clientDistExists) {
+  log.info('Serving static client from', clientDist);
   app.use(express.static(clientDist));
+} else {
+  log.info('No client dist found at', clientDist, '— skipping static serving');
 }
 
 app.use(
@@ -144,8 +220,8 @@ if (clientDistExists) {
 const PORT = Number(process.env.PORT ?? 3001);
 
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server ready at http://0.0.0.0:${PORT}/graphql`);
+  log.info(`Server ready at http://0.0.0.0:${PORT}/graphql`);
   if (clientDistExists) {
-    console.log(`Serving client from ${clientDist}`);
+    log.info('Client served from', clientDist);
   }
 });
