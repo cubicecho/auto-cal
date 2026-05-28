@@ -456,7 +456,8 @@ export function computeSchedule(
       : null;
 
     const slotDayMidnightCache = new Map<string, number>();
-    let pomodoroCount = 0; // unique across all slots for this habit
+    let pomodoroCount = 0; // unique across all slots for this habit (used for ID)
+    const pomodoroPerDay = new Map<string, number>(); // per-day label counter
 
     for (const slot of slots) {
       let cursor = slot.startMinutes + slot.usedMinutes;
@@ -479,10 +480,13 @@ export function computeSchedule(
         const unitStart = cursor;
         const unitEnd = cursor + habit.pomodoroUnitLength;
 
+        const dayLabel = (pomodoroPerDay.get(slot.dateStr) ?? 0) + 1;
+        pomodoroPerDay.set(slot.dateStr, dayLabel);
+
         results.push({
           kind: 'pomodoro',
           id: `${habit.id}-pom-${pomodoroCount}`,
-          title: `${habit.title} - pom ${pomodoroCount + 1}`,
+          title: `${habit.title} - pom ${dayLabel}`,
           priority: habit.priority,
           estimatedLength: habit.pomodoroUnitLength,
           activityTypeId: habit.activityTypeId,
