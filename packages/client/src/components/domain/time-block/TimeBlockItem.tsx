@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { hexToDesaturated } from '@/lib/utils';
+import { hexToDesaturated, useIsDark } from '@/lib/utils';
 import { Pencil } from 'lucide-react';
 
 type TimeBlock = TimeBlock_TimeBlockListFragment;
@@ -27,11 +27,12 @@ type TimeBlockItemProps = {
 };
 
 export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
+  const isDark = useIsDark();
   return (
     <Card
       style={{
         backgroundColor: timeBlock.activityType
-          ? hexToDesaturated(timeBlock.activityType.color)
+          ? hexToDesaturated(timeBlock.activityType.color, isDark)
           : undefined,
       }}
     >
