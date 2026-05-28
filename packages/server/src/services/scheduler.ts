@@ -456,6 +456,7 @@ export function computeSchedule(
       : null;
 
     const slotDayMidnightCache = new Map<string, number>();
+    let pomodoroCount = 0; // unique across all slots for this habit
 
     for (const slot of slots) {
       let cursor = slot.startMinutes + slot.usedMinutes;
@@ -473,7 +474,6 @@ export function computeSchedule(
       cursor = Math.max(cursor, Math.ceil(nowMins));
 
       let unitCountInCycle = 0;
-      let pomodoroIndex = 0;
 
       while (cursor + habit.pomodoroUnitLength <= slotEnd) {
         const unitStart = cursor;
@@ -481,8 +481,8 @@ export function computeSchedule(
 
         results.push({
           kind: 'pomodoro',
-          id: `${habit.id}-pom-${slot.dateStr}-${pomodoroIndex}`,
-          title: `${habit.title} - pom ${pomodoroIndex + 1}`,
+          id: `${habit.id}-pom-${pomodoroCount}`,
+          title: `${habit.title} - pom ${pomodoroCount + 1}`,
           priority: habit.priority,
           estimatedLength: habit.pomodoroUnitLength,
           activityTypeId: habit.activityTypeId,
@@ -493,7 +493,7 @@ export function computeSchedule(
           isOverdue: false,
         });
 
-        pomodoroIndex++;
+        pomodoroCount++;
         unitCountInCycle++;
 
         const isLongBreak =
