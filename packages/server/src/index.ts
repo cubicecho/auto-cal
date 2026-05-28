@@ -81,6 +81,14 @@ async function buildContext(
     authLog.warn('API key rejected (not found or expired)');
   }
 
+  // Env-var bypass: accept one specific UUID in any environment.
+  // Set BYPASS_AUTH_UUID to the demo user ID to allow passwordless access.
+  const bypassUuid = process.env.BYPASS_AUTH_UUID;
+  if (bypassUuid && rawToken === bypassUuid) {
+    authLog.debug('BYPASS_AUTH_UUID auth for', rawToken);
+    return { db, userId: rawToken, loaders, appBaseUrl: baseUrl };
+  }
+
   if (
     process.env.NODE_ENV !== 'production' &&
     /^[0-9a-f-]{36}$/i.test(rawToken)
@@ -91,6 +99,13 @@ async function buildContext(
 
   authLog.debug('Token did not match any auth method — unauthenticated');
   return { db, loaders, appBaseUrl: baseUrl };
+}
+
+if (process.env.BYPASS_AUTH_UUID) {
+  log.warn(
+    'BYPASS_AUTH_UUID is set — magic-link auth bypassed for user',
+    process.env.BYPASS_AUTH_UUID,
+  );
 }
 
 log.info('Building GraphQL schema...');

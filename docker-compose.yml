@@ -6,6 +6,9 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://autocal:autocal@postgres:5432/autocal
+      # Bypass magic-link auth for the seeded demo user.
+      # Remove or leave blank to require real email auth.
+      - BYPASS_AUTH_UUID=00000000-0000-0000-0000-000000000001
     depends_on:
       postgres:
         condition: service_healthy
