@@ -2,16 +2,11 @@ import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeList } from '@/components/domain/activity-type/ActivityTypeList';
 import { useQuery } from '@apollo/client/react';
 
-const GET_MY_ACTIVITY_TYPES = graphql(`
-  query GetMyActivityTypes {
+const GET_ACTIVITY_TYPES_PAGE = graphql(`
+  query GetActivityTypesPage {
     myActivityTypes {
       ...ActivityType_ActivityTypeList
     }
-  }
-`);
-
-const GET_ACTIVITY_TYPE_STATS = graphql(`
-  query GetActivityTypeStats {
     activityTypeStats {
       activityTypeId
       totalTodos
@@ -22,11 +17,10 @@ const GET_ACTIVITY_TYPE_STATS = graphql(`
 `);
 
 export default function ActivityTypesPage() {
-  const { data } = useQuery(GET_MY_ACTIVITY_TYPES, {
+  const { data } = useQuery(GET_ACTIVITY_TYPES_PAGE, {
     fetchPolicy: 'cache-and-network',
   });
-  const { data: statsData } = useQuery(GET_ACTIVITY_TYPE_STATS);
-  const rawStats = statsData?.activityTypeStats ?? [];
+  const rawStats = data?.activityTypeStats ?? [];
   const statsById = new Map(rawStats.map((s) => [s.activityTypeId, s]));
   return (
     <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6">

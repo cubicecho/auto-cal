@@ -5,7 +5,7 @@ import type {
 import { graphql } from '@/__generated__/index.js';
 import { TodoListList } from '@/components/domain/todo-list/TodoListList';
 import { useQuery } from '@apollo/client/react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 const GET_TODO_LISTS_PAGE = graphql(`
   query GetTodoListsPage {
@@ -48,8 +48,13 @@ export default function TodoListsPage() {
     { fetchPolicy: 'cache-and-network' },
   );
 
+  // Guard against React StrictMode double-invocation creating duplicate subs.
+  const subscribedRef = useRef(false);
+
   // Subscribe to todo events and merge into the cached query result.
   useEffect(() => {
+    if (subscribedRef.current) return;
+    subscribedRef.current = true;
     const unsubTodos = subscribeToMore({
       document: TODO_UPDATED_SUB,
       updateQuery(prev, { subscriptionData }) {
@@ -122,6 +127,7 @@ export default function TodoListsPage() {
     });
 
     return () => {
+      subscribedRef.current = false;
       unsubTodos();
       unsubLists();
     };
