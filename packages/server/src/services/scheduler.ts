@@ -234,7 +234,7 @@ export function computeSchedule(
     }));
 
   const habitTasks: Task[] = habits
-    .filter((h) => h.activityTypeId !== null)
+    .filter((h) => h.activityTypeId !== null && !h.pomodoroEnabled)
     .map((h) => ({
       kind: 'habit' as const,
       id: `${h.id}-${h.instanceIndex}`,

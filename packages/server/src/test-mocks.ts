@@ -102,6 +102,11 @@ export function makeHabit(overrides: Partial<Habit> = {}): Habit {
     frequencyUnit: 'week',
     estimatedLength: 30,
     priority: 1,
+    pomodoroEnabled: false,
+    pomodoroUnitLength: null,
+    pomodoroShortBreakLength: null,
+    pomodoroUnitsBeforeLongBreak: null,
+    pomodoroLongBreakLength: null,
     ...overrides,
   };
 }
