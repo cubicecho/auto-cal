@@ -1,0 +1,1 @@
+ALTER TABLE "habits" ADD COLUMN "pomodoro_max_per_day" integer;

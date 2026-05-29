@@ -46,6 +46,7 @@ const CREATE_HABIT = graphql(`
       pomodoroShortBreakLength
       pomodoroUnitsBeforeLongBreak
       pomodoroLongBreakLength
+      pomodoroMaxPerDay
     }
   }
 `);
@@ -70,6 +71,7 @@ const UPDATE_HABIT = graphql(`
       pomodoroShortBreakLength
       pomodoroUnitsBeforeLongBreak
       pomodoroLongBreakLength
+      pomodoroMaxPerDay
     }
   }
 `);
@@ -130,6 +132,7 @@ const habitSchema = z
     pomodoroShortBreakLength: z.number().int().min(1).max(60).nullable(),
     pomodoroUnitsBeforeLongBreak: z.number().int().min(1).max(20).nullable(),
     pomodoroLongBreakLength: z.number().int().min(1).max(120).nullable(),
+    pomodoroMaxPerDay: z.number().int().min(1).max(100).nullable(),
   })
   .superRefine((data, ctx) => {
     if (!data.pomodoroEnabled) return;
@@ -189,6 +192,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
     pomodoroShortBreakLength: habit?.pomodoroShortBreakLength ?? 5,
     pomodoroUnitsBeforeLongBreak: habit?.pomodoroUnitsBeforeLongBreak ?? 4,
     pomodoroLongBreakLength: habit?.pomodoroLongBreakLength ?? 15,
+    pomodoroMaxPerDay: habit?.pomodoroMaxPerDay ?? null,
   };
 
   const form = useAppForm({
@@ -205,6 +209,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
             pomodoroUnitsBeforeLongBreak:
               value.pomodoroUnitsBeforeLongBreak ?? 4,
             pomodoroLongBreakLength: value.pomodoroLongBreakLength ?? 15,
+            pomodoroMaxPerDay: value.pomodoroMaxPerDay,
           }
         : {
             pomodoroEnabled: false,
@@ -212,6 +217,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
             pomodoroShortBreakLength: null,
             pomodoroUnitsBeforeLongBreak: null,
             pomodoroLongBreakLength: null,
+            pomodoroMaxPerDay: null,
           };
 
       if (isEdit && habit) {
@@ -269,6 +275,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
         pomodoroShortBreakLength: habit?.pomodoroShortBreakLength ?? 5,
         pomodoroUnitsBeforeLongBreak: habit?.pomodoroUnitsBeforeLongBreak ?? 4,
         pomodoroLongBreakLength: habit?.pomodoroLongBreakLength ?? 15,
+        pomodoroMaxPerDay: habit?.pomodoroMaxPerDay ?? null,
       });
     }
   }, [open, habit?.id]);
@@ -408,6 +415,18 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
                             type="number"
                             min={1}
                             max={120}
+                          />
+                        )}
+                      </form.AppField>
+
+                      <form.AppField name="pomodoroMaxPerDay">
+                        {(field) => (
+                          <field.InputField
+                            label="Max per day (optional)"
+                            type="number"
+                            min={1}
+                            max={100}
+                            placeholder="No limit"
                           />
                         )}
                       </form.AppField>
