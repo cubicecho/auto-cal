@@ -56,6 +56,7 @@ export function CreateApiKeyDialog({
   const [scopes, setScopes] = useState<string[]>(['read']);
   const [expiry, setExpiry] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [nameError, setNameError] = useState('');
   const [scopeError, setScopeError] = useState('');
 
@@ -72,6 +73,7 @@ export function CreateApiKeyDialog({
       setScopes(['read']);
       setExpiry('');
       setCopied(false);
+      setCopiedUrl(null);
       setNameError('');
       setScopeError('');
     }
@@ -138,6 +140,25 @@ export function CreateApiKeyDialog({
         });
     } else {
       legacyCopy(token);
+      finish();
+    }
+  }
+
+  function handleCopyUrl(url: string) {
+    const finish = () => {
+      setCopiedUrl(url);
+      setTimeout(() => setCopiedUrl(null), 2000);
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard
+        .writeText(url)
+        .then(finish)
+        .catch(() => {
+          legacyCopy(url);
+          finish();
+        });
+    } else {
+      legacyCopy(url);
       finish();
     }
   }
@@ -265,6 +286,43 @@ export function CreateApiKeyDialog({
                   )}
                 </Button>
               </div>
+              {scopes.includes('read') && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    iCal feeds (copy now — token won't be shown again)
+                  </p>
+                  {[
+                    {
+                      label: 'Schedule',
+                      url: `${typeof window !== 'undefined' ? window.location.origin : ''}/ical?secret=${state.token}`,
+                    },
+                    {
+                      label: 'Time Blocks',
+                      url: `${typeof window !== 'undefined' ? window.location.origin : ''}/ical?secret=${state.token}&view=blocks`,
+                    },
+                  ].map(({ label, url }) => (
+                    <div key={label} className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground w-20 shrink-0">
+                        {label}
+                      </span>
+                      <code className="flex-1 truncate rounded-md bg-muted px-2 py-1.5 text-xs font-mono">
+                        {url}
+                      </code>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyUrl(url)}
+                      >
+                        {copiedUrl === url ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button onClick={() => handleClose(false)}>Done</Button>

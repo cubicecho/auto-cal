@@ -176,6 +176,12 @@ export function ApiKeyManager() {
                           </span>
                         </span>
                       </div>
+                      {scopes.includes('read') && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          iCal feeds available — use key token with{' '}
+                          <code className="font-mono">/ical?secret=…</code>
+                        </p>
+                      )}
                     </div>
                     <Button
                       size="sm"
