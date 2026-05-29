@@ -425,15 +425,15 @@ describe('time-block and activity-type resolvers', () => {
     });
   });
 
-  // ─── activityTypeStats ────────────────────────────────────────────────────────
+  // ─── myActivityTypeStats ────────────────────────────────────────────────────────
 
-  describe('activityTypeStats', () => {
+  describe('myActivityTypeStats', () => {
     it('throws when not authenticated', async () => {
       const result = await gql(
         testSchema,
         db,
         '',
-        'query { activityTypeStats { activityTypeId } }',
+        'query { myActivityTypeStats { activityTypeId } }',
       );
       expect(result.errors?.[0]?.message).toMatch(/not authenticated/i);
     });
@@ -446,10 +446,10 @@ describe('time-block and activity-type resolvers', () => {
         testSchema,
         db,
         userId,
-        'query { activityTypeStats { activityTypeId activityTypeName totalTodos completedTodos totalHabits } }',
+        'query { myActivityTypeStats { activityTypeId activityTypeName totalTodos completedTodos totalHabits } }',
       );
       expect(result.errors).toBeUndefined();
-      const stats = result.data?.activityTypeStats as Array<{
+      const stats = result.data?.myActivityTypeStats as Array<{
         totalTodos: number;
         totalHabits: number;
       }>;
@@ -482,10 +482,10 @@ describe('time-block and activity-type resolvers', () => {
         testSchema,
         db,
         userId,
-        'query { activityTypeStats { totalTodos completedTodos totalHabits } }',
+        'query { myActivityTypeStats { totalTodos completedTodos totalHabits } }',
       );
       expect(result.errors).toBeUndefined();
-      const stats = result.data?.activityTypeStats as Array<{
+      const stats = result.data?.myActivityTypeStats as Array<{
         totalTodos: number;
         completedTodos: number;
         totalHabits: number;
@@ -512,11 +512,11 @@ describe('time-block and activity-type resolvers', () => {
         testSchema,
         db,
         userId,
-        'query($s: String, $e: String) { activityTypeStats(startDate: $s, endDate: $e) { totalTodos } }',
+        'query($s: String, $e: String) { myActivityTypeStats(startDate: $s, endDate: $e) { totalTodos } }',
         { s: '2025-01-01', e: '2025-12-31' },
       );
       expect(result.errors).toBeUndefined();
-      const stats = result.data?.activityTypeStats as Array<{
+      const stats = result.data?.myActivityTypeStats as Array<{
         totalTodos: number;
       }>;
       expect(stats[0]?.totalTodos).toBe(0);
@@ -540,10 +540,10 @@ describe('time-block and activity-type resolvers', () => {
         testSchema,
         db,
         userId,
-        'query { activityTypeStats { totalTodos } }',
+        'query { myActivityTypeStats { totalTodos } }',
       );
       expect(result.errors).toBeUndefined();
-      const stats = result.data?.activityTypeStats as Array<{
+      const stats = result.data?.myActivityTypeStats as Array<{
         totalTodos: number;
       }>;
       expect(stats[0]?.totalTodos).toBe(1);

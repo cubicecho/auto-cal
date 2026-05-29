@@ -1070,18 +1070,18 @@ export enum OrderDirection {
 export type Query = {
   __typename?: 'Query';
   activityType: Maybe<ActivityType>;
-  activityTypeStats: Array<ActivityTypeStats>;
   activityTypes: Array<ActivityType>;
   apiKey: Maybe<ApiKey>;
   apiKeys: Array<ApiKey>;
   habit: Maybe<Habit>;
   habitCompletion: Maybe<HabitCompletion>;
   habitCompletions: Array<HabitCompletion>;
-  habitStats: Array<HabitStats>;
   habits: Array<Habit>;
+  myActivityTypeStats: Array<ActivityTypeStats>;
   myActivityTypes: Array<ActivityType>;
   myApiKeys: Array<ApiKey>;
   myHabitDetail: HabitDetail;
+  myHabitStats: Array<HabitStats>;
   myHabits: Array<Habit>;
   myProfile: Maybe<UserProfile>;
   mySchedule: Array<ScheduledItem>;
@@ -1104,12 +1104,6 @@ export type QueryActivityTypeArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<ActivityTypeOrderBy>;
   where?: InputMaybe<ActivityTypeFilters>;
-};
-
-
-export type QueryActivityTypeStatsArgs = {
-  endDate?: InputMaybe<Scalars['String']['input']>;
-  startDate?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1158,13 +1152,6 @@ export type QueryHabitCompletionsArgs = {
 };
 
 
-export type QueryHabitStatsArgs = {
-  endDate?: InputMaybe<Scalars['String']['input']>;
-  habitId?: InputMaybe<Scalars['ID']['input']>;
-  startDate?: InputMaybe<Scalars['String']['input']>;
-};
-
-
 export type QueryHabitsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
@@ -1173,9 +1160,22 @@ export type QueryHabitsArgs = {
 };
 
 
+export type QueryMyActivityTypeStatsArgs = {
+  endDate?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type QueryMyHabitDetailArgs = {
   habitId: Scalars['ID']['input'];
   periods?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryMyHabitStatsArgs = {
+  endDate?: InputMaybe<Scalars['String']['input']>;
+  habitId?: InputMaybe<Scalars['ID']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -2326,18 +2326,18 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
 
 export type QueryResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
   activityType?: Resolver<Maybe<ResolversTypes['ActivityType']>, ParentType, ContextType, Partial<QueryActivityTypeArgs>>;
-  activityTypeStats?: Resolver<Array<ResolversTypes['ActivityTypeStats']>, ParentType, ContextType, Partial<QueryActivityTypeStatsArgs>>;
   activityTypes?: Resolver<Array<ResolversTypes['ActivityType']>, ParentType, ContextType, Partial<QueryActivityTypesArgs>>;
   apiKey?: Resolver<Maybe<ResolversTypes['ApiKey']>, ParentType, ContextType, Partial<QueryApiKeyArgs>>;
   apiKeys?: Resolver<Array<ResolversTypes['ApiKey']>, ParentType, ContextType, Partial<QueryApiKeysArgs>>;
   habit?: Resolver<Maybe<ResolversTypes['Habit']>, ParentType, ContextType, Partial<QueryHabitArgs>>;
   habitCompletion?: Resolver<Maybe<ResolversTypes['HabitCompletion']>, ParentType, ContextType, Partial<QueryHabitCompletionArgs>>;
   habitCompletions?: Resolver<Array<ResolversTypes['HabitCompletion']>, ParentType, ContextType, Partial<QueryHabitCompletionsArgs>>;
-  habitStats?: Resolver<Array<ResolversTypes['HabitStats']>, ParentType, ContextType, Partial<QueryHabitStatsArgs>>;
   habits?: Resolver<Array<ResolversTypes['Habit']>, ParentType, ContextType, Partial<QueryHabitsArgs>>;
+  myActivityTypeStats?: Resolver<Array<ResolversTypes['ActivityTypeStats']>, ParentType, ContextType, Partial<QueryMyActivityTypeStatsArgs>>;
   myActivityTypes?: Resolver<Array<ResolversTypes['ActivityType']>, ParentType, ContextType>;
   myApiKeys?: Resolver<Array<ResolversTypes['ApiKey']>, ParentType, ContextType>;
   myHabitDetail?: Resolver<ResolversTypes['HabitDetail'], ParentType, ContextType, RequireFields<QueryMyHabitDetailArgs, 'habitId'>>;
+  myHabitStats?: Resolver<Array<ResolversTypes['HabitStats']>, ParentType, ContextType, Partial<QueryMyHabitStatsArgs>>;
   myHabits?: Resolver<Array<ResolversTypes['Habit']>, ParentType, ContextType, Partial<QueryMyHabitsArgs>>;
   myProfile?: Resolver<Maybe<ResolversTypes['UserProfile']>, ParentType, ContextType>;
   mySchedule?: Resolver<Array<ResolversTypes['ScheduledItem']>, ParentType, ContextType, Partial<QueryMyScheduleArgs>>;

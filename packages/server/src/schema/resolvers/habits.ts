@@ -71,7 +71,7 @@ export function applyHabitResolvers(
   };
 
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.habitStats!.resolve = async (
+  queryFields.myHabitStats!.resolve = async (
     _parent,
     args: { habitId?: string; startDate?: string; endDate?: string },
     context: Context,

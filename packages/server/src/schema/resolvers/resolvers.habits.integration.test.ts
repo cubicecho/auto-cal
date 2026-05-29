@@ -68,19 +68,19 @@ describe('habit resolvers', () => {
     });
   });
 
-  // ─── habitStats ───────────────────────────────────────────────────────────────
+  // ─── myHabitStats ───────────────────────────────────────────────────────────────
 
-  describe('habitStats', () => {
+  describe('myHabitStats', () => {
     it('returns empty array when user has no habits', async () => {
       const { id: userId } = await seedUser(db, 'habitstats-empty@example.com');
       const result = await gql(
         testSchema,
         db,
         userId,
-        'query { habitStats { habitId } }',
+        'query { myHabitStats { habitId } }',
       );
       expect(result.errors).toBeUndefined();
-      expect(result.data?.habitStats).toEqual([]);
+      expect(result.data?.myHabitStats).toEqual([]);
     });
 
     it('returns completion rate per habit', async () => {
@@ -95,10 +95,10 @@ describe('habit resolvers', () => {
         testSchema,
         db,
         userId,
-        'query { habitStats { habitId title completionRate totalCompletions } }',
+        'query { myHabitStats { habitId title completionRate totalCompletions } }',
       );
       expect(result.errors).toBeUndefined();
-      const stats = result.data?.habitStats as Array<{
+      const stats = result.data?.myHabitStats as Array<{
         totalCompletions: number;
         completionRate: number;
       }>;
@@ -119,11 +119,11 @@ describe('habit resolvers', () => {
         testSchema,
         db,
         userId,
-        'query($id: ID) { habitStats(habitId: $id) { habitId } }',
+        'query($id: ID) { myHabitStats(habitId: $id) { habitId } }',
         { id: h1.id },
       );
       expect(result.errors).toBeUndefined();
-      const stats = result.data?.habitStats as Array<{ habitId: string }>;
+      const stats = result.data?.myHabitStats as Array<{ habitId: string }>;
       expect(stats).toHaveLength(1);
       expect(stats[0]?.habitId).toBe(h1.id);
     });
@@ -143,11 +143,11 @@ describe('habit resolvers', () => {
         testSchema,
         db,
         userId,
-        'query($s: String, $e: String) { habitStats(startDate: $s, endDate: $e) { totalCompletions } }',
+        'query($s: String, $e: String) { myHabitStats(startDate: $s, endDate: $e) { totalCompletions } }',
         { s: '2025-01-01', e: '2025-12-31' },
       );
       expect(result.errors).toBeUndefined();
-      const stats = result.data?.habitStats as Array<{
+      const stats = result.data?.myHabitStats as Array<{
         totalCompletions: number;
       }>;
       expect(stats[0]?.totalCompletions).toBe(0);

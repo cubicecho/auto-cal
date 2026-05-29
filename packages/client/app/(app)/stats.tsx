@@ -40,7 +40,7 @@ const GET_MY_STATS = graphql(`
 
 const GET_ACTIVITY_TYPE_STATS_WITH_RANGE = graphql(`
   query GetActivityTypeStatsWithRange($startDate: String, $endDate: String) {
-    activityTypeStats(startDate: $startDate, endDate: $endDate) {
+    myActivityTypeStats(startDate: $startDate, endDate: $endDate) {
       activityTypeId
       activityTypeName
       totalTodos
@@ -97,7 +97,7 @@ type StatsData = NonNullable<GetMyStatsQuery['myStats']>;
 type HabitRow = StatsData['habits'][number];
 type TodoRow = StatsData['todos'];
 type ActivityTypeStatRow =
-  GetActivityTypeStatsWithRangeQuery['activityTypeStats'][number];
+  GetActivityTypeStatsWithRangeQuery['myActivityTypeStats'][number];
 type ActivityTypeRow =
   GetActivityTypeStatsWithRangeQuery['myActivityTypes'][number];
 
@@ -399,7 +399,7 @@ export default function StatsPage() {
 
       {activityData && (
         <ActivityTypeBreakdownSection
-          stats={activityData.activityTypeStats}
+          stats={activityData.myActivityTypeStats}
           activityTypes={activityData.myActivityTypes}
         />
       )}
