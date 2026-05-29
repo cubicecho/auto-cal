@@ -253,6 +253,7 @@ export type CreateHabitArgs = {
   minTimeBetweenInstances?: InputMaybe<Scalars['Int']['input']>;
   pomodoroEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   pomodoroLongBreakLength?: InputMaybe<Scalars['Int']['input']>;
+  pomodoroMaxPerDay?: InputMaybe<Scalars['Int']['input']>;
   pomodoroShortBreakLength?: InputMaybe<Scalars['Int']['input']>;
   pomodoroUnitLength?: InputMaybe<Scalars['Int']['input']>;
   pomodoroUnitsBeforeLongBreak?: InputMaybe<Scalars['Int']['input']>;
@@ -283,6 +284,7 @@ export type CreateHabitInput = {
   minTimeBetweenInstances?: InputMaybe<Scalars['Int']['input']>;
   pomodoroEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   pomodoroLongBreakLength?: InputMaybe<Scalars['Int']['input']>;
+  pomodoroMaxPerDay?: InputMaybe<Scalars['Int']['input']>;
   pomodoroShortBreakLength?: InputMaybe<Scalars['Int']['input']>;
   pomodoroUnitLength?: InputMaybe<Scalars['Int']['input']>;
   pomodoroUnitsBeforeLongBreak?: InputMaybe<Scalars['Int']['input']>;
@@ -483,6 +485,7 @@ export type Habit = {
   minTimeBetweenInstances: Maybe<Scalars['Int']['output']>;
   pomodoroEnabled: Scalars['Boolean']['output'];
   pomodoroLongBreakLength: Maybe<Scalars['Int']['output']>;
+  pomodoroMaxPerDay: Maybe<Scalars['Int']['output']>;
   pomodoroShortBreakLength: Maybe<Scalars['Int']['output']>;
   pomodoroUnitLength: Maybe<Scalars['Int']['output']>;
   pomodoroUnitsBeforeLongBreak: Maybe<Scalars['Int']['output']>;
@@ -582,6 +585,7 @@ export type HabitFilters = {
   minTimeBetweenInstances?: InputMaybe<StringFilter>;
   pomodoroEnabled?: InputMaybe<BooleanFilter>;
   pomodoroLongBreakLength?: InputMaybe<StringFilter>;
+  pomodoroMaxPerDay?: InputMaybe<StringFilter>;
   pomodoroShortBreakLength?: InputMaybe<StringFilter>;
   pomodoroUnitLength?: InputMaybe<StringFilter>;
   pomodoroUnitsBeforeLongBreak?: InputMaybe<StringFilter>;
@@ -602,6 +606,7 @@ export type HabitFiltersOr = {
   minTimeBetweenInstances?: InputMaybe<StringFilter>;
   pomodoroEnabled?: InputMaybe<BooleanFilter>;
   pomodoroLongBreakLength?: InputMaybe<StringFilter>;
+  pomodoroMaxPerDay?: InputMaybe<StringFilter>;
   pomodoroShortBreakLength?: InputMaybe<StringFilter>;
   pomodoroUnitLength?: InputMaybe<StringFilter>;
   pomodoroUnitsBeforeLongBreak?: InputMaybe<StringFilter>;
@@ -622,6 +627,7 @@ export type HabitOrderBy = {
   minTimeBetweenInstances?: InputMaybe<InnerOrder>;
   pomodoroEnabled?: InputMaybe<InnerOrder>;
   pomodoroLongBreakLength?: InputMaybe<InnerOrder>;
+  pomodoroMaxPerDay?: InputMaybe<InnerOrder>;
   pomodoroShortBreakLength?: InputMaybe<InnerOrder>;
   pomodoroUnitLength?: InputMaybe<InnerOrder>;
   pomodoroUnitsBeforeLongBreak?: InputMaybe<InnerOrder>;
@@ -1636,6 +1642,7 @@ export type UpdateHabitArgs = {
   minTimeBetweenInstances?: InputMaybe<Scalars['Int']['input']>;
   pomodoroEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   pomodoroLongBreakLength?: InputMaybe<Scalars['Int']['input']>;
+  pomodoroMaxPerDay?: InputMaybe<Scalars['Int']['input']>;
   pomodoroShortBreakLength?: InputMaybe<Scalars['Int']['input']>;
   pomodoroUnitLength?: InputMaybe<Scalars['Int']['input']>;
   pomodoroUnitsBeforeLongBreak?: InputMaybe<Scalars['Int']['input']>;
@@ -1666,6 +1673,7 @@ export type UpdateHabitInput = {
   minTimeBetweenInstances?: InputMaybe<Scalars['Int']['input']>;
   pomodoroEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   pomodoroLongBreakLength?: InputMaybe<Scalars['Int']['input']>;
+  pomodoroMaxPerDay?: InputMaybe<Scalars['Int']['input']>;
   pomodoroShortBreakLength?: InputMaybe<Scalars['Int']['input']>;
   pomodoroUnitLength?: InputMaybe<Scalars['Int']['input']>;
   pomodoroUnitsBeforeLongBreak?: InputMaybe<Scalars['Int']['input']>;
@@ -2196,6 +2204,7 @@ export type HabitResolvers<ContextType = Context, ParentType extends ResolversPa
   minTimeBetweenInstances?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   pomodoroEnabled?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   pomodoroLongBreakLength?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  pomodoroMaxPerDay?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   pomodoroShortBreakLength?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   pomodoroUnitLength?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
   pomodoroUnitsBeforeLongBreak?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;

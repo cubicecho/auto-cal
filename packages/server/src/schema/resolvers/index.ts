@@ -176,6 +176,7 @@ const extensionSDL = `
     pomodoroShortBreakLength: Int
     pomodoroUnitsBeforeLongBreak: Int
     pomodoroLongBreakLength: Int
+    pomodoroMaxPerDay: Int
   }
 
   input CreateTimeBlockArgs {
@@ -201,6 +202,7 @@ const extensionSDL = `
     pomodoroShortBreakLength: Int
     pomodoroUnitsBeforeLongBreak: Int
     pomodoroLongBreakLength: Int
+    pomodoroMaxPerDay: Int
   }
 
   input UpdateTimeBlockArgs {

@@ -30,6 +30,7 @@ export const habits = pgTable('habits', {
   pomodoroShortBreakLength: integer('pomodoro_short_break_length'),
   pomodoroUnitsBeforeLongBreak: integer('pomodoro_units_before_long_break'),
   pomodoroLongBreakLength: integer('pomodoro_long_break_length'),
+  pomodoroMaxPerDay: integer('pomodoro_max_per_day'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

@@ -48,6 +48,7 @@ const UpdateHabitInput = z.object({
     .max(120)
     .nullable()
     .optional(),
+  pomodoroMaxPerDay: z.number().int().min(1).max(100).nullable().optional(),
 });
 
 export function applyHabitResolvers(
@@ -238,6 +239,7 @@ export function applyHabitResolvers(
         pomodoroUnitsBeforeLongBreak:
           input.pomodoroUnitsBeforeLongBreak ?? null,
         pomodoroLongBreakLength: input.pomodoroLongBreakLength ?? null,
+        pomodoroMaxPerDay: input.pomodoroMaxPerDay ?? null,
       })
       .returning();
     if (!habit) throw new Error('Failed to create habit');
@@ -312,6 +314,9 @@ export function applyHabitResolvers(
         }),
         ...(input.pomodoroLongBreakLength !== undefined && {
           pomodoroLongBreakLength: input.pomodoroLongBreakLength,
+        }),
+        ...(input.pomodoroMaxPerDay !== undefined && {
+          pomodoroMaxPerDay: input.pomodoroMaxPerDay,
         }),
         updatedAt: new Date(),
       })

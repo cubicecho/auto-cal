@@ -367,6 +367,7 @@ input CreateHabitInput {
   pomodoroShortBreakLength: Int
   pomodoroUnitsBeforeLongBreak: Int
   pomodoroLongBreakLength: Int
+  pomodoroMaxPerDay: Int
 
   """DateTime"""
   createdAt: DateTime
@@ -391,6 +392,7 @@ input UpdateHabitInput {
   pomodoroShortBreakLength: Int
   pomodoroUnitsBeforeLongBreak: Int
   pomodoroLongBreakLength: Int
+  pomodoroMaxPerDay: Int
 
   """DateTime"""
   createdAt: DateTime
@@ -415,6 +417,7 @@ input HabitFilters {
   pomodoroShortBreakLength: StringFilter
   pomodoroUnitsBeforeLongBreak: StringFilter
   pomodoroLongBreakLength: StringFilter
+  pomodoroMaxPerDay: StringFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
   OR: [HabitFiltersOr!]
@@ -479,6 +482,7 @@ input HabitFiltersOr {
   pomodoroShortBreakLength: StringFilter
   pomodoroUnitsBeforeLongBreak: StringFilter
   pomodoroLongBreakLength: StringFilter
+  pomodoroMaxPerDay: StringFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -499,6 +503,7 @@ input HabitOrderBy {
   pomodoroShortBreakLength: InnerOrder
   pomodoroUnitsBeforeLongBreak: InnerOrder
   pomodoroLongBreakLength: InnerOrder
+  pomodoroMaxPerDay: InnerOrder
   createdAt: InnerOrder
   updatedAt: InnerOrder
 }
@@ -904,6 +909,7 @@ type Habit {
   pomodoroShortBreakLength: Int
   pomodoroUnitsBeforeLongBreak: Int
   pomodoroLongBreakLength: Int
+  pomodoroMaxPerDay: Int
 
   """DateTime"""
   createdAt: DateTime!
@@ -1244,6 +1250,7 @@ input CreateHabitArgs {
   pomodoroShortBreakLength: Int
   pomodoroUnitsBeforeLongBreak: Int
   pomodoroLongBreakLength: Int
+  pomodoroMaxPerDay: Int
 }
 
 input CreateTimeBlockArgs {
@@ -1269,6 +1276,7 @@ input UpdateHabitArgs {
   pomodoroShortBreakLength: Int
   pomodoroUnitsBeforeLongBreak: Int
   pomodoroLongBreakLength: Int
+  pomodoroMaxPerDay: Int
 }
 
 input UpdateTimeBlockArgs {
