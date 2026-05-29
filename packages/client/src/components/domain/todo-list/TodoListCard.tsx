@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { hexToDesaturated } from '@/lib/utils';
+import { hexToDesaturated, useIsDark } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Pencil, Plus } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
@@ -75,13 +75,15 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
     }
   }
 
+  const isDark = useIsDark();
+
   return (
     <>
       <Card
         className="flex flex-col"
         style={{
           backgroundColor: list.activityType
-            ? hexToDesaturated(list.activityType.color)
+            ? hexToDesaturated(list.activityType.color, isDark)
             : undefined,
         }}
       >

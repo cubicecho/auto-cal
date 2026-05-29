@@ -6,7 +6,7 @@ import type {
 type ActivityTypeStats = GetActivityTypeStatsQuery['activityTypeStats'][number];
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
-import { hexToDesaturated } from '@/lib/utils';
+import { hexToDesaturated, useIsDark } from '@/lib/utils';
 import { Pencil, Plus, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { ActivityTypeForm } from './ActivityTypeForm';
@@ -51,6 +51,8 @@ export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
     if (!open) setEditingItem(null);
   }
 
+  const isDark = useIsDark();
+
   return (
     <>
       <div className="mb-4 flex items-center justify-between">
@@ -90,7 +92,9 @@ export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
               <div
                 key={item.id}
                 className="flex items-center justify-between rounded-md border px-3 py-2"
-                style={{ backgroundColor: hexToDesaturated(item.color) }}
+                style={{
+                  backgroundColor: hexToDesaturated(item.color, isDark),
+                }}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium">{item.name}</span>
