@@ -483,6 +483,14 @@ export function computeSchedule(
         const dayLabel = (pomodoroPerDay.get(slot.dateStr) ?? 0) + 1;
         pomodoroPerDay.set(slot.dateStr, dayLabel);
 
+        if (
+          habit.pomodoroMaxPerDay != null &&
+          dayLabel > habit.pomodoroMaxPerDay
+        ) {
+          slot.usedMinutes = slotEnd - slot.startMinutes; // consume slot
+          break;
+        }
+
         results.push({
           kind: 'pomodoro',
           id: `${habit.id}-pom-${pomodoroCount}`,

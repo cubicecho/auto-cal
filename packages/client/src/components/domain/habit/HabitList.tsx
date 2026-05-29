@@ -26,6 +26,7 @@ export const HABIT_LIST_FRAGMENT = graphql(`
     pomodoroShortBreakLength
     pomodoroUnitsBeforeLongBreak
     pomodoroLongBreakLength
+    pomodoroMaxPerDay
     createdAt
   }
 `);
