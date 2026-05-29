@@ -3,7 +3,8 @@ import type {
   GetActivityTypeStatsQuery,
 } from '@/__generated__/graphql.js';
 
-type ActivityTypeStats = GetActivityTypeStatsQuery['activityTypeStats'][number];
+type ActivityTypeStats =
+  GetActivityTypeStatsQuery['myActivityTypeStats'][number];
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { hexToDesaturated, useIsDark } from '@/lib/utils';
