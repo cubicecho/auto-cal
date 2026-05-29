@@ -176,6 +176,7 @@ const extensionSDL = `
     pomodoroShortBreakLength: Int
     pomodoroUnitsBeforeLongBreak: Int
     pomodoroLongBreakLength: Int
+    pomodoroMaxPerDay: Int
   }
 
   input CreateTimeBlockArgs {
@@ -201,6 +202,7 @@ const extensionSDL = `
     pomodoroShortBreakLength: Int
     pomodoroUnitsBeforeLongBreak: Int
     pomodoroLongBreakLength: Int
+    pomodoroMaxPerDay: Int
   }
 
   input UpdateTimeBlockArgs {
@@ -263,8 +265,8 @@ const extensionSDL = `
     myTodos(listId: ID, completed: Boolean, orderBy: TodoOrderBy): [Todo!]!
     myHabits(activityTypeId: ID): [Habit!]!
     myTimeBlocks(activityTypeId: ID, containsDay: Int): [TimeBlock!]!
-    activityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
-    habitStats(habitId: ID, startDate: String, endDate: String): [HabitStats!]!
+    myActivityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
+    myHabitStats(habitId: ID, startDate: String, endDate: String): [HabitStats!]!
     myHabitDetail(habitId: ID!, periods: Int): HabitDetail!
     myStats(startDate: String, endDate: String): StatsOverview!
     mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!

@@ -72,6 +72,7 @@ export const CreateHabitInput = z.object({
   pomodoroShortBreakLength: z.number().int().min(1).max(60).optional(),
   pomodoroUnitsBeforeLongBreak: z.number().int().min(1).max(20).optional(),
   pomodoroLongBreakLength: z.number().int().min(1).max(120).optional(),
+  pomodoroMaxPerDay: z.number().int().min(1).max(100).nullable().optional(),
 });
 
 export const UpdateHabitInput = z.object({

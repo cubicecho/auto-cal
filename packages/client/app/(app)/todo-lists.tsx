@@ -1,11 +1,12 @@
-import type {
-  GetTodoListsPageQuery,
-  Todo_TodoListFragment,
-} from '@/__generated__/graphql.js';
+import type { Todo_TodoListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { TodoListList } from '@/components/domain/todo-list/TodoListList';
-import { useQuery } from '@apollo/client/react';
-import { useEffect, useMemo } from 'react';
+import type { TodoListEvent } from '@/hooks/useTodoListsUpdated';
+import { useTodoListsUpdated } from '@/hooks/useTodoListsUpdated';
+import type { TodoEvent } from '@/hooks/useTodosUpdated';
+import { useTodosUpdated } from '@/hooks/useTodosUpdated';
+import { useApolloClient, useQuery } from '@apollo/client/react';
+import { useMemo } from 'react';
 
 const GET_TODO_LISTS_PAGE = graphql(`
   query GetTodoListsPage {
@@ -18,114 +19,76 @@ const GET_TODO_LISTS_PAGE = graphql(`
   }
 `);
 
-const TODO_UPDATED_SUB = graphql(`
-  subscription TodoUpdated {
-    myTodosUpdated {
-      type
-      deletedId
-      todo {
-        ...Todo_TodoList
-      }
-    }
-  }
-`);
+type Client = ReturnType<typeof useApolloClient>;
 
-const TODO_LIST_UPDATED_SUB = graphql(`
-  subscription TodoListUpdated {
-    myTodoListsUpdated {
-      type
-      deletedId
-      todoList {
-        ...TodoList_TodoListList
-      }
-    }
+function applyTodoEvent(client: Client, event: TodoEvent): void {
+  const cached = client.cache.readQuery({ query: GET_TODO_LISTS_PAGE });
+  if (!cached) return;
+
+  const todos = cached.myTodos;
+  if (event.type === 'deleted') {
+    client.cache.writeQuery({
+      query: GET_TODO_LISTS_PAGE,
+      data: {
+        ...cached,
+        myTodos: todos.filter((t) => t.id !== event.deletedId),
+      },
+    });
+  } else if (event.todo) {
+    const incoming = event.todo;
+    client.cache.writeQuery({
+      query: GET_TODO_LISTS_PAGE,
+      data: {
+        ...cached,
+        myTodos:
+          event.type === 'created'
+            ? todos.some((t) => t.id === incoming.id)
+              ? todos
+              : [...todos, incoming]
+            : todos.map((t) => (t.id === incoming.id ? incoming : t)),
+      },
+    });
   }
-`);
+}
+
+function applyTodoListEvent(client: Client, event: TodoListEvent): void {
+  const cached = client.cache.readQuery({ query: GET_TODO_LISTS_PAGE });
+  if (!cached) return;
+
+  const lists = cached.myTodoLists;
+  if (event.type === 'deleted') {
+    client.cache.writeQuery({
+      query: GET_TODO_LISTS_PAGE,
+      data: {
+        ...cached,
+        myTodoLists: lists.filter((l) => l.id !== event.deletedId),
+      },
+    });
+  } else if (event.todoList) {
+    const incoming = event.todoList;
+    client.cache.writeQuery({
+      query: GET_TODO_LISTS_PAGE,
+      data: {
+        ...cached,
+        myTodoLists:
+          event.type === 'created'
+            ? lists.some((l) => l.id === incoming.id)
+              ? lists
+              : [...lists, incoming]
+            : lists.map((l) => (l.id === incoming.id ? incoming : l)),
+      },
+    });
+  }
+}
 
 export default function TodoListsPage() {
-  const { data, loading, error, subscribeToMore } = useQuery(
-    GET_TODO_LISTS_PAGE,
-    { fetchPolicy: 'cache-and-network' },
-  );
+  const client = useApolloClient();
+  const { data, loading, error } = useQuery(GET_TODO_LISTS_PAGE, {
+    fetchPolicy: 'cache-and-network',
+  });
 
-  // Subscribe to todo events and merge into the cached query result.
-  useEffect(() => {
-    const unsubTodos = subscribeToMore({
-      document: TODO_UPDATED_SUB,
-      updateQuery(prev, { subscriptionData }) {
-        const event = subscriptionData.data?.myTodosUpdated;
-        if (!event) return prev as GetTodoListsPageQuery;
-
-        const todos = (prev.myTodos ?? []) as GetTodoListsPageQuery['myTodos'];
-
-        if (event.type === 'deleted') {
-          return {
-            ...prev,
-            myTodos: todos.filter((t) => t.id !== event.deletedId),
-          } as GetTodoListsPageQuery;
-        }
-
-        if (!event.todo) return prev as GetTodoListsPageQuery;
-        const incoming = event.todo as GetTodoListsPageQuery['myTodos'][number];
-
-        if (event.type === 'created') {
-          // Avoid duplicates (optimistic update may have already added it)
-          const exists = todos.some((t) => t.id === incoming.id);
-          return {
-            ...prev,
-            myTodos: exists ? todos : [...todos, incoming],
-          } as GetTodoListsPageQuery;
-        }
-
-        // updated
-        return {
-          ...prev,
-          myTodos: todos.map((t) => (t.id === incoming.id ? incoming : t)),
-        } as GetTodoListsPageQuery;
-      },
-    });
-
-    const unsubLists = subscribeToMore({
-      document: TODO_LIST_UPDATED_SUB,
-      updateQuery(prev, { subscriptionData }) {
-        const event = subscriptionData.data?.myTodoListsUpdated;
-        if (!event) return prev as GetTodoListsPageQuery;
-
-        const lists = (prev.myTodoLists ??
-          []) as GetTodoListsPageQuery['myTodoLists'];
-
-        if (event.type === 'deleted') {
-          return {
-            ...prev,
-            myTodoLists: lists.filter((l) => l.id !== event.deletedId),
-          } as GetTodoListsPageQuery;
-        }
-
-        if (!event.todoList) return prev as GetTodoListsPageQuery;
-        const incoming =
-          event.todoList as GetTodoListsPageQuery['myTodoLists'][number];
-
-        if (event.type === 'created') {
-          const exists = lists.some((l) => l.id === incoming.id);
-          return {
-            ...prev,
-            myTodoLists: exists ? lists : [...lists, incoming],
-          } as GetTodoListsPageQuery;
-        }
-
-        // updated
-        return {
-          ...prev,
-          myTodoLists: lists.map((l) => (l.id === incoming.id ? incoming : l)),
-        } as GetTodoListsPageQuery;
-      },
-    });
-
-    return () => {
-      unsubTodos();
-      unsubLists();
-    };
-  }, [subscribeToMore]);
+  useTodosUpdated((event) => applyTodoEvent(client, event));
+  useTodoListsUpdated((event) => applyTodoListEvent(client, event));
 
   const todosByListId = useMemo(() => {
     const map = new Map<string, Todo_TodoListFragment[]>();

@@ -12,7 +12,7 @@ const GET_MY_ACTIVITY_TYPES = graphql(`
 
 const GET_ACTIVITY_TYPE_STATS = graphql(`
   query GetActivityTypeStats {
-    activityTypeStats {
+    myActivityTypeStats {
       activityTypeId
       totalTodos
       completedTodos
@@ -26,7 +26,7 @@ export default function ActivityTypesPage() {
     fetchPolicy: 'cache-and-network',
   });
   const { data: statsData } = useQuery(GET_ACTIVITY_TYPE_STATS);
-  const rawStats = statsData?.activityTypeStats ?? [];
+  const rawStats = statsData?.myActivityTypeStats ?? [];
   const statsById = new Map(rawStats.map((s) => [s.activityTypeId, s]));
   return (
     <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6">

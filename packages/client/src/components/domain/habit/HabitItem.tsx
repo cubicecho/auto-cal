@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
-import { hexToDesaturated } from '@/lib/utils';
+import { hexToDesaturated, useIsDark } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Pencil } from 'lucide-react';
 
@@ -38,6 +38,8 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
     },
   );
 
+  const isDark = useIsDark();
+
   function handleSaveLength(estimatedLength: number) {
     updateHabit({ variables: { input: { id: habit.id, estimatedLength } } });
   }
@@ -48,7 +50,7 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
       onClick={() => onSelect(habit)}
       style={{
         backgroundColor: habit.activityType
-          ? hexToDesaturated(habit.activityType.color)
+          ? hexToDesaturated(habit.activityType.color, isDark)
           : undefined,
       }}
     >

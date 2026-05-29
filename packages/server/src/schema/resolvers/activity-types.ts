@@ -34,7 +34,7 @@ export function applyActivityTypeResolvers(
   };
 
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.activityTypeStats!.resolve = async (
+  queryFields.myActivityTypeStats!.resolve = async (
     _parent,
     args: { startDate?: string; endDate?: string },
     context: Context,

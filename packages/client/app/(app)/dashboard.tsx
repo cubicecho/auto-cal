@@ -2,7 +2,8 @@ import { graphql } from '@/__generated__/index.js';
 import { CalendarView } from '@/components/domain/dashboard/CalendarView';
 import { ScheduleView } from '@/components/domain/dashboard/ScheduleView';
 import { WeekNavigator } from '@/components/domain/dashboard/WeekNavigator';
-import { useMutation, useQuery, useSubscription } from '@apollo/client/react';
+import { useTodosUpdated } from '@/hooks/useTodosUpdated';
+import { useMutation, useQuery } from '@apollo/client/react';
 import { addDays, addMonths, addWeeks, format, startOfMonth } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
@@ -29,16 +30,6 @@ const MY_SCHEDULE = graphql(`
 const UPDATE_PROFILE = graphql(`
   mutation UpdateProfile($timezone: String!) {
     myUpdateProfile(timezone: $timezone)
-  }
-`);
-
-// Reuse the same subscription from the todo-lists page
-const TODO_UPDATED_SUB = graphql(`
-  subscription DashboardTodoUpdated {
-    myTodosUpdated {
-      type
-      deletedId
-    }
   }
 `);
 
@@ -183,12 +174,9 @@ export default function DashboardPage() {
     },
   );
 
-  // Refetch the schedule whenever any todo changes — the schedule is a
-  // server-computed view derived from todos, so we can't update it locally.
-  useSubscription(TODO_UPDATED_SUB, {
-    onData: () => {
-      refetchSchedule().catch(console.error);
-    },
+  // Refetch the schedule whenever any todo changes.
+  useTodosUpdated(() => {
+    refetchSchedule().catch(console.error);
   });
 
   return (
