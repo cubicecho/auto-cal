@@ -1,18 +1,18 @@
 import type { ActivityType, Habit, TimeBlock } from '@auto-cal/db';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  makeHabit as baseMakeHabit,
-  makeTodo as baseMakeTodo,
-  makeActivityType,
-  makeTimeBlock,
-} from '../test-mocks.ts';
-import {
   type TodoWithActivityType,
   computeSchedule,
   startOfISOWeek,
   startOfISOWeekStr,
   startOfLocalMonth,
-} from './scheduler.ts';
+} from '../../src/services/scheduler.ts';
+import {
+  makeHabit as baseMakeHabit,
+  makeTodo as baseMakeTodo,
+  makeActivityType,
+  makeTimeBlock,
+} from '../test-mocks.ts';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

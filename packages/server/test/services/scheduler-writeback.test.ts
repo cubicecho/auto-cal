@@ -20,7 +20,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { runSchedulerWriteback } from './scheduler-writeback.ts';
+import { runSchedulerWriteback } from '../../src/services/scheduler-writeback.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = resolve(__dirname, '../../../../packages/db/drizzle');

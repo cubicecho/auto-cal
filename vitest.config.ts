@@ -13,12 +13,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['packages/*/src/**/*.test.ts'],
+    include: ['packages/*/test/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       include: ['packages/*/src/**/*.ts'],
       exclude: [
+        'packages/*/test/**',
         'packages/*/src/**/*.test.ts',
         'packages/*/src/__generated__/**',
       ],
