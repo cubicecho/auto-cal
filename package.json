@@ -6,7 +6,7 @@
   "private": true,
   "workspaces": ["packages/*"],
   "scripts": {
-    "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "dev": "npm run codegen && concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "npm run dev -w @auto-cal/server",
     "dev:client": "cd packages/client && npx expo start",
     "build": "npm run codegen && npm run build:client && npm run build:server",
