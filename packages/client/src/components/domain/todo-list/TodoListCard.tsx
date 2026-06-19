@@ -13,14 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { formatDuration, hexToDesaturated, useIsDark } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
@@ -233,33 +226,21 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
         onOpenChange={(open) => !open && setEditingTodo(null)}
       />
 
-      <Dialog open={clearCompletedOpen} onOpenChange={setClearCompletedOpen}>
-        <DialogContent className="sm:max-w-[360px]">
-          <DialogHeader>
-            <DialogTitle>Remove all completed?</DialogTitle>
-            <DialogDescription>
-              {completedCount} completed{' '}
-              {completedCount === 1 ? 'todo' : 'todos'} in &ldquo;{list.name}
-              &rdquo; will be permanently deleted.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setClearCompletedOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={clearing}
-              onClick={handleClearCompleted}
-            >
-              Remove all
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={clearCompletedOpen}
+        onOpenChange={setClearCompletedOpen}
+        title="Remove all completed?"
+        description={
+          <>
+            {completedCount} completed {completedCount === 1 ? 'todo' : 'todos'}{' '}
+            in &ldquo;{list.name}
+            &rdquo; will be permanently deleted.
+          </>
+        }
+        confirmLabel="Remove all"
+        loading={clearing}
+        onConfirm={handleClearCompleted}
+      />
     </>
   );
 }
