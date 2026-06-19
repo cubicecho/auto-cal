@@ -22,7 +22,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { hexToDesaturated, useIsDark } from '@/lib/utils';
+import { formatDuration, hexToDesaturated, useIsDark } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { ListX, Pencil, Plus } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
@@ -48,14 +48,6 @@ const DELETE_TODOS = graphql(`
 type TodoList = TodoList_TodoListListFragment;
 type Todo = Todo_TodoListFragment;
 
-function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours === 0) return `${mins}min`;
-  if (mins === 0) return `${hours}hr`;
-  return `${hours}hr ${mins}min`;
-}
-
 type TodoListCardProps = {
   list: TodoList;
   todos: Todo[];
@@ -79,12 +71,15 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
   const visibleTodos = showCompleted
     ? todos
     : todos.filter((t) => t.completedAt === null);
-  const completedCount = todos.filter((t) => t.completedAt !== null).length;
-  const totalLength = todos.reduce((sum, t) => sum + t.estimatedLength, 0);
-  const remainingLength = todos.reduce(
-    (sum, t) => (t.completedAt === null ? sum + t.estimatedLength : sum),
-    0,
-  );
+  // Single pass over todos: completed count plus total and remaining length.
+  let completedCount = 0;
+  let totalLength = 0;
+  let remainingLength = 0;
+  for (const t of todos) {
+    totalLength += t.estimatedLength;
+    if (t.completedAt !== null) completedCount += 1;
+    else remainingLength += t.estimatedLength;
+  }
 
   async function handleQuickAdd() {
     const title = newTitle.trim();
