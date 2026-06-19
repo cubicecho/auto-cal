@@ -13,10 +13,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { hexToDesaturated, useIsDark } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
-import { Pencil, Plus } from 'lucide-react';
+import { ListX, Pencil, Plus } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 import { TodoListForm } from './TodoListForm';
 
@@ -29,8 +37,24 @@ const QUICK_CREATE_TODO = graphql(`
   }
 `);
 
+const DELETE_TODOS = graphql(`
+  mutation DeleteTodos($listId: ID!, $completed: Boolean) {
+    myDeleteTodos(listId: $listId, completed: $completed) {
+      id
+    }
+  }
+`);
+
 type TodoList = TodoList_TodoListListFragment;
 type Todo = Todo_TodoListFragment;
+
+function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return `${mins}min`;
+  if (mins === 0) return `${hours}hr`;
+  return `${hours}hr ${mins}min`;
+}
 
 type TodoListCardProps = {
   list: TodoList;
@@ -42,8 +66,13 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [clearCompletedOpen, setClearCompletedOpen] = useState(false);
 
   const [createTodo, { loading: creating }] = useMutation(QUICK_CREATE_TODO, {
+    refetchQueries: ['GetTodoListsPage'],
+  });
+
+  const [deleteTodos, { loading: clearing }] = useMutation(DELETE_TODOS, {
     refetchQueries: ['GetTodoListsPage'],
   });
 
@@ -51,6 +80,11 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
     ? todos
     : todos.filter((t) => t.completedAt === null);
   const completedCount = todos.filter((t) => t.completedAt !== null).length;
+  const totalLength = todos.reduce((sum, t) => sum + t.estimatedLength, 0);
+  const remainingLength = todos.reduce(
+    (sum, t) => (t.completedAt === null ? sum + t.estimatedLength : sum),
+    0,
+  );
 
   async function handleQuickAdd() {
     const title = newTitle.trim();
@@ -75,6 +109,18 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
     }
   }
 
+  async function handleClearCompleted() {
+    try {
+      await deleteTodos({
+        variables: { listId: list.id, completed: true },
+      });
+      setClearCompletedOpen(false);
+    } catch (err) {
+      // Keep the dialog open on failure so the user can retry.
+      console.error('Failed to clear completed todos', err);
+    }
+  }
+
   const isDark = useIsDark();
 
   return (
@@ -96,16 +142,39 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
                   {list.description}
                 </CardDescription>
               )}
+              {todos.length > 0 && (
+                <p className="text-xs font-normal text-muted-foreground">
+                  {formatDuration(remainingLength)}
+                  <span className="opacity-60">
+                    {' / '}
+                    {formatDuration(totalLength)}
+                  </span>
+                </p>
+              )}
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setEditingList(true)}
-              aria-label={`Edit ${list.name}`}
-              className="h-7 w-7 shrink-0"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setEditingList(true)}
+                aria-label={`Edit ${list.name}`}
+                className="h-7 w-7"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              {completedCount > 0 && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setClearCompletedOpen(true)}
+                  aria-label={`Remove all completed todos from ${list.name}`}
+                  title="Remove all completed"
+                  className="h-7 w-7 hover:text-destructive"
+                >
+                  <ListX className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
 
@@ -168,6 +237,34 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
         open={editingTodo !== null}
         onOpenChange={(open) => !open && setEditingTodo(null)}
       />
+
+      <Dialog open={clearCompletedOpen} onOpenChange={setClearCompletedOpen}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>Remove all completed?</DialogTitle>
+            <DialogDescription>
+              {completedCount} completed{' '}
+              {completedCount === 1 ? 'todo' : 'todos'} in &ldquo;{list.name}
+              &rdquo; will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setClearCompletedOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={clearing}
+              onClick={handleClearCompleted}
+            >
+              Remove all
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

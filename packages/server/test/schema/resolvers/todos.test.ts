@@ -519,18 +519,21 @@ describe('todo resolvers', () => {
   // ─── myDeleteTodos ────────────────────────────────────────────────────────────
 
   const DELETE_TODOS = `
-    mutation($where: TodoFilters) {
-      myDeleteTodos(where: $where) { id }
+    mutation($listId: ID!, $completed: Boolean) {
+      myDeleteTodos(listId: $listId, completed: $completed) { id }
     }
   `;
 
   describe('myDeleteTodos', () => {
     it('throws when not authenticated', async () => {
-      const result = await gql(testSchema, db, '', DELETE_TODOS, { where: {} });
+      const result = await gql(testSchema, db, '', DELETE_TODOS, {
+        listId: 'any-list',
+        completed: true,
+      });
       expect(result.errors?.[0]?.message).toMatch(/not authenticated/i);
     });
 
-    it('deletes only todos matching the filter, leaving others intact', async () => {
+    it('with completed: true, deletes only completed todos in the list', async () => {
       const { id: userId } = await seedUser(db, 'bulk-delete@example.com');
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
@@ -545,10 +548,8 @@ describe('todo resolvers', () => {
       const pending = await seedTodo(db, userId, list.id, { title: 'Pending' });
 
       const result = await gql(testSchema, db, userId, DELETE_TODOS, {
-        where: {
-          listId: { eq: list.id },
-          completedAt: { isNotNull: true },
-        },
+        listId: list.id,
+        completed: true,
       });
       expect(result.errors).toBeUndefined();
       const deleted = result.data?.myDeleteTodos as Array<{ id: string }>;
@@ -569,7 +570,43 @@ describe('todo resolvers', () => {
       expect(ids).not.toContain(done1.id);
     });
 
-    it("never deletes another user's todos, even with a matching filter", async () => {
+    it('scopes deletes to the given list, leaving the same user other lists intact', async () => {
+      const { id: userId } = await seedUser(db, 'bulk-delete-list@example.com');
+      const at = await seedActivityType(db, userId);
+      const listA = await seedTodoList(db, userId, at.id);
+      const listB = await seedTodoList(db, userId, at.id);
+      const inA = await seedTodo(db, userId, listA.id, {
+        title: 'A done',
+        completedAt: new Date(),
+      });
+      const inB = await seedTodo(db, userId, listB.id, {
+        title: 'B done',
+        completedAt: new Date(),
+      });
+
+      const result = await gql(testSchema, db, userId, DELETE_TODOS, {
+        listId: listA.id,
+        completed: true,
+      });
+      expect(result.errors).toBeUndefined();
+      const deletedIds = (
+        result.data?.myDeleteTodos as Array<{ id: string }>
+      ).map((t) => t.id);
+      expect(deletedIds).toEqual([inA.id]);
+
+      const remaining = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos { id } }',
+      );
+      const ids = (remaining.data?.myTodos as Array<{ id: string }>).map(
+        (t) => t.id,
+      );
+      expect(ids).toContain(inB.id);
+    });
+
+    it("never deletes another user's todos, even when targeting their list", async () => {
       const { id: userId } = await seedUser(
         db,
         'bulk-delete-scope@example.com',
@@ -578,12 +615,6 @@ describe('todo resolvers', () => {
         db,
         'bulk-delete-scope-other@example.com',
       );
-      const at = await seedActivityType(db, userId);
-      const list = await seedTodoList(db, userId, at.id);
-      const mine = await seedTodo(db, userId, list.id, {
-        title: 'Mine done',
-        completedAt: new Date(),
-      });
       const otherAt = await seedActivityType(db, otherId);
       const otherList = await seedTodoList(db, otherId, otherAt.id);
       const theirs = await seedTodo(db, otherId, otherList.id, {
@@ -591,15 +622,17 @@ describe('todo resolvers', () => {
         completedAt: new Date(),
       });
 
-      // A deliberately broad filter that would match every user's completed todos.
+      // Caller targets another user's list id directly; the userId scope must
+      // make this a no-op rather than deleting their todos.
       const result = await gql(testSchema, db, userId, DELETE_TODOS, {
-        where: { completedAt: { isNotNull: true } },
+        listId: otherList.id,
+        completed: true,
       });
       expect(result.errors).toBeUndefined();
       const deletedIds = (
         result.data?.myDeleteTodos as Array<{ id: string }>
       ).map((t) => t.id);
-      expect(deletedIds).toContain(mine.id);
+      expect(deletedIds).toHaveLength(0);
       expect(deletedIds).not.toContain(theirs.id);
 
       const otherRemaining = await gql(

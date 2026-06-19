@@ -285,6 +285,7 @@ const extensionSDL = `
     myUpdateTodo(input: UpdateTodoArgs!): Todo!
     myCompleteTodo(id: ID!, completedAt: String): Todo!
     myDeleteTodo(id: ID!): Boolean!
+    myDeleteTodos(listId: ID!, completed: Boolean): [Todo!]!
     myCreateHabit(input: CreateHabitArgs!): Habit!
     myDeleteHabit(id: ID!): Boolean!
     myUpdateHabit(input: UpdateHabitArgs!): Habit!
