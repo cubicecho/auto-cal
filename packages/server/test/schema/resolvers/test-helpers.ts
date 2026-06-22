@@ -19,8 +19,8 @@ import { buildSchema } from '@vantreeseba/drizzle-graphql';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { graphql } from 'graphql';
-import { createLoaders } from '../../context.ts';
-import { applyCustomResolvers } from './index.ts';
+import { createLoaders } from '../../../src/context.ts';
+import { applyCustomResolvers } from '../../../src/schema/resolvers/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = resolve(

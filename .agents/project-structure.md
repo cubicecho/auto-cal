@@ -311,9 +311,9 @@ Resolvers are split per-domain under `schema/resolvers/`. New domains follow the
 
 There are existing vitest suites — the project is not test-free:
 
-- `packages/server/src/auth.test.ts` — magic-link token + JWT helpers
-- `packages/server/src/schema/validators.test.ts` — Zod validator coverage
-- `packages/server/src/services/scheduler.test.ts` — pure scheduler algorithm
+- `packages/server/test/auth.test.ts` — magic-link token + JWT helpers
+- `packages/server/test/schema/validators.test.ts` — Zod validator coverage
+- `packages/server/test/services/scheduler.test.ts` — pure scheduler algorithm
 
 Run with `npm test`. todo.md #15 ("test suite") covers the gaps that remain (resolver integration tests, CI workflow, coverage targets).
 

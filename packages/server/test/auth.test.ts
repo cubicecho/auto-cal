@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { signMagicToken, signSessionToken, verifyToken } from './auth.ts';
+import { signMagicToken, signSessionToken, verifyToken } from '../src/auth.ts';
 
 describe('signMagicToken / verifyToken', () => {
   it('issues a token that verifies with the correct email claim', async () => {

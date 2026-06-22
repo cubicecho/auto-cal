@@ -22,8 +22,8 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { graphql } from 'graphql';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createLoaders } from '../../context.ts';
-import { applyCustomResolvers } from './index.ts';
+import { createLoaders } from '../../../src/context.ts';
+import { applyCustomResolvers } from '../../../src/schema/resolvers/index.ts';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

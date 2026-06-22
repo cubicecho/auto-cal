@@ -15,7 +15,7 @@ import { buildMocks } from '@vantreeseba/graphql-mocks';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const schema = readFileSync(
-  resolve(__dirname, './__generated__/schema.graphql'),
+  resolve(__dirname, '../src/__generated__/schema.graphql'),
   'utf8',
 );
 

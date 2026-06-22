@@ -5,14 +5,7 @@ import {
   type CompletionDialogTarget,
 } from '@/components/domain/CompletionDialog';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
 import {
   Tooltip,
@@ -205,32 +198,21 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
 
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent className="sm:max-w-[360px]">
-          <DialogHeader>
-            <DialogTitle>Delete todo?</DialogTitle>
-            <DialogDescription>
-              &ldquo;{todo.title}&rdquo; will be permanently deleted.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={deleting}
-              onClick={() =>
-                deleteTodo({ variables: { id: todo.id } }).then(() =>
-                  setDeleteOpen(false),
-                )
-              }
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete todo?"
+        description={
+          <>&ldquo;{todo.title}&rdquo; will be permanently deleted.</>
+        }
+        confirmLabel="Delete"
+        loading={deleting}
+        onConfirm={() =>
+          deleteTodo({ variables: { id: todo.id } }).then(() =>
+            setDeleteOpen(false),
+          )
+        }
+      />
 
       <CompletionDialog
         target={completionTarget}

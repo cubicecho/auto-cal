@@ -1,5 +1,5 @@
 import { todos } from '@auto-cal/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
 import type { InnerOrder, TodoOrderBy } from '../../__generated__/resolvers.ts';
 import type { Context } from '../../context.ts';
@@ -205,5 +205,40 @@ export function applyTodoResolvers(
       })
       .catch(console.error);
     return true;
+  };
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myDeleteTodos!.resolve = async (
+    _parent,
+    args: { listId: string; completed?: boolean },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    // Scope every delete to the caller and a single list, so there is no way
+    // to bulk-delete another user's todos or wipe everything with an empty
+    // filter. `completed` optionally narrows to (in)complete todos.
+    const conditions = [
+      eq(todos.userId, context.userId),
+      eq(todos.listId, args.listId),
+    ];
+    if (args.completed === true) conditions.push(isNotNull(todos.completedAt));
+    else if (args.completed === false)
+      conditions.push(isNull(todos.completedAt));
+
+    const deleted = await context.db
+      .delete(todos)
+      .where(and(...conditions))
+      .returning();
+
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    for (const todo of deleted) {
+      pubsub
+        .publish(TODO_EVENT(context.userId), {
+          type: 'deleted',
+          deletedId: todo.id,
+        })
+        .catch(console.error);
+    }
+    return deleted;
   };
 }

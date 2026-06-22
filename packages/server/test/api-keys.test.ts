@@ -4,7 +4,7 @@ import {
   generateApiKey,
   hashApiKey,
   isApiKey,
-} from './api-keys.ts';
+} from '../src/api-keys.ts';
 
 describe('generateApiKey', () => {
   it('returns a token with the acal_ prefix', () => {

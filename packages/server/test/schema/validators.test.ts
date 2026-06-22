@@ -9,7 +9,7 @@ import {
   UpdateHabitInput,
   UpdateTimeBlockInput,
   UpdateTodoInput,
-} from './validators.ts';
+} from '../../src/schema/validators.ts';
 
 describe('CreateActivityTypeInput', () => {
   it('accepts valid input with name only (uses default color)', () => {
