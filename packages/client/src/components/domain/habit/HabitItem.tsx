@@ -8,8 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { ColorBar } from '@/components/ui/color-bar';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
-import { hexToDesaturated, useIsDark } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Pencil } from 'lucide-react';
 
@@ -38,22 +38,21 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
     },
   );
 
-  const isDark = useIsDark();
-
   function handleSaveLength(estimatedLength: number) {
     updateHabit({ variables: { input: { id: habit.id, estimatedLength } } });
   }
 
   return (
     <Card
-      className="cursor-pointer transition-colors"
+      className="relative cursor-pointer overflow-hidden transition-colors"
       onClick={() => onSelect(habit)}
-      style={{
-        backgroundColor: habit.activityType
-          ? hexToDesaturated(habit.activityType.color, isDark)
-          : undefined,
-      }}
     >
+      {habit.activityType && (
+        <ColorBar
+          color={habit.activityType.color}
+          label={habit.activityType.name}
+        />
+      )}
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>

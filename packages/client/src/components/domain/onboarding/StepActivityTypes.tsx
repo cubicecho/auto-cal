@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { ColorDot } from '@/components/ui/color-dot';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
@@ -153,10 +154,7 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
                   key={at.id}
                   className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium"
                 >
-                  <span
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: at.color }}
-                  />
+                  <ColorDot color={at.color} className="h-2.5 w-2.5" />
                   {at.name}
                 </span>
               ))}

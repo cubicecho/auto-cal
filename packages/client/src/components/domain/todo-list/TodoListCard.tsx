@@ -13,8 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { ColorBar } from '@/components/ui/color-bar';
 import { Input } from '@/components/ui/input';
-import { hexToDesaturated, useIsDark } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Pencil, Plus } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
@@ -75,22 +75,19 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
     }
   }
 
-  const isDark = useIsDark();
-
   return (
     <>
-      <Card
-        className="flex flex-col"
-        style={{
-          backgroundColor: list.activityType
-            ? hexToDesaturated(list.activityType.color, isDark)
-            : undefined,
-        }}
-      >
+      <Card className="relative flex flex-col overflow-hidden">
+        {list.activityType && (
+          <ColorBar
+            color={list.activityType.color}
+            label={list.activityType.name}
+          />
+        )}
         <CardHeader className="space-y-1 pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <CardTitle className="text-base truncate">{list.name}</CardTitle>
+              <CardTitle className="truncate text-base">{list.name}</CardTitle>
               {list.description && (
                 <CardDescription className="line-clamp-2 text-xs">
                   {list.description}

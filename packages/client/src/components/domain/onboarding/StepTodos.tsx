@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { ColorDot } from '@/components/ui/color-dot';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import {
   Select,
@@ -189,9 +190,9 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
                   className="flex items-center gap-3 px-3 py-2 text-sm"
                 >
                   {t.activityType && (
-                    <span
-                      className="h-2.5 w-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: t.activityType.color }}
+                    <ColorDot
+                      color={t.activityType.color}
+                      className="h-2.5 w-2.5"
                     />
                   )}
                   <span className="font-medium">{t.title}</span>

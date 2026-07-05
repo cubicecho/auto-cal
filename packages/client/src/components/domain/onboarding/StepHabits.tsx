@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { ColorDot } from '@/components/ui/color-dot';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -181,9 +182,9 @@ export function StepHabits({ onBack, onNext, onSkip }: StepHabitsProps) {
                   className="flex items-center gap-3 px-3 py-2 text-sm"
                 >
                   {h.activityType && (
-                    <span
-                      className="h-2.5 w-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: h.activityType.color }}
+                    <ColorDot
+                      color={h.activityType.color}
+                      className="h-2.5 w-2.5"
                     />
                   )}
                   <span className="font-medium">{h.title}</span>
