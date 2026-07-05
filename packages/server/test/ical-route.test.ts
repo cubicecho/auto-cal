@@ -1,7 +1,7 @@
 import { db } from '@auto-cal/db';
 import type { Request, Response } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { icalHandler } from './ical-route.ts';
+import { icalHandler } from '../src/ical-route.ts';
 import {
   makeActivityType,
   makeApiKey,

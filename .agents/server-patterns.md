@@ -156,7 +156,7 @@ if (todo.userId !== context.userId) throw new Error('Forbidden');
 
 ## Zod Validation at Resolver Boundary
 
-All validators live in `packages/server/src/schema/validators.ts`, with coverage in `packages/server/src/schema/validators.test.ts`. Key constraints:
+All validators live in `packages/server/src/schema/validators.ts`, with coverage in `packages/server/test/schema/validators.test.ts`. Key constraints:
 
 | Field | Rule |
 |-------|------|
@@ -292,7 +292,7 @@ export function computeSchedule(
 ): ScheduledItem[] { ... }
 ```
 
-Pure function — deterministic, easy to unit test. Coverage in `packages/server/src/services/scheduler.test.ts`.
+Pure function — deterministic, easy to unit test. Coverage in `packages/server/test/services/scheduler.test.ts`.
 
 Since `todos.activityTypeId` no longer exists on the DB row, callers (`schedule.ts`, `scheduler-writeback.ts`, `ical-route.ts`) fetch `todoLists` alongside `todos`, build a `Map<listId, activityTypeId>`, and enrich each todo before passing it in.
 
@@ -300,8 +300,8 @@ Since `todos.activityTypeId` no longer exists on the DB row, callers (`schedule.
 
 The server package has the following vitest suites — run with `npm test` from the repo root:
 
-- `packages/server/src/auth.test.ts` — magic-link token + JWT helpers
-- `packages/server/src/schema/validators.test.ts` — Zod validator coverage
-- `packages/server/src/services/scheduler.test.ts` — pure scheduler algorithm
+- `packages/server/test/auth.test.ts` — magic-link token + JWT helpers
+- `packages/server/test/schema/validators.test.ts` — Zod validator coverage
+- `packages/server/test/services/scheduler.test.ts` — pure scheduler algorithm
 
 Resolver-level integration tests (PGLite in-memory) are not yet in place — see todo.md #15.

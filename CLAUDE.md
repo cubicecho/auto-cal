@@ -12,7 +12,7 @@ npm run dev:client       # Vite client only (localhost:3000)
 
 # Quality — run both before every commit; CI fails if either does not pass
 npm test                 # vitest (all suites)
-npm test -- packages/server/src/services/scheduler.test.ts  # single file
+npm test -- packages/server/test/services/scheduler.test.ts  # single file
 npm test -- -t "schedules a todo"                           # single test by name
 npm run lint             # biome check .
 npm run lint:fix         # biome check --write .
