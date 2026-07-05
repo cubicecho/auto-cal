@@ -1,4 +1,5 @@
 import { graphql } from '@/__generated__/index.js';
+import { ColorDot } from '@/components/ui/color-dot';
 import {
   Select,
   SelectContent,
@@ -77,10 +78,7 @@ export function TodoListSelect({
                 return (
                   <span className="flex items-center gap-2">
                     {l.activityType && (
-                      <span
-                        className="inline-block h-3 w-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: l.activityType.color }}
-                      />
+                      <ColorDot color={l.activityType.color} />
                     )}
                     {l.name}
                   </span>
@@ -93,12 +91,7 @@ export function TodoListSelect({
         {lists.map((l) => (
           <SelectItem key={l.id} value={l.id}>
             <span className="flex items-center gap-2">
-              {l.activityType && (
-                <span
-                  className="inline-block h-3 w-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: l.activityType.color }}
-                />
-              )}
+              {l.activityType && <ColorDot color={l.activityType.color} />}
               {l.name}
             </span>
           </SelectItem>

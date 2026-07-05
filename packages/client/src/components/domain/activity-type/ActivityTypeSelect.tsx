@@ -1,4 +1,5 @@
 import { graphql } from '@/__generated__/index.js';
+import { ColorDot } from '@/components/ui/color-dot';
 import {
   Select,
   SelectContent,
@@ -55,10 +56,7 @@ export function ActivityTypeSelect({
                 const at = activityTypes.find((a) => a.id === value);
                 return at ? (
                   <span className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-3 w-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: at.color }}
-                    />
+                    <ColorDot color={at.color} />
                     {at.name}
                   </span>
                 ) : (
@@ -72,10 +70,7 @@ export function ActivityTypeSelect({
         {activityTypes.map((at) => (
           <SelectItem key={at.id} value={at.id}>
             <span className="flex items-center gap-2">
-              <span
-                className="inline-block h-3 w-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: at.color }}
-              />
+              <ColorDot color={at.color} />
               {at.name}
             </span>
           </SelectItem>

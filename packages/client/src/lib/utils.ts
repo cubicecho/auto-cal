@@ -1,31 +1,14 @@
 import { type ClassValue, clsx } from 'clsx';
-import { useEffect, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-/** Tracks the `dark` class on <html> and re-renders when it changes. */
-export function useIsDark(): boolean {
-  const [isDark, setIsDark] = useState(
-    () =>
-      typeof document !== 'undefined' &&
-      document.documentElement.classList.contains('dark'),
-  );
-  useEffect(() => {
-    const observer = new MutationObserver(() =>
-      setIsDark(document.documentElement.classList.contains('dark')),
-    );
-    observer.observe(document.documentElement, { attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
-  return isDark;
-}
-
 /**
  * Returns a desaturated HSL background tint derived from a hex color.
  * Light mode: high-lightness pastel. Dark mode: low-lightness dark tint.
+ * Only used by the native (Expo) screens; web uses ColorBar/ColorDot instead.
  */
 export function hexToDesaturated(hex: string, isDark = false): string {
   const r = Number.parseInt(hex.slice(1, 3), 16) / 255;

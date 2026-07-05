@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { ColorDot } from '@/components/ui/color-dot';
 import { useQuery } from '@apollo/client/react';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import { useMemo } from 'react';
@@ -93,9 +94,9 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
         <div className="flex-1">
           <div className="flex items-center gap-2">
             {habit.activityType && (
-              <span
-                className="inline-block h-3 w-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: habit.activityType.color }}
+              <ColorDot
+                color={habit.activityType.color}
+                title={habit.activityType.name}
               />
             )}
             <h2 className="text-2xl font-bold">{habit.title}</h2>

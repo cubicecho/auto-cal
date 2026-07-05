@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { hexToDesaturated, useIsDark } from '@/lib/utils';
+import { ColorBar } from '@/components/ui/color-bar';
 import { useMutation } from '@apollo/client/react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -36,7 +36,6 @@ type TimeBlockItemProps = {
 };
 
 export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
-  const isDark = useIsDark();
   const [confirming, setConfirming] = useState(false);
 
   const [deleteTimeBlock, { loading: deleting }] = useMutation(
@@ -49,13 +48,13 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
   }
 
   return (
-    <Card
-      style={{
-        backgroundColor: timeBlock.activityType
-          ? hexToDesaturated(timeBlock.activityType.color, isDark)
-          : undefined,
-      }}
-    >
+    <Card className="relative overflow-hidden">
+      {timeBlock.activityType && (
+        <ColorBar
+          color={timeBlock.activityType.color}
+          label={timeBlock.activityType.name}
+        />
+      )}
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
