@@ -1,5 +1,13 @@
 import { habitCompletions } from '@auto-cal/db/schema';
-import { beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import {
   type TestDb,
   type TestSchema,
@@ -26,6 +34,20 @@ describe('schedule resolvers', () => {
   // ─── mySchedule ──────────────────────────────────────────────────────────────
 
   describe('mySchedule', () => {
+    // Pin "now" to a Monday midnight so the current ISO week always has future
+    // time-block slots. Without this, `mySchedule` (which schedules relative to
+    // the current week and current time) fails whenever the suite runs after the
+    // last slot of the week — e.g. CI on a Sunday evening in UTC. Fake only Date
+    // so PGLite's async DB queries keep using real timers and don't deadlock.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-01-05T00:00:00')); // Monday
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('throws when not authenticated', async () => {
       const result = await gql(
         testSchema,
