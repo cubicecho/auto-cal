@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ColorBar } from '@/components/ui/color-bar';
 import { useMutation } from '@apollo/client/react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -48,13 +47,10 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
   }
 
   return (
-    <Card className="relative overflow-hidden">
-      {timeBlock.activityType && (
-        <ColorBar
-          color={timeBlock.activityType.color}
-          label={timeBlock.activityType.name}
-        />
-      )}
+    <Card
+      accentColor={timeBlock.activityType?.color}
+      accentLabel={timeBlock.activityType?.name}
+    >
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>

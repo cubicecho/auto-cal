@@ -1,41 +1,30 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import { cn, hexToAccent } from '@/lib/utils';
 
 type ColorBarProps = {
-  color: string;
-  /** Shown on hover; also used as the accessible label. */
-  label?: string;
-  className?: string;
+  /** Nullable so callers can pass `activityType?.color`; renders nothing without it. */
+  color?: string | null | undefined;
+  /** Activity type name: shown on hover and exposed as the accessible name. */
+  label?: string | undefined;
+  className?: string | undefined;
 };
 
 /**
- * A full-height accent bar pinned to the left edge of a `relative` card.
- * Doubles as a hover target showing the activity type's name. The parent must
- * be `relative` (and usually `overflow-hidden` so the bar follows the card's
- * rounded corners).
+ * A full-height accent bar pinned to the left edge of a card. The color is
+ * normalized via `hexToAccent` so it stays visible in both light and dark
+ * mode. Prefer `<Card accentColor accentLabel>`, which owns the positioning
+ * this component needs; when using ColorBar directly, the parent must be
+ * `relative` and `overflow-hidden` so the bar follows the rounded corners.
  */
 export function ColorBar({ color, label, className }: ColorBarProps) {
-  const bar = (
-    <span
-      className={cn(
-        'absolute inset-y-0 left-0 w-2.5 cursor-default',
-        className,
-      )}
-      style={{ backgroundColor: color }}
-      aria-label={label}
-    />
-  );
-
-  if (!label) return bar;
-
+  if (!color) return null;
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>{bar}</TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
+    <span
+      className={cn('absolute inset-y-0 left-0 w-2.5', className)}
+      style={{ backgroundColor: hexToAccent(color) }}
+      title={label}
+      {...(label
+        ? { role: 'img', 'aria-label': label }
+        : { 'aria-hidden': true })}
+    />
   );
 }

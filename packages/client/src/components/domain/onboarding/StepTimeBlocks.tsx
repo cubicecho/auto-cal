@@ -233,10 +233,7 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
                   className="flex items-center gap-3 px-3 py-2 text-sm"
                 >
                   {tb.activityType && (
-                    <ColorDot
-                      color={tb.activityType.color}
-                      className="h-2.5 w-2.5"
-                    />
+                    <ColorDot color={tb.activityType.color} size="sm" />
                   )}
                   <span className="font-medium">
                     {tb.activityType?.name ?? 'No type'}

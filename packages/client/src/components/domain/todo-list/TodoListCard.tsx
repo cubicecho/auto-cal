@@ -13,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ColorBar } from '@/components/ui/color-bar';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { formatDuration } from '@/lib/utils';
@@ -112,13 +111,11 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
 
   return (
     <>
-      <Card className="relative flex flex-col overflow-hidden">
-        {list.activityType && (
-          <ColorBar
-            color={list.activityType.color}
-            label={list.activityType.name}
-          />
-        )}
+      <Card
+        className="flex flex-col"
+        accentColor={list.activityType?.color}
+        accentLabel={list.activityType?.name}
+      >
         <CardHeader className="space-y-1 pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">

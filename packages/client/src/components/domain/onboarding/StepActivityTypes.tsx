@@ -154,7 +154,7 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
                   key={at.id}
                   className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium"
                 >
-                  <ColorDot color={at.color} className="h-2.5 w-2.5" />
+                  <ColorDot color={at.color} size="sm" />
                   {at.name}
                 </span>
               ))}

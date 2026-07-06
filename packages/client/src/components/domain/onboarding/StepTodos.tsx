@@ -192,7 +192,8 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
                   {t.activityType && (
                     <ColorDot
                       color={t.activityType.color}
-                      className="h-2.5 w-2.5"
+                      size="sm"
+                      title={t.activityType.name}
                     />
                   )}
                   <span className="font-medium">{t.title}</span>

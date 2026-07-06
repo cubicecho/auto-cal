@@ -184,7 +184,8 @@ export function StepHabits({ onBack, onNext, onSkip }: StepHabitsProps) {
                   {h.activityType && (
                     <ColorDot
                       color={h.activityType.color}
-                      className="h-2.5 w-2.5"
+                      size="sm"
+                      title={h.activityType.name}
                     />
                   )}
                   <span className="font-medium">{h.title}</span>

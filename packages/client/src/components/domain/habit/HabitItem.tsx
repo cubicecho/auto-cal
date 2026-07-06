@@ -8,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ColorBar } from '@/components/ui/color-bar';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
 import { useMutation } from '@apollo/client/react';
 import { Pencil } from 'lucide-react';
@@ -44,15 +43,11 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
 
   return (
     <Card
-      className="relative cursor-pointer overflow-hidden transition-colors"
+      className="cursor-pointer transition-colors"
       onClick={() => onSelect(habit)}
+      accentColor={habit.activityType?.color}
+      accentLabel={habit.activityType?.name}
     >
-      {habit.activityType && (
-        <ColorBar
-          color={habit.activityType.color}
-          label={habit.activityType.name}
-        />
-      )}
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>

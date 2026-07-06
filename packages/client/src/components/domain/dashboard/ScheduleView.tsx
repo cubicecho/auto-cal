@@ -2,6 +2,7 @@ import type { ScheduledItem_ScheduleViewFragment } from '@/__generated__/graphql
 import { graphql } from '@/__generated__/index.js';
 import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
+import { ColorDot } from '@/components/ui/color-dot';
 import {
   Tooltip,
   TooltipContent,
@@ -264,9 +265,9 @@ function ScheduleCard({
         !item.isScheduled ? 'border-amber-200 bg-amber-50/50' : ''
       }`}
     >
-      <div
-        className="mt-0.5 h-4 w-1 flex-shrink-0 rounded-full"
-        style={{ backgroundColor: item.activityType?.color ?? '#94a3b8' }}
+      <ColorDot
+        color={item.activityType?.color ?? '#94a3b8'}
+        className="mt-0.5 h-4 w-1"
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
