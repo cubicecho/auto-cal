@@ -333,6 +333,43 @@ describe('habit resolvers', () => {
       expect(habit.title).toBe('Daily walk');
       expect(habit.frequencyCount).toBe(5);
     });
+
+    it('creates a habit when pomodoro is disabled (null pomodoro fields)', async () => {
+      const { id: userId } = await seedUser(
+        db,
+        'create-habit-nopomo@example.com',
+      );
+      const at = await seedActivityType(db, userId);
+
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'mutation($input: CreateHabitArgs!) { myCreateHabit(input: $input) { id pomodoroEnabled pomodoroUnitLength } }',
+        {
+          input: {
+            title: 'No pomodoro',
+            activityTypeId: at.id,
+            frequencyCount: 3,
+            frequencyUnit: 'week',
+            estimatedLength: 30,
+            pomodoroEnabled: false,
+            pomodoroUnitLength: null,
+            pomodoroShortBreakLength: null,
+            pomodoroUnitsBeforeLongBreak: null,
+            pomodoroLongBreakLength: null,
+            pomodoroMaxPerDay: null,
+          },
+        },
+      );
+      expect(result.errors).toBeUndefined();
+      const habit = result.data?.myCreateHabit as {
+        pomodoroEnabled: boolean;
+        pomodoroUnitLength: number | null;
+      };
+      expect(habit.pomodoroEnabled).toBe(false);
+      expect(habit.pomodoroUnitLength).toBeNull();
+    });
   });
 
   // ─── myDeleteHabit ────────────────────────────────────────────────────────────

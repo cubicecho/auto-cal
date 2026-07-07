@@ -68,10 +68,28 @@ export const CreateHabitInput = z.object({
   frequencyUnit: z.enum(['week', 'month'] as const),
   minTimeBetweenInstances: z.number().int().min(0).nullable().optional(),
   pomodoroEnabled: z.boolean().optional(),
-  pomodoroUnitLength: z.number().int().min(1).max(120).optional(),
-  pomodoroShortBreakLength: z.number().int().min(1).max(60).optional(),
-  pomodoroUnitsBeforeLongBreak: z.number().int().min(1).max(20).optional(),
-  pomodoroLongBreakLength: z.number().int().min(1).max(120).optional(),
+  pomodoroUnitLength: z.number().int().min(1).max(120).nullable().optional(),
+  pomodoroShortBreakLength: z
+    .number()
+    .int()
+    .min(1)
+    .max(60)
+    .nullable()
+    .optional(),
+  pomodoroUnitsBeforeLongBreak: z
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .nullable()
+    .optional(),
+  pomodoroLongBreakLength: z
+    .number()
+    .int()
+    .min(1)
+    .max(120)
+    .nullable()
+    .optional(),
   pomodoroMaxPerDay: z.number().int().min(1).max(100).nullable().optional(),
 });
 
