@@ -18,7 +18,6 @@
     "lint:fix": "biome check --write .",
     "db:generate": "npm run db:generate -w @auto-cal/db",
     "db:migrate": "npm run db:migrate -w @auto-cal/db",
-    "db:seed": "npm run db:seed -w @auto-cal/db",
     "db:studio": "npm run db:studio -w @auto-cal/db",
     "db:clean": "rm -rf pgdata",
     "generate:schema": "node --experimental-strip-types packages/server/generate_schema.ts",

@@ -4,11 +4,20 @@ Express + Apollo Server, no build step (`--experimental-strip-types`). All impor
 
 ## Startup Behaviour
 
-`seedDemoUser()` always runs on startup. `seedDemoData()` runs in non-production and is idempotent (skips if the demo user already has activity types). Demo seed creates 3 activity types (Work, Exercise, Learning), 3 todo lists (one per activity type), 6 time blocks, 5 todos (distributed across the lists), 3 habits.
+No data is seeded on startup. Users are created on demand by `verifyMagicLink`.
+
+## Magic-link exposure (`EXPOSE_MAGIC_LINK`)
+
+`requestMagicLink` only returns the `magicLink` in its response when
+`magicLinkExposed()` (`packages/server/src/config.ts`) is true: outside
+production, or in any environment when `EXPOSE_MAGIC_LINK` is set (`1`/`true`/`yes`).
+This gives the dev-style passwordless login on local/secure-network deployments
+that have no email provider. In production without the flag, the link is only
+logged server-side and the response returns `magicLink: null`.
 
 ## Auth — UUID Bearer Fallback (Dev Only, currently active in prod too — see todo.md #25)
 
-The server context accepts a raw UUID as a Bearer token for backwards compatibility with the demo user (`DEMO_USER_ID`). The fallback runs in **all environments today** — there is no `NODE_ENV` guard. The check lives in `packages/server/src/index.ts` after JWT verification fails:
+The server context accepts a raw UUID as a Bearer token (dev convenience). The fallback runs in **all environments today** — there is no `NODE_ENV` guard. The check lives in `packages/server/src/index.ts` after JWT verification fails:
 
 ```typescript
 // Try JWT first

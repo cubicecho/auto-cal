@@ -6,7 +6,6 @@ import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHt
 import { expressMiddleware } from '@as-integrations/express4';
 import { db } from '@auto-cal/db';
 import { apiKeys } from '@auto-cal/db/schema';
-import { seedDemoData, seedDemoUser } from '@auto-cal/db/seed';
 import cors from 'cors';
 import { eq } from 'drizzle-orm';
 import express from 'express';
@@ -82,7 +81,7 @@ async function buildContext(
   }
 
   // Env-var bypass: accept one specific UUID in any environment.
-  // Set BYPASS_AUTH_UUID to the demo user ID to allow passwordless access.
+  // Set BYPASS_AUTH_UUID to an existing user ID to allow passwordless access.
   const bypassUuid = process.env.BYPASS_AUTH_UUID;
   if (bypassUuid && rawToken === bypassUuid) {
     authLog.debug('BYPASS_AUTH_UUID auth for', rawToken);
@@ -170,14 +169,6 @@ const server = new ApolloServer<Context>({
 log.info('Starting Apollo Server...');
 await server.start();
 log.info('Apollo Server started');
-
-log.info('Seeding demo user...');
-await seedDemoUser();
-
-if (process.env.NODE_ENV !== 'production') {
-  log.info('Seeding demo data (non-production)...');
-  await seedDemoData();
-}
 
 const clientDist = path.resolve(process.cwd(), 'packages/client/dist');
 const clientDistExists = fs.existsSync(clientDist);

@@ -43,7 +43,7 @@ npm test                 # vitest
 | **drizzle-graphql** | Auto-generates GraphQL schema from Drizzle tables — zero duplication; we extend with custom resolvers |
 | **PGLite** | Embedded Postgres, zero setup for local dev and single-node deploys; swap to full Postgres via `DATABASE_URL` |
 | **--experimental-strip-types** | Node 22+ runs TypeScript directly — no tsc watch, no build step for the server; requires `.ts` extensions in all imports |
-| **Auth** | Magic-link + JWT (jose) is live. `requestMagicLink` / `verifyMagicLink` mutations are public. `DEMO_USER_ID` env var is a dev fallback only. |
+| **Auth** | Magic-link + JWT (jose) is live. `requestMagicLink` / `verifyMagicLink` mutations are public. Set `EXPOSE_MAGIC_LINK` for dev-style passwordless login on local/secure networks. |
 
 ## Key Conventions
 

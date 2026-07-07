@@ -30,7 +30,8 @@ node --experimental-strip-types packages/server/src/index.ts
 | `DATABASE_URL` | Conditional | Postgres connection string (e.g. `postgresql://user:pass@host:5432/db`); when set, uses `postgres.js` driver |
 | `PGLITE_DATA_DIR` | Conditional | Path to PGLite data directory; required when `DATABASE_URL` is not set |
 | `NODE_ENV` | No | `production` / `development` |
-| `DEMO_USER_ID` | No | Hard-coded demo user UUID for development; bypasses magic-link flow |
+| `EXPOSE_MAGIC_LINK` | No | `1`/`true`/`yes` returns the magic link directly in the `requestMagicLink` response (dev-style passwordless login) even in production. For local/secure networks only — never enable on a public deployment. |
+| `BYPASS_AUTH_UUID` | No | An existing user UUID accepted as a Bearer token in any environment; passwordless access for that one user. Local/secure networks only. |
 
 ## Docker Compose Files
 

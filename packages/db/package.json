@@ -5,15 +5,13 @@
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/schema.ts",
-    "./relations": "./src/relations.ts",
-    "./seed": "./src/seed.ts"
+    "./relations": "./src/relations.ts"
   },
   "scripts": {
     "migrate": "env-cmd -f ../../.env node --experimental-strip-types src/migrator.ts",
     "db:generate": "env-cmd -f ../../.env drizzle-kit generate",
     "db:migrate": "npm run migrate",
-    "db:studio": "env-cmd -f ../../.env drizzle-kit studio",
-    "db:seed": "env-cmd -f ../../.env node --experimental-strip-types src/seed-runner.ts"
+    "db:studio": "env-cmd -f ../../.env drizzle-kit studio"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.15",

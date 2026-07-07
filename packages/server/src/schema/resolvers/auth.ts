@@ -2,6 +2,7 @@ import { users } from '@auto-cal/db/schema';
 import type { GraphQLObjectType } from 'graphql';
 import { z } from 'zod';
 import { signMagicToken, signSessionToken, verifyToken } from '../../auth.ts';
+import { magicLinkExposed } from '../../config.ts';
 import type { Context } from '../../context.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
@@ -17,13 +18,12 @@ export function applyAuthResolvers(mutationFields: Fields): void {
     const token = await signMagicToken(email);
     const magicLink = `${context.appBaseUrl}/auth/verify?token=${token}`;
 
-    if (process.env.NODE_ENV === 'production') {
-      console.log(`[auth] Magic link for ${email}: ${magicLink}`);
-      return { ok: true, magicLink: null };
-    }
-
     console.log(`\n[auth] Magic link for ${email}:\n${magicLink}\n`);
-    return { ok: true, magicLink };
+
+    // Only hand the link back to the client when direct login is enabled
+    // (non-production, or EXPOSE_MAGIC_LINK on local/secure networks). Otherwise
+    // it must be delivered out-of-band (email) so it can't be guessed.
+    return { ok: true, magicLink: magicLinkExposed() ? magicLink : null };
   };
 
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above

@@ -74,8 +74,8 @@ function DevMagicLink({
           Sign in →
         </a>
         <p className="mt-6 text-xs text-muted-foreground">
-          This link is shown here because the server is running in development
-          mode.
+          This link is shown here because direct login is enabled on this
+          server.
         </p>
       </div>
     </div>

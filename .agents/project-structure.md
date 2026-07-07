@@ -27,8 +27,6 @@ packages/db/src/
 ├── index.ts            # PGLite/Postgres dual-backend, exports `db` instance
 ├── schema.ts           # Aggregates all model exports
 ├── relations.ts        # Drizzle relations
-├── seed.ts             # seedDemoUser(), seedDemoData() — non-prod only
-├── seed-runner.ts      # CLI entry for the seed script
 ├── migrator.ts         # Programmatic drizzle-kit migrate (used by Dockerfile)
 └── models/
     ├── enums.ts            # ACTIVITY_TYPES, FREQUENCY_UNITS, etc.
