@@ -19,7 +19,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
 
 function buildWsUrl(): string {
   if (API_URL) {
-    // e.g. http://localhost:3001 → ws://localhost:3001/graphql
+    // e.g. http://localhost:4000 → ws://localhost:4000/graphql
     return `${API_URL.replace(/^http/, 'ws')}/graphql`;
   }
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -27,7 +27,7 @@ function buildWsUrl(): string {
     return `${proto}//${window.location.host}/graphql`;
   }
   // Fallback for native dev without explicit API_URL
-  return 'ws://localhost:3001/graphql';
+  return 'ws://localhost:4000/graphql';
 }
 
 const wsLink = new GraphQLWsLink(
