@@ -14,6 +14,7 @@ let db: any;
 
 if (databaseUrl) {
   // Production: use real Postgres via postgres.js
+  console.log('[auto-cal] DB backend: Postgres (via DATABASE_URL)');
   const { drizzle } = await import('drizzle-orm/postgres-js');
   const postgres = await import('postgres');
   const client = postgres.default(databaseUrl);
@@ -27,6 +28,8 @@ if (databaseUrl) {
   // Development: use PGLite (embedded Postgres, zero setup)
   const dir = process.env.PGLITE_DATA_DIR;
   if (!dir) throw new Error('Set DATABASE_URL or PGLITE_DATA_DIR');
+
+  console.log(`[auto-cal] DB backend: PGLite (PGLITE_DATA_DIR=${dir})`);
 
   if (process.env.NODE_ENV === 'production') {
     // PGLite drives PostgreSQL's internal event loop via setTimeout(fn, 0) —

@@ -40,6 +40,11 @@ EXPOSE 4000
 
 ENV NODE_ENV=production
 ENV PORT=4000
-ENV PGLITE_DATA_DIR=/app/pgdata
+# NOTE: PGLITE_DATA_DIR is intentionally NOT baked in. The backend is chosen at
+# runtime: DATABASE_URL → real Postgres; otherwise PGLITE_DATA_DIR → PGLite.
+# Baking in a PGLITE_DATA_DIR default made a run without DATABASE_URL silently
+# fall back to PGLite's WASM event loop, which busy-waits and burns CPU at idle.
+# Now such a run fails loudly ("Set DATABASE_URL or PGLITE_DATA_DIR") instead.
+# For the embedded-DB mode, docker-compose.pglite.yml sets PGLITE_DATA_DIR itself.
 
 CMD ["node", "--experimental-strip-types", "packages/server/src/index.ts"]

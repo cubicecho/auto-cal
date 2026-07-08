@@ -51,7 +51,9 @@ PGLite compiles PostgreSQL to WebAssembly via Emscripten. Emscripten simulates P
 
 **Fix:** Use `DATABASE_URL` with a real Postgres instance (see `docker-compose.yml`). PGLite is appropriate only for local development or single-user demos where the CPU overhead is acceptable.
 
-The server logs a warning at startup when `PGLITE_DATA_DIR` is set in `NODE_ENV=production`.
+At startup the server logs which backend it selected — `[auto-cal] DB backend: Postgres (via DATABASE_URL)` or `[auto-cal] DB backend: PGLite (PGLITE_DATA_DIR=…)` — and additionally warns when PGLite is used under `NODE_ENV=production`. If a deployment that you believe is on Postgres is burning idle CPU, check that log line first: it almost always means the app container never received `DATABASE_URL` and silently fell back to PGLite while the Postgres container sits unused.
+
+**Silent-fallback footgun (fixed):** the Dockerfile previously baked in `ENV PGLITE_DATA_DIR=/app/pgdata`, so running the image without `DATABASE_URL` quietly dropped to PGLite. That default has been removed — a run with neither `DATABASE_URL` nor `PGLITE_DATA_DIR` now fails fast with `Set DATABASE_URL or PGLITE_DATA_DIR` instead of busy-looping. `docker-compose.pglite.yml` sets `PGLITE_DATA_DIR` explicitly, so the embedded-DB mode is unaffected.
 
 ## Switching to Full Postgres
 
