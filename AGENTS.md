@@ -109,6 +109,20 @@ All files related to project structure, tasks, planning, and feature tracking li
 
 Always add new `.agents/` files to the reference list below.
 
+## Keep the Website in Sync
+
+The marketing/docs site lives in `site/` (Eleventy → GitHub Pages, published at
+`https://cubicecho.github.io/auto-cal/`). When you complete a user-facing
+feature, change, or remove functionality, update the site in the same change so
+it never falls behind the app:
+
+- **New or changed features** — update the feature descriptions in `site/src/index.njk` (and the hero example if the scheduling/day view changed).
+- **Self-hosting changes** — new env vars, ports, Docker options, or setup steps go in `site/src/self-hosting.njk` (keep it consistent with `README.md`).
+- **Renamed/removed views or flows** — fix any references so screenshots, copy, and examples match what ships.
+
+Preview locally with `npm run dev` inside `site/` (serves on `localhost:8080`);
+the GitHub Pages workflow (`.github/workflows/pages.yml`) deploys on push to `main`.
+
 ## Agent Reference Files
 
 - [`.agents/project-structure.md`](.agents/project-structure.md) — Full package layout, DB schema tables, GraphQL operations, client components, resolver pipeline, directory tree
