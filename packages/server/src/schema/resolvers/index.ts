@@ -254,6 +254,15 @@ const extensionSDL = `
     myTodosUpdated: TodoEvent!
   }
 
+  # drizzle-graphql's buildSchema sets the query/mutation root operations
+  # explicitly and no subscription, so a conventionally-named "type Subscription"
+  # is NOT auto-promoted to the root subscription operation by extendSchema.
+  # Wire it explicitly, otherwise graphql-js rejects every subscription with
+  # "Schema is not configured to execute subscription operation".
+  extend schema {
+    subscription: Subscription
+  }
+
   extend type Todo {
     activityType: ActivityType
   }
