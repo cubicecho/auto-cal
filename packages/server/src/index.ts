@@ -29,6 +29,20 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1);
 });
 
+// Normalize an Authorization header / WS connectionParams value to a bare
+// token. Accepts "Bearer <token>" (any case) or a bare token, so JWTs and API
+// keys authenticate identically over HTTP and WebSocket. The WS path previously
+// passed the raw "Bearer <token>" string straight through, which made every
+// API-key (and JWT) subscription fail auth — clients like the Home Assistant
+// integration then reconnected in a tight loop, burning idle CPU.
+function extractToken(authorization?: string | null): string | undefined {
+  if (!authorization) return undefined;
+  const trimmed = authorization.trim();
+  if (!trimmed) return undefined;
+  const bearer = /^Bearer\s+(.+)$/i.exec(trimmed);
+  return bearer?.[1] ? bearer[1].trim() : trimmed;
+}
+
 async function buildContext(
   rawToken?: string,
   appBaseUrl?: string,
@@ -125,7 +139,9 @@ const serverCleanup = useServer(
   {
     schema,
     context: (ctx) => {
-      const raw = ctx.connectionParams?.authorization as string | undefined;
+      const raw = extractToken(
+        ctx.connectionParams?.authorization as string | undefined,
+      );
       return buildContext(raw);
     },
     onConnect: (ctx) => {
@@ -186,10 +202,7 @@ app.use(
   express.json(),
   expressMiddleware(server, {
     context: async ({ req }: { req: express.Request }): Promise<Context> => {
-      const authHeader = req.headers.authorization;
-      const rawToken = authHeader?.startsWith('Bearer ')
-        ? authHeader.slice(7)
-        : undefined;
+      const rawToken = extractToken(req.headers.authorization);
       const appBaseUrl =
         process.env.NODE_ENV === 'production'
           ? (process.env.APP_URL ?? `${req.protocol}://${req.get('host')}`)
