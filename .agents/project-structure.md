@@ -71,6 +71,7 @@ packages/server/src/
 │       ├── schedule.ts
 │       ├── stats.ts
 │       ├── profile.ts
+│       ├── import.ts         # myImportTodos — bulk Google Tasks import (transactional)
 │       └── auth.ts
 └── __generated__/            # Server schema + resolver types (codegen output)
     ├── schema.graphql
@@ -85,6 +86,7 @@ Imports **must** include `.ts` extension (Node 22 `--experimental-strip-types`).
 packages/client/src/
 ├── main.tsx              # App entry — Apollo + Router providers
 ├── lib/utils.ts          # cn(), priorityLabel()
+├── lib/google-tasks.ts   # parseGoogleTasks() — Takeout Tasks.json parser
 ├── hooks/                # form-hook, etc.
 ├── components/
 │   ├── ui/               # ShadCN primitives + custom (route-error, inline-length-edit)
@@ -109,6 +111,7 @@ packages/client/src/
 │   ├── time-blocks.tsx
 │   ├── activity-types.tsx
 │   ├── stats.tsx
+│   ├── import-todos.tsx      # Google Tasks JSON import (linked from Todos + Settings)
 │   └── settings.tsx
 └── __generated__/        # GraphQL Codegen output (gitignored)
     ├── gql.ts

@@ -153,3 +153,26 @@ export const MyCreateApiKeyInput = z.object({
   scopes: z.array(z.enum(API_KEY_SCOPES)).min(1),
   expiresAt: z.string().datetime({ local: true }).optional(),
 });
+
+// Bulk import (e.g. Google Tasks). Dates arrive as arbitrary ISO strings from
+// the export file, so they are validated loosely and parsed in the resolver;
+// an unparseable value becomes null rather than rejecting the whole import.
+const ImportTodoInput = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(2000).nullish(),
+  dueAt: z.string().nullish(),
+  completedAt: z.string().nullish(),
+});
+
+const ImportTodoListInput = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(2000).nullish(),
+  activityTypeId: z.string().uuid(),
+  defaultPriority: z.number().int().min(0).max(100).default(0),
+  defaultEstimatedLength: z.number().int().min(0).max(1440).default(0),
+  todos: z.array(ImportTodoInput).max(2000),
+});
+
+export const ImportTodosInput = z.object({
+  lists: z.array(ImportTodoListInput).min(1).max(100),
+});

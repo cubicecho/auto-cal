@@ -12,6 +12,7 @@ import { applyActivityTypeResolvers } from './activity-types.ts';
 import { applyApiKeyResolvers } from './api-keys.ts';
 import { applyAuthResolvers } from './auth.ts';
 import { applyHabitResolvers } from './habits.ts';
+import { applyImportResolvers } from './import.ts';
 import { applyProfileResolvers } from './profile.ts';
 import { applyScheduleResolvers } from './schedule.ts';
 import { applyStatsResolvers } from './stats.ts';
@@ -231,6 +232,31 @@ const extensionSDL = `
     expiresAt: String
   }
 
+  input ImportTodoInput {
+    title: String!
+    description: String
+    dueAt: String
+    completedAt: String
+  }
+
+  input ImportTodoListInput {
+    name: String!
+    description: String
+    activityTypeId: ID!
+    defaultPriority: Int
+    defaultEstimatedLength: Int
+    todos: [ImportTodoInput!]!
+  }
+
+  input ImportTodosArgs {
+    lists: [ImportTodoListInput!]!
+  }
+
+  type ImportTodosResult {
+    listsCreated: Int!
+    todosCreated: Int!
+  }
+
   enum TodoEventType {
     created
     updated
@@ -308,6 +334,7 @@ const extensionSDL = `
     verifyMagicLink(token: String!): VerifyMagicLinkResult!
     myCreateApiKey(input: MyCreateApiKeyInput!): CreateApiKeyResult!
     myRevokeApiKey(id: ID!): Boolean!
+    myImportTodos(input: ImportTodosArgs!): ImportTodosResult!
   }
 
   type RequestMagicLinkResult {
@@ -343,6 +370,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   applyScheduleResolvers(queryFields, mutationFields);
   applyAuthResolvers(mutationFields);
   applyApiKeyResolvers(queryFields, mutationFields);
+  applyImportResolvers(mutationFields);
   applySubscriptionResolvers(subscriptionFields);
 
   // Field resolvers: activityType on Habit and TimeBlock load directly from

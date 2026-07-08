@@ -141,6 +141,7 @@ function NativeLayout() {
       <Tabs.Screen name="calendar" options={{ href: null }} />
       <Tabs.Screen name="onboarding" options={{ href: null }} />
       <Tabs.Screen name="stats" options={{ href: null }} />
+      <Tabs.Screen name="import-todos" options={{ href: null }} />
       <Tabs.Screen name="todo-lists" options={{ title: 'Todos' }} />
       <Tabs.Screen name="habits" options={{ title: 'Habits' }} />
       <Tabs.Screen name="time-blocks" options={{ title: 'Time Blocks' }} />

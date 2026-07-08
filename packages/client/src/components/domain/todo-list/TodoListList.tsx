@@ -4,7 +4,8 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
-import { ListTodo, Plus } from 'lucide-react';
+import { Link } from 'expo-router';
+import { Download, ListTodo, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { TodoListCard } from './TodoListCard';
 import { TodoListForm } from './TodoListForm';
@@ -45,10 +46,18 @@ export function TodoListList({ lists, todosByListId }: TodoListListProps) {
               Lists group todos by activity type. Create one to get started.
             </p>
           </div>
-          <Button size="sm" onClick={() => setCreatingList(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New List
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/import-todos">
+                <Download className="mr-2 h-4 w-4" />
+                Import
+              </Link>
+            </Button>
+            <Button size="sm" onClick={() => setCreatingList(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New List
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col items-center gap-3 py-10 text-center">
@@ -82,10 +91,18 @@ export function TodoListList({ lists, todosByListId }: TodoListListProps) {
             on a todo to open the full form.
           </p>
         </div>
-        <Button size="sm" onClick={() => setCreatingList(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New List
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/import-todos">
+              <Download className="mr-2 h-4 w-4" />
+              Import
+            </Link>
+          </Button>
+          <Button size="sm" onClick={() => setCreatingList(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New List
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
