@@ -207,8 +207,53 @@ function HabitConsistencySection({ habits }: { habits: HabitRow[] }) {
             )}
           </View>
         )}
+        {habits.length > 0 && <HabitCompletionBreakdown habits={habits} />}
       </CardContent>
     </Card>
+  );
+}
+
+function HabitCompletionBreakdown({ habits }: { habits: HabitRow[] }) {
+  return (
+    <div className="mt-5 border-t border-border pt-3">
+      <div className="flex items-center gap-2 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="w-2.5 shrink-0" />
+        <span className="flex-1">Habit</span>
+        <span className="w-24 text-right">Completed / Goal</span>
+        <span className="w-20 text-right">Cadence</span>
+      </div>
+      <div className="space-y-1">
+        {habits.map((h) => {
+          // `target` is the goal projected over the selected range (may be
+          // fractional across multiple periods); round for a readable count.
+          const goal = Math.max(1, Math.round(h.target));
+          const met = h.completions >= goal;
+          return (
+            <div
+              key={h.habitId}
+              className="flex items-center gap-2 py-0.5 text-sm"
+            >
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: h.activityType?.color ?? '#94a3b8' }}
+              />
+              <span className="flex-1 truncate">{h.title}</span>
+              <span className="w-24 text-right tabular-nums">
+                <span
+                  className={`font-semibold ${met ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}
+                >
+                  {h.completions}
+                </span>
+                <span className="text-muted-foreground"> / {goal}</span>
+              </span>
+              <span className="w-20 text-right text-xs text-muted-foreground">
+                {h.frequencyCount}×/{h.frequencyUnit}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
