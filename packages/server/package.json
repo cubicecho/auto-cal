@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --env-file=../../.env --experimental-transform-types src/index.ts",
+    "dev": "node --env-file=../../.env --experimental-strip-types src/index.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
