@@ -14,7 +14,8 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
 const NAV_LINKS = [
-  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/today', label: 'Today' },
+  { href: '/calendar', label: 'Calendar' },
   { href: '/todo-lists', label: 'Todos' },
   { href: '/habits', label: 'Habits' },
   { href: '/time-blocks', label: 'Time Blocks' },
@@ -136,7 +137,8 @@ function NativeLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="dashboard" options={{ href: null }} />
+      <Tabs.Screen name="today" options={{ href: null }} />
+      <Tabs.Screen name="calendar" options={{ href: null }} />
       <Tabs.Screen name="onboarding" options={{ href: null }} />
       <Tabs.Screen name="stats" options={{ href: null }} />
       <Tabs.Screen name="todo-lists" options={{ title: 'Todos' }} />

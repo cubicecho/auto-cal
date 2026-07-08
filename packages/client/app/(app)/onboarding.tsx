@@ -43,7 +43,7 @@ export default function OnboardingPage() {
     if (data && data.myActivityTypes.length > 0) {
       checked.current = true;
       storage.setItem('onboarding_done', '1');
-      router.replace('/dashboard');
+      router.replace('/today');
     }
   }, [data, loading, step, force, router]);
 
@@ -53,12 +53,12 @@ export default function OnboardingPage() {
 
   function handleFinish() {
     storage.setItem('onboarding_done', '1');
-    router.replace('/dashboard');
+    router.replace('/today');
   }
 
   function handleSkipAll() {
     storage.setItem('onboarding_done', '1');
-    router.replace('/dashboard');
+    router.replace('/today');
   }
 
   if (step === 1 && loading) {

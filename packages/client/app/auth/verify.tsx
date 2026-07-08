@@ -21,7 +21,7 @@ export default function VerifyPage() {
   const [verify, { error }] = useMutation(VERIFY_MAGIC_LINK, {
     onCompleted(data) {
       storage.setItem('auth_token', data.verifyMagicLink.token);
-      router.replace('/(app)/dashboard');
+      router.replace('/(app)/today');
     },
   });
 

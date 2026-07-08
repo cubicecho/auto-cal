@@ -114,7 +114,7 @@ function isCurrent(date: Date, view: CalendarViewMode): boolean {
   }
 }
 
-export default function DashboardPage() {
+export default function CalendarPage() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     weekStart?: string;
@@ -129,7 +129,7 @@ export default function DashboardPage() {
     day?: string;
     view?: string;
   }) {
-    router.replace({ pathname: '/dashboard', params: next });
+    router.replace({ pathname: '/calendar', params: next });
   }
 
   function setDate(nextDate: Date) {
@@ -183,7 +183,7 @@ export default function DashboardPage() {
     <div className="container mx-auto flex h-full min-h-0 flex-col px-4 pt-4">
       <div className="mb-3 flex-shrink-0 flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Dashboard</h2>
+          <h2 className="text-2xl font-bold">Calendar</h2>
           <p className="text-sm text-muted-foreground">
             Your schedule at a glance
           </p>
