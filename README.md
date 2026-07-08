@@ -2,6 +2,8 @@
 
 **Auto Cal** is a smart todo and habit scheduling app that automatically fits your tasks into the time you have available.
 
+🌐 **[Website & self-hosting guide](https://cubicecho.github.io/auto-cal/)** — what it does and how to run it yourself.
+
 ## What It Does
 
 - **Intelligent scheduling** — tasks are placed into your calendar automatically based on priority and the time blocks you define

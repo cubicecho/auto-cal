@@ -1,0 +1,157 @@
+---
+layout: base.njk
+title: false
+---
+
+<section class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Smart todo &amp; habit scheduler</p>
+    <h1>{{ site.tagline }}</h1>
+    <p class="lede">
+      Define the time blocks in your week, add your todos and recurring habits, and Auto Cal fits them into
+      your calendar automatically — by priority, into the right window, rescheduling as things change.
+      Self-hosted, open source, one Docker image.
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="{{ '/self-hosting/' | url }}">Self-host it</a>
+      <a class="btn btn-ghost" href="{{ site.repo }}">View on GitHub ↗</a>
+    </div>
+
+    <div class="schedule-card" aria-hidden="false">
+      <div class="schedule-head">
+        <strong>Today</strong>
+        <span>auto-scheduled</span>
+      </div>
+      <div class="slot">
+        <span class="slot-time">09:00</span>
+        <span class="slot-bar"></span>
+        <span class="slot-body">
+          <span class="slot-title">Write project proposal</span>
+          <span class="slot-meta">Deep work · P1 · 90 min</span>
+        </span>
+        <span class="slot-tag">todo</span>
+      </div>
+      <div class="slot">
+        <span class="slot-time">12:30</span>
+        <span class="slot-bar b2"></span>
+        <span class="slot-body">
+          <span class="slot-title">Run 5k</span>
+          <span class="slot-meta">Exercise · 3× / week</span>
+        </span>
+        <span class="slot-tag habit">habit</span>
+      </div>
+      <div class="slot">
+        <span class="slot-time">15:00</span>
+        <span class="slot-bar b3"></span>
+        <span class="slot-body">
+          <span class="slot-title">Review pull requests</span>
+          <span class="slot-meta">Deep work · P2 · 45 min</span>
+        </span>
+        <span class="slot-tag">todo</span>
+      </div>
+      <div class="slot">
+        <span class="slot-time">19:00</span>
+        <span class="slot-bar b4"></span>
+        <span class="slot-body">
+          <span class="slot-title">Read 20 pages</span>
+          <span class="slot-meta">Learning · 5× / week</span>
+        </span>
+        <span class="slot-tag habit">habit</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <h2>What it does</h2>
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="feature-icon">🧮</div>
+        <h3>Automatic scheduling</h3>
+        <p>Add a todo with a priority and an estimated length; Auto Cal places it into the next free slot of a
+          matching time block. No dragging things around a calendar by hand.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🧱</div>
+        <h3>Activity-based time blocks</h3>
+        <p>Define recurring windows for an activity — <em>"5–7 pm, exercise"</em>, <em>"9–12, deep work"</em> — and
+          only matching todos and habits land there. Your day keeps its shape.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🔁</div>
+        <h3>Habit tracking</h3>
+        <p>Set a cadence like <strong>3× per week</strong> or <strong>10× per month</strong>. Auto Cal schedules
+          only the instances you still owe and tracks your completion rate over time.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">⚖️</div>
+        <h3>Auto-rescheduling</h3>
+        <p>When a higher-priority item arrives or you finish something early, lower-priority items shift to make
+          room — the whole plan recomputes, no manual reshuffling.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📆</div>
+        <h3>Subscribe from any calendar</h3>
+        <p>A read-only iCal feed exposes your computed schedule and time blocks. Subscribe from Google Calendar,
+          Apple Calendar, or anything that speaks <code>.ics</code>.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🔑</div>
+        <h3>GraphQL API &amp; keys</h3>
+        <p>Everything is a scoped GraphQL API. Mint <code>acal_</code> API keys to script your todos, drive the
+          iCal feed, or wire Auto Cal into your own tools.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">✉️</div>
+        <h3>Passwordless login</h3>
+        <p>Sign in with a magic link — no passwords to store or leak. On a trusted local network you can enable
+          link-in-response login and skip the email provider entirely.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📦</div>
+        <h3>Ships as one image</h3>
+        <p>A single Docker image builds the web client and the API server. Run it with embedded PGLite for a
+          demo, or point it at Postgres for real use.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <div class="flow">
+      <div class="flow-node">
+        <strong>You add the inputs</strong>
+        <span>Time blocks, todos with priority &amp; estimate, habits with a cadence</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node flow-scheduler">
+        <strong>The scheduler</strong>
+        <span>matches items to blocks · orders by priority · fills free slots · recomputes on every change</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <strong>Your calendar</strong>
+        <span>A concrete plan in the app and over the iCal feed</span>
+      </div>
+    </div>
+    <p class="flow-caption">
+      The schedule is a pure function of your current todos, habits, and time blocks — recomputed fresh whenever
+      anything changes, then written back so the app and your subscribed calendar always agree. Habits only take
+      up as many slots as you still owe for the period; finish one and the rest of the week rebalances.
+    </p>
+  </div>
+</section>
+
+<section class="section cta-final">
+  <div class="wrap">
+    <h2>Run it yourself in a few minutes.</h2>
+    <p>One <code>docker compose up</code> and a browser tab. All your data stays on your box.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="{{ '/self-hosting/' | url }}">Read the self-hosting guide</a>
+      <a class="btn btn-ghost" href="{{ site.repo }}">GitHub ↗</a>
+    </div>
+  </div>
+</section>

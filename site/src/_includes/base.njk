@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% if title %}{{ title }} · {{ site.name }}{% else %}{{ site.name }} — {{ site.tagline }}{% endif %}</title>
+    <meta name="description" content="{{ description or site.description }}" />
+    <meta property="og:title" content="{{ title or site.name }}" />
+    <meta property="og:description" content="{{ description or site.description }}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="{{ site.url }}" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%85%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="{{ '/css/style.css' | url }}" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="{{ '/' | url }}">
+          <span class="brand-mark" aria-hidden="true">📅</span>
+          <span class="brand-name">{{ site.name }}</span>
+        </a>
+        <nav class="site-nav">
+          <a href="{{ '/' | url }}">Home</a>
+          <a href="{{ '/self-hosting/' | url }}">Self-hosting</a>
+          <a class="nav-external" href="{{ site.repo }}">GitHub ↗</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      {{ content | safe }}
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <p>{{ site.name }} — a self-hosted todo &amp; habit scheduler. MIT licensed.</p>
+        <p class="footer-links">
+          <a href="{{ site.repo }}">Source</a>
+          <a href="{{ site.dockerHub }}">Docker Hub</a>
+          <a href="{{ '/self-hosting/' | url }}">Self-hosting</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

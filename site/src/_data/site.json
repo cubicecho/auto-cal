@@ -1,0 +1,8 @@
+{
+  "name": "Auto Cal",
+  "tagline": "Your todos and habits, scheduled automatically.",
+  "description": "A self-hosted smart scheduler: define the time blocks in your week, add todos and recurring habits, and Auto Cal fits them into your calendar by priority — rescheduling automatically as things change. Subscribe from any calendar app over an iCal feed. Ships as a single Docker image.",
+  "repo": "https://github.com/cubicecho/auto-cal",
+  "dockerHub": "https://hub.docker.com/r/vantreeseba/auto-cal",
+  "url": "https://cubicecho.github.io/auto-cal"
+}
