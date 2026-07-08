@@ -5,9 +5,15 @@ import { Button } from '@/components/ui/button';
 import { useTodosUpdated } from '@/hooks/useTodosUpdated';
 import { priorityLabel } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { format, parseISO } from 'date-fns';
+import { addDays, format, isToday, parseISO } from 'date-fns';
 import { Link } from 'expo-router';
-import { AlertTriangle, Check, Plus } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 // Reuses the ScheduledItem_ScheduleView fragment defined in ScheduleView.tsx.
@@ -56,7 +62,13 @@ function toMonday(date: Date): Date {
 
 export default function TodayPage() {
   const [todoOpen, setTodoOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
   const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const viewingToday = isToday(selectedDate);
 
   const [updateProfile] = useMutation(UPDATE_PROFILE);
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only effect
@@ -68,7 +80,7 @@ export default function TodayPage() {
 
   const { data, refetch } = useQuery(MY_TODAY, {
     variables: {
-      weekStart: format(toMonday(new Date()), 'yyyy-MM-dd'),
+      weekStart: format(toMonday(selectedDate), 'yyyy-MM-dd'),
       timezone: clientTimezone,
     },
     fetchPolicy: 'cache-and-network',
@@ -79,14 +91,14 @@ export default function TodayPage() {
   });
 
   const schedule = data?.mySchedule ?? [];
-  const todayKey = format(new Date(), 'yyyy-MM-dd');
+  const selectedKey = format(selectedDate, 'yyyy-MM-dd');
 
   const { today, unscheduledCount } = useMemo(() => {
     const items = schedule.filter(
       (i) =>
         i.isScheduled &&
         i.scheduledStart &&
-        format(new Date(i.scheduledStart), 'yyyy-MM-dd') === todayKey,
+        format(new Date(i.scheduledStart), 'yyyy-MM-dd') === selectedKey,
     );
     items.sort(
       (a, b) =>
@@ -97,7 +109,7 @@ export default function TodayPage() {
       today: items,
       unscheduledCount: schedule.filter((i) => !i.isScheduled).length,
     };
-  }, [schedule, todayKey]);
+  }, [schedule, selectedKey]);
 
   const [completeHabit, { loading: completingHabit }] = useMutation(
     COMPLETE_HABIT,
@@ -148,14 +160,48 @@ export default function TodayPage() {
       <div className="mx-auto w-full max-w-2xl">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold leading-none">Today</h2>
+            <h2 className="text-2xl font-bold leading-none">
+              {viewingToday ? 'Today' : format(selectedDate, 'EEEE')}
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {format(new Date(), 'EEEE, MMMM d')}
+              {format(selectedDate, 'EEEE, MMMM d')}
             </p>
           </div>
           <Button size="sm" onClick={() => setTodoOpen(true)}>
             <Plus className="mr-1 h-4 w-4" />
             Add todo
+          </Button>
+        </div>
+
+        <div className="mb-3 flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedDate((d) => addDays(d, -1))}
+            title="Previous day"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={viewingToday}
+            className="disabled:opacity-40"
+            onClick={() => {
+              const d = new Date();
+              d.setHours(0, 0, 0, 0);
+              setSelectedDate(d);
+            }}
+          >
+            Today
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedDate((d) => addDays(d, 1))}
+            title="Next day"
+          >
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
@@ -170,7 +216,9 @@ export default function TodayPage() {
           {today.length === 0 ? (
             <div className="border-t px-3.5 py-10 text-center">
               <p className="text-sm text-muted-foreground">
-                Nothing scheduled for today.
+                {viewingToday
+                  ? 'Nothing scheduled for today.'
+                  : `Nothing scheduled for ${format(selectedDate, 'EEEE, MMMM d')}.`}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Add a todo or habit and assign it to an activity type with a
