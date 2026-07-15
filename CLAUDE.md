@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # Dev
 npm run dev              # frontend + backend concurrently
-npm run dev:server       # GraphQL API only (localhost:4000)
+npm run dev:server       # GraphQL API only (localhost:3001)
 npm run dev:client       # Vite client only (localhost:3000)
 
 # Quality — run both before every commit; CI fails if either does not pass

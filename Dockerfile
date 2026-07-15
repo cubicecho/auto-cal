@@ -36,10 +36,10 @@ COPY --from=client-builder /app/packages/client/dist ./packages/client/dist
 
 RUN mkdir -p /app/pgdata
 
-EXPOSE 4000
+EXPOSE 3001
 
 ENV NODE_ENV=production
-ENV PORT=4000
+ENV PORT=3001
 # NOTE: PGLITE_DATA_DIR is intentionally NOT baked in. The backend is chosen at
 # runtime: DATABASE_URL → real Postgres; otherwise PGLITE_DATA_DIR → PGLite.
 # Baking in a PGLITE_DATA_DIR default made a run without DATABASE_URL silently

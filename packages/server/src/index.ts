@@ -221,7 +221,7 @@ if (clientDistExists) {
   });
 }
 
-const PORT = Number(process.env.PORT ?? 4000);
+const PORT = Number(process.env.PORT ?? 3001);
 
 httpServer.listen(PORT, '0.0.0.0', () => {
   log.info(`Server ready at http://0.0.0.0:${PORT}/graphql`);

@@ -182,7 +182,7 @@ Operations colocated under `packages/client/src/operations/api-keys.graphql.ts` 
 ## Acceptance
 
 1. User generates a key labelled "Home Assistant" with `read` scope in Settings, copies it once.
-2. `curl -H "Authorization: Bearer acal_<token>" -d '{"query":"{ myTodos { id title } }"}' http://localhost:4000/graphql` returns that user's todos.
+2. `curl -H "Authorization: Bearer acal_<token>" -d '{"query":"{ myTodos { id title } }"}' http://localhost:3001/graphql` returns that user's todos.
 3. Revoking the key in Settings causes the same curl to return an auth error within one request.
 4. The plaintext token is never visible in the API after creation; only `keyPrefix` shows up in `myApiKeys`.
 5. A request authenticated with an API key cannot call `myCreateApiKey` or `myRevokeApiKey`.

@@ -110,6 +110,6 @@ Scope enforcement: `read` scope for GET/PROPFIND/REPORT; `write` scope for PUT/D
 npm run typecheck && npm run lint && npm test
 
 # Apple Calendar manual test:
-# Other CalDAV Account → Server: http://localhost:4000/caldav/<user-id>/
+# Other CalDAV Account → Server: http://localhost:3001/caldav/<user-id>/
 # Username: anything   Password: acal_xxx
 ```

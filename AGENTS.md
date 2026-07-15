@@ -9,7 +9,7 @@ Monorepo: `packages/db` (Drizzle + PGLite), `packages/server` (Express + Apollo)
 ```bash
 # Dev
 npm run dev              # start frontend + backend
-npm run dev:server       # GraphQL server only (localhost:4000)
+npm run dev:server       # GraphQL server only (localhost:3001)
 npm run dev:client       # React client only (localhost:3000)
 
 # Quality

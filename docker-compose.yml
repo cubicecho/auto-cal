@@ -2,7 +2,7 @@ services:
   auto-cal:
     build: .
     ports:
-      - "4000:4000"
+      - "3001:3001"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://autocal:autocal@postgres:5432/autocal

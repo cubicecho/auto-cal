@@ -26,7 +26,7 @@ node --experimental-strip-types packages/server/src/index.ts
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `PORT` | No | Server port (default `4000`) |
+| `PORT` | No | Server port (default `3001`) |
 | `DATABASE_URL` | Conditional | Postgres connection string (e.g. `postgresql://user:pass@host:5432/db`); when set, uses `postgres.js` driver |
 | `PGLITE_DATA_DIR` | Conditional | Path to PGLite data directory; required when `DATABASE_URL` is not set |
 | `NODE_ENV` | No | `production` / `development` |

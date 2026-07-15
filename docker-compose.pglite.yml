@@ -2,7 +2,7 @@ services:
   auto-cal:
     build: .
     ports:
-      - "4000:4000"
+      - "3001:3001"
     volumes:
       - auto-cal-data:/app/pgdata
     environment:

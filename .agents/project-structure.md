@@ -326,7 +326,7 @@ Run with `npm test`. todo.md #15 ("test suite") covers the gaps that remain (res
 |----------|------|------------|
 | `packages/server/src/__generated__/schema.graphql` | Full SDL (drizzle-generated + extensions) | `npm run codegen:server` |
 | `packages/server/src/__generated__/resolvers.ts` | Resolver types | `npm run codegen:server` |
-| `packages/client/src/__generated__/gql.ts` + `graphql.ts` | Typed operations + result types | `npm run codegen` (requires server running on :4000) |
+| `packages/client/src/__generated__/gql.ts` + `graphql.ts` | Typed operations + result types | `npm run codegen` (requires server running on :3001) |
 
 All `__generated__/` directories are gitignored.
 
@@ -337,7 +337,7 @@ All `__generated__/` directories are gitignored.
 | Command | Purpose |
 |---------|---------|
 | `npm run dev` | Frontend + backend (concurrently) |
-| `npm run dev:server` | API only on :4000 |
+| `npm run dev:server` | API only on :3001 |
 | `npm run dev:client` | Vite on :3000 |
 | `npm run typecheck` | `tsc --noEmit` across packages |
 | `npm run lint` / `lint:fix` | Biome |
