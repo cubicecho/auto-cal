@@ -1,5 +1,41 @@
-import { API_KEY_SCOPES } from '@auto-cal/db/schema';
+import { API_KEY_SCOPES, PROJECT_STATUSES } from '@auto-cal/db/schema';
 import { z } from 'zod';
+
+export const CreateProjectInput = z.object({
+  name: z.string().min(1).max(100),
+  // Parent activity type the project's dedicated type nests under. Omit for a
+  // top-level project type.
+  parentActivityTypeId: z.string().uuid().nullable().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Must be a valid hex color')
+    .optional(),
+  // Auto-create an empty todo list for the project (default on).
+  createList: z.boolean().default(true),
+});
+
+export const UpdateProjectInput = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(100).optional(),
+  status: z.enum(PROJECT_STATUSES).optional(),
+});
+
+export const CreateProjectNoteInput = z.object({
+  projectId: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  content: z.string().max(50000).default(''),
+});
+
+export const UpdateProjectNoteInput = z.object({
+  id: z.string().uuid(),
+  title: z.string().min(1).max(200).optional(),
+  content: z.string().max(50000).optional(),
+});
+
+export const ReorderProjectNotesInput = z.object({
+  projectId: z.string().uuid(),
+  noteIds: z.array(z.string().uuid()).min(1).max(500),
+});
 
 export const CreateActivityTypeInput = z.object({
   name: z.string().min(1).max(100),

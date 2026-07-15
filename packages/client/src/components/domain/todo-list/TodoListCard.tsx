@@ -17,7 +17,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { formatDuration } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
-import { ListX, Pencil, Plus } from 'lucide-react';
+import { FolderKanban, ListX, Pencil, Plus } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 import { TodoListForm } from './TodoListForm';
 
@@ -120,6 +120,12 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <CardTitle className="truncate text-base">{list.name}</CardTitle>
+              {list.project && (
+                <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  <FolderKanban className="h-3 w-3" />
+                  {list.project.name}
+                </span>
+              )}
               {list.description && (
                 <CardDescription className="line-clamp-2 text-xs">
                   {list.description}

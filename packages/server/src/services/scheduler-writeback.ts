@@ -11,6 +11,7 @@ import { habitCompletions, todos } from '@auto-cal/db/schema';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import {
   type TodoWithActivityType,
+  activityTypeAndAncestors,
   computeSchedule,
   startOfISOWeek,
   startOfLocalMonth,
@@ -47,23 +48,28 @@ function countByPeriod(
 
 /**
  * Returns true if the todo's scheduledAt is in the future and still falls
- * within a valid time block for its activity type. Used to decide whether to
+ * within a valid time block for its activity type — or any ancestor type, since
+ * a task may inherit its ancestors' general blocks. Used to decide whether to
  * preserve an existing scheduled placement rather than re-running the scheduler.
  */
 function isScheduledAtValid(
   todo: TodoWithActivityType,
   timeBlocks: TimeBlock[],
   now: Date,
+  activityTypeMap: Map<string, ActivityType>,
 ): boolean {
   if (!todo.scheduledAt || todo.scheduledAt <= now) return false;
   if (!todo.activityTypeId) return false;
 
+  const validTypeIds = new Set(
+    activityTypeAndAncestors(todo.activityTypeId, activityTypeMap),
+  );
   const scheduled = new Date(todo.scheduledAt);
   const dayOfWeek = scheduled.getDay(); // 0=Sun…6=Sat
   const scheduledMins = scheduled.getHours() * 60 + scheduled.getMinutes();
 
   return timeBlocks.some((b) => {
-    if (b.activityTypeId !== todo.activityTypeId) return false;
+    if (!b.activityTypeId || !validTypeIds.has(b.activityTypeId)) return false;
     if (!b.daysOfWeek.includes(dayOfWeek)) return false;
     const [startH = 0, startM = 0] = b.startTime.split(':').map(Number);
     const [endH = 0, endM = 0] = b.endTime.split(':').map(Number);
@@ -178,7 +184,9 @@ export async function runSchedulerWriteback(
   // block are kept as-is and excluded from the scheduling loop.
   const prePlacedIds = new Set(
     userTodos
-      .filter((t) => isScheduledAtValid(t, userTimeBlocks, now))
+      .filter((t) =>
+        isScheduledAtValid(t, userTimeBlocks, now, activityTypeMap),
+      )
       .map((t) => t.id),
   );
 

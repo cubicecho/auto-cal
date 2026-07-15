@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { href: '/today', label: 'Today' },
   { href: '/calendar', label: 'Calendar' },
   { href: '/todo-lists', label: 'Todos' },
+  { href: '/projects', label: 'Projects' },
   { href: '/habits', label: 'Habits' },
   { href: '/time-blocks', label: 'Time Blocks' },
   { href: '/activity-types', label: 'Activity Types' },
@@ -143,6 +144,7 @@ function NativeLayout() {
       <Tabs.Screen name="stats" options={{ href: null }} />
       <Tabs.Screen name="import-todos" options={{ href: null }} />
       <Tabs.Screen name="todo-lists" options={{ title: 'Todos' }} />
+      <Tabs.Screen name="projects" options={{ title: 'Projects' }} />
       <Tabs.Screen name="habits" options={{ title: 'Habits' }} />
       <Tabs.Screen name="time-blocks" options={{ title: 'Time Blocks' }} />
       <Tabs.Screen

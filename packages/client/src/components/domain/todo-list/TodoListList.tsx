@@ -4,6 +4,7 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Link } from 'expo-router';
 import { Download, ListTodo, Plus } from 'lucide-react';
 import { useState } from 'react';
@@ -22,6 +23,10 @@ export const TODO_LIST_LIST_FRAGMENT = graphql(`
       name
       color
     }
+    project {
+      id
+      name
+    }
   }
 `);
 
@@ -35,6 +40,15 @@ type TodoListListProps = {
 
 export function TodoListList({ lists, todosByListId }: TodoListListProps) {
   const [creatingList, setCreatingList] = useState(false);
+  // Project-owned lists are managed from the project view; hide them here by
+  // default to keep the standalone todo-lists page focused.
+  const [hideProjectLists, setHideProjectLists] = useState(true);
+
+  const hasProjectLists = lists.some((l) => l.project);
+  const displayLists =
+    hideProjectLists && hasProjectLists
+      ? lists.filter((l) => !l.project)
+      : lists;
 
   if (lists.length === 0) {
     return (
@@ -91,7 +105,20 @@ export function TodoListList({ lists, todosByListId }: TodoListListProps) {
             on a todo to open the full form.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {hasProjectLists && (
+            <label
+              htmlFor="hide-project-lists"
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+            >
+              <Switch
+                id="hide-project-lists"
+                checked={hideProjectLists}
+                onCheckedChange={setHideProjectLists}
+              />
+              Hide project lists
+            </label>
+          )}
           <Button variant="outline" size="sm" asChild>
             <Link href="/import-todos">
               <Download className="mr-2 h-4 w-4" />
@@ -106,7 +133,7 @@ export function TodoListList({ lists, todosByListId }: TodoListListProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {lists.map((list) => (
+        {displayLists.map((list) => (
           <TodoListCard
             key={list.id}
             list={list}

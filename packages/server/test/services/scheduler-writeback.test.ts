@@ -276,6 +276,61 @@ describe('runSchedulerWriteback', () => {
     expect(updated?.scheduledAt).not.toBeNull();
   });
 
+  it('preserves an inherited placement in an ancestor time block', async () => {
+    // A dedicated child activity type nested under Work, with a time block that
+    // exists ONLY on the parent. A todo pre-placed into that parent block must
+    // be treated as valid (inherited) and left exactly where it is.
+    const childType = seed(
+      await db
+        .insert(activityTypes)
+        .values({
+          userId,
+          name: 'Redesign',
+          color: '#f59e0b',
+          parentId: activityTypeId,
+        })
+        .returning(),
+    );
+    await db.insert(timeBlocks).values({
+      userId,
+      activityTypeId, // parent (Work) block only — no dedicated child block
+      daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+      startTime: '09:00',
+      endTime: '17:00',
+      priority: 0,
+    });
+    const list = seed(
+      await db
+        .insert(todoLists)
+        .values({ userId, name: 'Redesign', activityTypeId: childType.id })
+        .returning(),
+    );
+
+    // Pre-place at 10:00 — offset from the 09:00 block start so a rewrite would
+    // move it and this assertion would fail.
+    const future = new Date();
+    future.setDate(future.getDate() + 1);
+    future.setHours(10, 0, 0, 0);
+
+    const todo = seed(
+      await db
+        .insert(todos)
+        .values({
+          userId,
+          listId: list.id,
+          title: 'Inherited placement',
+          estimatedLength: 30,
+          scheduledAt: future,
+        })
+        .returning(),
+    );
+
+    await runSchedulerWriteback(db, userId);
+
+    const [updated] = await db.query.todos.findMany({ where: { id: todo.id } });
+    expect(updated?.scheduledAt?.getTime()).toBe(future.getTime());
+  });
+
   it('does not delete real (completed) habit completions during writeback', async () => {
     await db.insert(timeBlocks).values({
       userId,

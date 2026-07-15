@@ -1,5 +1,6 @@
 import { integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { activityTypes } from './activity_types.ts';
+import { projects } from './projects.ts';
 import { users } from './users.ts';
 
 export const todoLists = pgTable('todo_lists', {
@@ -12,6 +13,10 @@ export const todoLists = pgTable('todo_lists', {
   activityTypeId: uuid('activity_type_id')
     .notNull()
     .references(() => activityTypes.id, { onDelete: 'restrict' }),
+  // Nullable: a list may belong to a project or stand alone.
+  projectId: uuid('project_id').references(() => projects.id, {
+    onDelete: 'set null',
+  }),
   defaultPriority: integer('default_priority').notNull().default(0),
   defaultEstimatedLength: integer('default_estimated_length')
     .notNull()

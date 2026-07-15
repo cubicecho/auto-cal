@@ -14,6 +14,7 @@ import { applyAuthResolvers } from './auth.ts';
 import { applyHabitResolvers } from './habits.ts';
 import { applyImportResolvers } from './import.ts';
 import { applyProfileResolvers } from './profile.ts';
+import { applyProjectResolvers } from './projects.ts';
 import { applyScheduleResolvers } from './schedule.ts';
 import { applyStatsResolvers } from './stats.ts';
 import { applySubscriptionResolvers } from './subscriptions.ts';
@@ -115,6 +116,36 @@ const extensionSDL = `
   input CreateActivityTypeArgs {
     name: String!
     color: String
+  }
+
+  input CreateProjectArgs {
+    name: String!
+    parentActivityTypeId: ID
+    color: String
+    createList: Boolean
+  }
+
+  input UpdateProjectArgs {
+    id: ID!
+    name: String
+    status: String
+  }
+
+  input CreateProjectNoteArgs {
+    projectId: ID!
+    title: String!
+    content: String
+  }
+
+  input UpdateProjectNoteArgs {
+    id: ID!
+    title: String
+    content: String
+  }
+
+  input ReorderProjectNotesArgs {
+    projectId: ID!
+    noteIds: [ID!]!
   }
 
   input UpdateActivityTypeArgs {
@@ -293,6 +324,18 @@ const extensionSDL = `
     activityType: ActivityType
   }
 
+  # Project.activityType / Project.notes and TodoList.project / ProjectNote.project
+  # are auto-generated from Drizzle relations (resolvers wired below). Only the
+  # single-list convenience field and the activity-type tree links need SDL here.
+  extend type Project {
+    list: TodoList
+  }
+
+  extend type ActivityType {
+    parent: ActivityType
+    children: [ActivityType!]!
+  }
+
   extend type Query {
     myProfile: UserProfile
     myActivityTypes: [ActivityType!]!
@@ -306,6 +349,8 @@ const extensionSDL = `
     myStats(startDate: String, endDate: String): StatsOverview!
     mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!
     myApiKeys: [ApiKey!]!
+    myProjects(includeArchived: Boolean): [Project!]!
+    myProject(id: ID!): Project
   }
 
   extend type Mutation {
@@ -335,6 +380,13 @@ const extensionSDL = `
     myCreateApiKey(input: MyCreateApiKeyInput!): CreateApiKeyResult!
     myRevokeApiKey(id: ID!): Boolean!
     myImportTodos(input: ImportTodosArgs!): ImportTodosResult!
+    myCreateProject(input: CreateProjectArgs!): Project!
+    myUpdateProject(input: UpdateProjectArgs!): Project!
+    myArchiveProject(id: ID!): Project!
+    myCreateProjectNote(input: CreateProjectNoteArgs!): ProjectNote!
+    myUpdateProjectNote(input: UpdateProjectNoteArgs!): ProjectNote!
+    myReorderProjectNotes(input: ReorderProjectNotesArgs!): [ProjectNote!]!
+    myDeleteProjectNote(id: ID!): Boolean!
   }
 
   type RequestMagicLinkResult {
@@ -368,6 +420,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   applyTimeBlockResolvers(queryFields, mutationFields);
   applyStatsResolvers(queryFields);
   applyScheduleResolvers(queryFields, mutationFields);
+  applyProjectResolvers(queryFields, mutationFields);
   applyAuthResolvers(mutationFields);
   applyApiKeyResolvers(queryFields, mutationFields);
   applyImportResolvers(mutationFields);
@@ -394,8 +447,65 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   timeBlockType.getFields().activityType!.resolve = resolveActivityType;
 
   const todoListType = extended.getType('TodoList') as GraphQLObjectType;
+  const todoListFields = todoListType.getFields();
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  todoListType.getFields().activityType!.resolve = resolveActivityType;
+  todoListFields.activityType!.resolve = resolveActivityType;
+  // biome-ignore lint/style/noNonNullAssertion: auto-generated from todoLists.project relation
+  todoListFields.project!.resolve = (
+    parent: { projectId: string | null },
+    _args: unknown,
+    context: Context,
+  ) =>
+    parent.projectId ? context.loaders.project.load(parent.projectId) : null;
+
+  // Activity-type tree links.
+  const activityTypeType = extended.getType(
+    'ActivityType',
+  ) as GraphQLObjectType;
+  const activityTypeFields = activityTypeType.getFields();
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  activityTypeFields.parent!.resolve = (
+    parent: { parentId: string | null },
+    _args: unknown,
+    context: Context,
+  ) =>
+    parent.parentId ? context.loaders.activityType.load(parent.parentId) : null;
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  activityTypeFields.children!.resolve = (
+    parent: { id: string },
+    _args: unknown,
+    context: Context,
+  ) => context.loaders.activityTypeByParent.load(parent.id);
+
+  // Project relation fields.
+  const projectType = extended.getType('Project') as GraphQLObjectType;
+  const projectFields = projectType.getFields();
+  // biome-ignore lint/style/noNonNullAssertion: auto-generated from projects.activityType relation
+  projectFields.activityType!.resolve = resolveActivityType;
+  // biome-ignore lint/style/noNonNullAssertion: auto-generated from projects.notes relation
+  projectFields.notes!.resolve = (
+    parent: { id: string },
+    _args: unknown,
+    context: Context,
+  ) => context.loaders.projectNotes.load(parent.id);
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  projectFields.list!.resolve = async (
+    parent: { id: string },
+    _args: unknown,
+    context: Context,
+  ) => {
+    const lists = await context.loaders.todoListsByProject.load(parent.id);
+    return lists[0] ?? null;
+  };
+
+  // ProjectNote.project is auto-generated from the projectNotes.project relation.
+  const projectNoteType = extended.getType('ProjectNote') as GraphQLObjectType;
+  // biome-ignore lint/style/noNonNullAssertion: auto-generated from projectNotes.project relation
+  projectNoteType.getFields().project!.resolve = (
+    parent: { projectId: string },
+    _args: unknown,
+    context: Context,
+  ) => context.loaders.project.load(parent.projectId);
 
   // drizzle-graphql generates ApiKey.scopes as String! but the DB stores a
   // text[] array; patch the field type so GraphQL serializes it as [String!]!.

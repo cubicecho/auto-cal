@@ -379,3 +379,148 @@ describe('computeSchedule', () => {
     expect(result.filter((r) => r.isScheduled)).toHaveLength(2);
   });
 });
+
+// ─── Activity-type inheritance (project dedicated blocks) ─────────────────────
+
+describe('computeSchedule — activity-type inheritance', () => {
+  // REDESIGN is a dedicated (project) type nested under WORK.
+  const REDESIGN: ActivityType = makeActivityType({
+    id: 'at-redesign',
+    name: 'Redesign',
+    color: '#f59e0b',
+    parentId: WORK.id,
+  });
+  const HIER_MAP = new Map<string, ActivityType>([
+    [WORK.id, WORK],
+    [REDESIGN.id, REDESIGN],
+    [EXERCISE.id, EXERCISE],
+  ]);
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(`${WEEK}T00:00:00`));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('schedules a child-type task into its own dedicated block', () => {
+    const [result] = computeSchedule(
+      WEEK,
+      [
+        makeBlock({
+          activityTypeId: WORK.id,
+          daysOfWeek: [1],
+          startTime: '09:00',
+          endTime: '17:00',
+        }),
+        makeBlock({
+          id: 'tb-redesign',
+          activityTypeId: REDESIGN.id,
+          daysOfWeek: [1],
+          startTime: '13:00',
+          endTime: '14:00',
+        }),
+      ],
+      [makeTodo({ activityTypeId: REDESIGN.id, estimatedLength: 60 })],
+      [],
+      HIER_MAP,
+    );
+    expect(result?.isScheduled).toBe(true);
+    // Lands in the dedicated 13:00 block, not the general 09:00 one.
+    expect(result?.scheduledStart).toBe('2026-05-04T13:00:00.000Z');
+  });
+
+  it('falls back to an ancestor block when no dedicated block exists', () => {
+    const [result] = computeSchedule(
+      WEEK,
+      [
+        makeBlock({
+          activityTypeId: WORK.id,
+          daysOfWeek: [1],
+          startTime: '09:00',
+          endTime: '17:00',
+        }),
+      ],
+      [makeTodo({ activityTypeId: REDESIGN.id, estimatedLength: 60 })],
+      [],
+      HIER_MAP,
+    );
+    expect(result?.isScheduled).toBe(true);
+    expect(result?.scheduledStart).toBe('2026-05-04T09:00:00.000Z');
+  });
+
+  it('prefers the dedicated block even when an ancestor block has higher priority', () => {
+    const [result] = computeSchedule(
+      WEEK,
+      [
+        makeBlock({
+          activityTypeId: WORK.id,
+          daysOfWeek: [1],
+          startTime: '09:00',
+          endTime: '10:00',
+          priority: 100,
+        }),
+        makeBlock({
+          id: 'tb-redesign',
+          activityTypeId: REDESIGN.id,
+          daysOfWeek: [1],
+          startTime: '14:00',
+          endTime: '15:00',
+          priority: 0,
+        }),
+      ],
+      [makeTodo({ activityTypeId: REDESIGN.id, estimatedLength: 60 })],
+      [],
+      HIER_MAP,
+    );
+    expect(result?.isScheduled).toBe(true);
+    // Own-type slot wins despite the ancestor block's higher priority.
+    expect(result?.scheduledStart).toBe('2026-05-04T14:00:00.000Z');
+  });
+
+  it('never schedules an ancestor-type task into a descendant dedicated block', () => {
+    const [result] = computeSchedule(
+      WEEK,
+      [
+        makeBlock({
+          id: 'tb-redesign',
+          activityTypeId: REDESIGN.id,
+          daysOfWeek: [1],
+          startTime: '09:00',
+          endTime: '17:00',
+        }),
+      ],
+      [makeTodo({ activityTypeId: WORK.id, estimatedLength: 60 })],
+      [],
+      HIER_MAP,
+    );
+    expect(result?.isScheduled).toBe(false);
+  });
+
+  it('terminates and schedules when the parent chain contains a cycle', () => {
+    // Self-cycle: a corrupt/degenerate parent pointer must not loop forever.
+    const SELF: ActivityType = makeActivityType({
+      id: 'at-self',
+      name: 'Self',
+      parentId: 'at-self',
+    });
+    const cycleMap = new Map<string, ActivityType>([[SELF.id, SELF]]);
+    const [result] = computeSchedule(
+      WEEK,
+      [
+        makeBlock({
+          activityTypeId: SELF.id,
+          daysOfWeek: [1],
+          startTime: '09:00',
+          endTime: '10:00',
+        }),
+      ],
+      [makeTodo({ activityTypeId: SELF.id, estimatedLength: 60 })],
+      [],
+      cycleMap,
+    );
+    expect(result?.isScheduled).toBe(true);
+    expect(result?.scheduledStart).toBe('2026-05-04T09:00:00.000Z');
+  });
+});

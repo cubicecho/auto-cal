@@ -27,6 +27,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.users.id,
       to: r.apiKeys.userId,
     }),
+    projects: r.many.projects({
+      from: r.users.id,
+      to: r.projects.userId,
+    }),
   },
   apiKeys: {
     user: r.one.users({
@@ -52,6 +56,30 @@ export const relations = defineRelations(schema, (r) => ({
       to: r.timeBlocks.activityTypeId,
     }),
   },
+  projects: {
+    user: r.one.users({
+      from: r.projects.userId,
+      to: r.users.id,
+    }),
+    activityType: r.one.activityTypes({
+      from: r.projects.activityTypeId,
+      to: r.activityTypes.id,
+    }),
+    notes: r.many.projectNotes({
+      from: r.projects.id,
+      to: r.projectNotes.projectId,
+    }),
+  },
+  projectNotes: {
+    user: r.one.users({
+      from: r.projectNotes.userId,
+      to: r.users.id,
+    }),
+    project: r.one.projects({
+      from: r.projectNotes.projectId,
+      to: r.projects.id,
+    }),
+  },
   todoLists: {
     user: r.one.users({
       from: r.todoLists.userId,
@@ -60,6 +88,10 @@ export const relations = defineRelations(schema, (r) => ({
     activityType: r.one.activityTypes({
       from: r.todoLists.activityTypeId,
       to: r.activityTypes.id,
+    }),
+    project: r.one.projects({
+      from: r.todoLists.projectId,
+      to: r.projects.id,
     }),
     todos: r.many.todos({
       from: r.todoLists.id,

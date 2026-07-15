@@ -142,6 +142,65 @@ function expandSlots(weekStartStr: string, block: TimeBlock): Slot[] {
   });
 }
 
+/**
+ * Per-level penalty applied to inherited (ancestor) time-block slots. Block
+ * priorities are constrained to 0–100, so a penalty this large guarantees any
+ * own-type slot outranks every ancestor slot, and a nearer ancestor outranks a
+ * farther one — i.e. dedicated blocks are always filled before general parent
+ * blocks. Block priority remains the tiebreaker within a single depth.
+ */
+const ANCESTOR_DEPTH_PENALTY = 1000;
+
+/**
+ * Walk an activity type up its parent chain, returning [ownId, parentId, …]
+ * with a visited-set cycle guard. Used so a task can schedule into time blocks
+ * of its own type or any ancestor type.
+ */
+export function activityTypeAndAncestors(
+  activityTypeId: string,
+  activityTypeMap: Map<string, ActivityType>,
+): string[] {
+  const chain: string[] = [];
+  const visited = new Set<string>();
+  let currentId: string | null = activityTypeId;
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+    chain.push(currentId);
+    currentId = activityTypeMap.get(currentId)?.parentId ?? null;
+  }
+  return chain;
+}
+
+/**
+ * Build the ordered slot list a task may schedule into: its own type's slots
+ * plus every ancestor type's slots, ordered so own-type slots come first
+ * (ANCESTOR_DEPTH_PENALTY per level), then by date and start time. The same
+ * mutable Slot objects are reused (never cloned) so capacity consumption stays
+ * consistent across tasks.
+ */
+function slotsForTaskType(
+  activityTypeId: string,
+  slotsByActivityType: Map<string, Slot[]>,
+  activityTypeMap: Map<string, ActivityType>,
+): Slot[] {
+  const chain = activityTypeAndAncestors(activityTypeId, activityTypeMap);
+  const combined: Array<{ slot: Slot; depth: number }> = [];
+  chain.forEach((id, depth) => {
+    const slots = slotsByActivityType.get(id);
+    if (!slots) return;
+    for (const slot of slots) combined.push({ slot, depth });
+  });
+  combined.sort((a, b) => {
+    const ap = a.slot.priority - ANCESTOR_DEPTH_PENALTY * a.depth;
+    const bp = b.slot.priority - ANCESTOR_DEPTH_PENALTY * b.depth;
+    if (bp !== ap) return bp - ap;
+    const dateCmp = a.slot.dateStr.localeCompare(b.slot.dateStr);
+    if (dateCmp !== 0) return dateCmp;
+    return a.slot.startMinutes - b.slot.startMinutes;
+  });
+  return combined.map((c) => c.slot);
+}
+
 /** Sort tasks: priority DESC, then estimatedLength ASC */
 function sortTasks(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => {
@@ -294,8 +353,12 @@ export function computeSchedule(
       continue;
     }
 
-    const slots = slotsByActivityType.get(task.activityTypeId);
-    if (!slots || slots.length === 0) {
+    const slots = slotsForTaskType(
+      task.activityTypeId,
+      slotsByActivityType,
+      activityTypeMap,
+    );
+    if (slots.length === 0) {
       results.push({
         ...task,
         activityType,
@@ -448,6 +511,9 @@ export function computeSchedule(
   });
 
   for (const habit of uniquePomodoroHabits) {
+    // Pomodoro auto-fill greedily consumes each slot's remaining capacity, so it
+    // is intentionally NOT extended to ancestor types — a pomodoro habit must not
+    // swallow a shared general parent block. It fills its own dedicated slots only.
     const slots = slotsByActivityType.get(habit.activityTypeId ?? '');
     if (!slots) continue;
 
