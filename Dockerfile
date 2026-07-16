@@ -11,10 +11,18 @@ COPY server/package*.json ./server/
 
 RUN npm install --legacy-peer-deps
 
-# Copy client source (includes committed src/__generated__/ types)
+# Copy sources + codegen configs. __generated__/ types are gitignored, so they
+# are NOT in the build context — they must be generated here. Codegen builds the
+# GraphQL schema from the db + server Drizzle definitions, so all three packages
+# and the root codegen configs are required.
+COPY db ./db
+COPY server ./server
 COPY client ./client
+COPY codegen.ts codegen.server.ts ./
 
-# Export the web bundle; no EXPO_PUBLIC_API_URL → defaults to '' → relative /graphql
+# Generate schema.graphql + typed client operations, then export the web bundle.
+# (no EXPO_PUBLIC_API_URL → defaults to '' → relative /graphql)
+RUN npm run codegen
 RUN cd client && npx expo export --platform web
 
 # ── Stage 2: production server ────────────────────────────────────────────────
