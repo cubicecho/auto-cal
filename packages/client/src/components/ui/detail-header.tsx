@@ -1,7 +1,23 @@
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Pencil } from 'lucide-react';
 import type { ReactNode } from 'react';
+
+// The outline "Edit" action shared by the detail views' header.
+export function EditButton({
+  onClick,
+  label = 'Edit',
+}: {
+  onClick: () => void;
+  label?: string;
+}) {
+  return (
+    <Button variant="outline" size="sm" onClick={onClick}>
+      <Pencil className="mr-1.5 h-3.5 w-3.5" />
+      {label}
+    </Button>
+  );
+}
 
 type DetailHeaderProps = {
   onBack: () => void;
