@@ -5,6 +5,8 @@ import type {
 import { graphql } from '@/__generated__/index.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Page } from '@/components/ui/page';
+import { QueryState } from '@/components/ui/query-state';
+import { segmentedItemClass } from '@/components/ui/segmented';
 import { useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
@@ -404,23 +406,18 @@ export default function StatsPage() {
             key={r.key}
             type="button"
             onClick={() => setRange(r.key)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              range === r.key
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
+            className={segmentedItemClass(range === r.key)}
           >
             {r.label}
           </button>
         ))}
       </div>
 
-      {isLoading && (
-        <p className="text-muted-foreground text-sm">Loading stats…</p>
-      )}
-      {error && (
-        <p className="text-destructive text-sm">Error: {error.message}</p>
-      )}
+      <QueryState
+        loading={isLoading}
+        error={error}
+        loadingLabel="Loading stats…"
+      />
 
       {stats && (
         <>

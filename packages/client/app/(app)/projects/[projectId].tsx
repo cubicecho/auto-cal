@@ -1,7 +1,7 @@
 import { graphql } from '@/__generated__/index.js';
 import { ProjectDetail } from '@/components/domain/project/ProjectDetail';
 import { ProjectForm } from '@/components/domain/project/ProjectForm';
-import { Page } from '@/components/ui/page';
+import { DetailPage } from '@/components/ui/detail-page';
 import { useQuery } from '@apollo/client/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -27,35 +27,32 @@ export default function ProjectDetailPage() {
     fetchPolicy: 'cache-and-network',
   });
 
-  const project = data?.myProject;
-
-  if (!project) {
-    return (
-      <Page className="px-3 py-4">
-        <p className="text-muted-foreground">
-          {loading ? 'Loading…' : 'Project not found.'}
-        </p>
-      </Page>
-    );
-  }
-
   return (
-    <Page className="px-3 py-4">
-      <ProjectDetail
-        project={project}
-        todos={data?.myTodos ?? []}
-        onBack={() => router.push('/projects')}
-        onEdit={() => setFormOpen(true)}
-      />
-      <ProjectForm
-        project={{
-          id: project.id,
-          name: project.name,
-          status: project.status,
-        }}
-        open={formOpen}
-        onOpenChange={setFormOpen}
-      />
-    </Page>
+    <DetailPage
+      entity={data?.myProject}
+      loading={loading}
+      notFoundLabel="Project not found."
+      className="px-3 py-4"
+    >
+      {(project) => (
+        <>
+          <ProjectDetail
+            project={project}
+            todos={data?.myTodos ?? []}
+            onBack={() => router.push('/projects')}
+            onEdit={() => setFormOpen(true)}
+          />
+          <ProjectForm
+            project={{
+              id: project.id,
+              name: project.name,
+              status: project.status,
+            }}
+            open={formOpen}
+            onOpenChange={setFormOpen}
+          />
+        </>
+      )}
+    </DetailPage>
   );
 }

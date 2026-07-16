@@ -3,6 +3,7 @@ import { graphql } from '@/__generated__/index.js';
 import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
+import { SectionHeading } from '@/components/ui/section-heading';
 import {
   Tooltip,
   TooltipContent,
@@ -203,9 +204,9 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
         const dayLabel = format(date, 'EEEE, MMM d');
         return (
           <div key={dayKey}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+            <SectionHeading variant="overline" className="mb-1.5">
               {dayLabel}
-            </p>
+            </SectionHeading>
             <div className="flex flex-col gap-1.5">
               {items.map((item) => (
                 <ScheduleCard
@@ -227,10 +228,13 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
 
       {unscheduled.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 flex items-center gap-1.5">
+          <SectionHeading
+            variant="overline"
+            className="mb-1.5 flex items-center gap-1.5"
+          >
             <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
             Unschedulable ({unscheduled.length})
-          </p>
+          </SectionHeading>
           <div className="flex flex-col gap-1.5">
             {unscheduled.map((item) => (
               <ScheduleCard key={`${item.kind}-${item.id}`} item={item} />

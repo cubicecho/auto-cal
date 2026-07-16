@@ -7,7 +7,6 @@ type HabitPeriod = NonNullable<
   GetHabitDetailQuery['myHabitDetail']
 >['periods'][number];
 import { graphql } from '@/__generated__/index.js';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -15,9 +14,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { DetailHeader } from '@/components/ui/detail-header';
+import { DetailHeader, EditButton } from '@/components/ui/detail-header';
+import { QueryState } from '@/components/ui/query-state';
 import { useQuery } from '@apollo/client/react';
-import { Pencil } from 'lucide-react';
 import { useMemo } from 'react';
 
 const GET_HABIT_DETAIL = graphql(`
@@ -88,12 +87,7 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
         colorLabel={habit.activityType?.name}
         title={habit.title}
         subtitle={habit.description || undefined}
-        actions={
-          <Button variant="outline" size="sm" onClick={() => onEdit(habit)}>
-            <Pencil className="mr-1.5 h-3.5 w-3.5" />
-            Edit
-          </Button>
-        }
+        actions={<EditButton onClick={() => onEdit(habit)} />}
       />
 
       {/* Quick-stats grid */}
@@ -120,14 +114,12 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
       </div>
 
       {/* Loading / error states */}
-      {loading && (
-        <p className="text-muted-foreground text-sm">Loading stats…</p>
-      )}
-      {error && (
-        <p className="text-destructive text-sm">
-          Error loading stats: {error.message}
-        </p>
-      )}
+      <QueryState
+        loading={loading}
+        error={error}
+        loadingLabel="Loading stats…"
+        errorLabel="Error loading stats"
+      />
 
       {detail && (
         <>

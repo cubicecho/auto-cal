@@ -2,6 +2,7 @@ import type { Todo_TodoListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { TodoListList } from '@/components/domain/todo-list/TodoListList';
 import { Page } from '@/components/ui/page';
+import { QueryState } from '@/components/ui/query-state';
 import type { TodoListEvent } from '@/hooks/useTodoListsUpdated';
 import { useTodoListsUpdated } from '@/hooks/useTodoListsUpdated';
 import type { TodoEvent } from '@/hooks/useTodosUpdated';
@@ -115,14 +116,11 @@ export default function TodoListsPage() {
 
   return (
     <Page>
-      {error && (
-        <p className="text-destructive text-sm">
-          Error loading todos: {error.message}
-        </p>
-      )}
-      {loading && !data && (
-        <p className="text-muted-foreground text-sm">Loading…</p>
-      )}
+      <QueryState
+        loading={loading && !data}
+        error={error}
+        errorLabel="Error loading todos"
+      />
       <TodoListList
         lists={data?.myTodoLists ?? []}
         todosByListId={todosByListId}

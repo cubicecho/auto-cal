@@ -1,3 +1,4 @@
+import { segmentedItemClass } from '@/components/ui/segmented';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { storage } from '@/storage';
@@ -72,12 +73,7 @@ function WebLayout() {
                     <Link
                       key={href}
                       href={href}
-                      className={cn(
-                        'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                        pathname.startsWith(href)
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                      )}
+                      className={segmentedItemClass(pathname.startsWith(href))}
                     >
                       {label}
                     </Link>

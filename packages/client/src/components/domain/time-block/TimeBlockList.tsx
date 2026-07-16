@@ -2,6 +2,7 @@ import type { TimeBlock_TimeBlockListFragment } from '@/__generated__/graphql.js
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { EmptyState, PageHeader } from '@/components/ui/page';
+import { QueryState } from '@/components/ui/query-state';
 import { useListSection } from '@/hooks/useListSection';
 import { Clock, Plus } from 'lucide-react';
 import { TimeBlockForm } from './TimeBlockForm';
@@ -48,14 +49,12 @@ export function TimeBlockList({ items, loading, error }: TimeBlockListProps) {
         }
       />
 
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading time blocks…</p>
-      )}
-      {error && (
-        <p className="text-sm text-destructive">
-          Error loading time blocks: {error.message}
-        </p>
-      )}
+      <QueryState
+        loading={loading}
+        error={error}
+        loadingLabel="Loading time blocks…"
+        errorLabel="Error loading time blocks"
+      />
       {!loading && items.length === 0 && (
         <EmptyState
           icon={Clock}

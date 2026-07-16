@@ -2,6 +2,7 @@ import { graphql } from '@/__generated__/index.js';
 import { CalendarView } from '@/components/domain/dashboard/CalendarView';
 import { ScheduleView } from '@/components/domain/dashboard/ScheduleView';
 import { WeekNavigator } from '@/components/domain/dashboard/WeekNavigator';
+import { Page, PageHeader } from '@/components/ui/page';
 import { useTodosUpdated } from '@/hooks/useTodosUpdated';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { addDays, addMonths, addWeeks, format, startOfMonth } from 'date-fns';
@@ -180,33 +181,32 @@ export default function CalendarPage() {
   });
 
   return (
-    <div className="container mx-auto flex h-full min-h-0 flex-col px-4 pt-4">
-      <div className="mb-3 flex-shrink-0 flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Calendar</h2>
-          <p className="text-sm text-muted-foreground">
-            Your schedule at a glance
-          </p>
-        </div>
-        <WeekNavigator
-          date={date}
-          view={view}
-          dateLabel={dateLabel(date, view)}
-          isCurrent={isCurrent(date, view)}
-          onPrev={() => setDate(navigateDate(date, view, -1))}
-          onNext={() => setDate(navigateDate(date, view, 1))}
-          onToday={() =>
-            setDate(
-              view === 'week'
-                ? toMonday(new Date())
-                : view === 'month'
-                  ? startOfMonth(new Date())
-                  : new Date(),
-            )
-          }
-          onViewChange={handleViewChange}
-        />
-      </div>
+    <Page fill scroll={false} className="pt-4 pb-0">
+      <PageHeader
+        className="mb-3 flex-shrink-0"
+        title="Calendar"
+        subtitle="Your schedule at a glance"
+        actions={
+          <WeekNavigator
+            date={date}
+            view={view}
+            dateLabel={dateLabel(date, view)}
+            isCurrent={isCurrent(date, view)}
+            onPrev={() => setDate(navigateDate(date, view, -1))}
+            onNext={() => setDate(navigateDate(date, view, 1))}
+            onToday={() =>
+              setDate(
+                view === 'week'
+                  ? toMonday(new Date())
+                  : view === 'month'
+                    ? startOfMonth(new Date())
+                    : new Date(),
+              )
+            }
+            onViewChange={handleViewChange}
+          />
+        }
+      />
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         <CalendarView
@@ -221,6 +221,6 @@ export default function CalendarPage() {
           date={date}
         />
       </div>
-    </div>
+    </Page>
   );
 }

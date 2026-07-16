@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Page, PageHeader } from '@/components/ui/page';
 import { storage } from '@/storage';
 import { Link, useRouter } from 'expo-router';
 import { Upload, Wand2 } from 'lucide-react';
@@ -20,8 +21,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-8 space-y-4">
-      <h1 className="mb-6 text-2xl font-bold">Settings</h1>
+    <Page width="narrow" className="space-y-4 py-8">
+      <PageHeader title="Settings" />
 
       <Card>
         <CardHeader>
@@ -58,6 +59,6 @@ export default function SettingsPage() {
       </Card>
 
       <ApiKeyManager />
-    </div>
+    </Page>
   );
 }

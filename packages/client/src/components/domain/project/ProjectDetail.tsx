@@ -8,10 +8,11 @@ import { graphql } from '@/__generated__/index.js';
 import { TodoListCard } from '@/components/domain/todo-list/TodoListCard';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { DetailHeader } from '@/components/ui/detail-header';
+import { DetailHeader, EditButton } from '@/components/ui/detail-header';
+import { SectionHeading } from '@/components/ui/section-heading';
 import { StatusChip } from '@/components/ui/status-chip';
 import { useMutation } from '@apollo/client/react';
-import { Archive, Pencil } from 'lucide-react';
+import { Archive } from 'lucide-react';
 import { useState } from 'react';
 import { ProjectNotesEditor } from './ProjectNotesEditor';
 
@@ -93,10 +94,7 @@ export function ProjectDetail({
         }
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => onEdit(project)}>
-              <Pencil className="mr-1.5 h-3.5 w-3.5" />
-              Edit
-            </Button>
+            <EditButton onClick={() => onEdit(project)} />
             {project.status !== 'archived' && (
               <Button
                 variant="outline"
@@ -115,16 +113,12 @@ export function ProjectDetail({
           narrow ones. */}
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_18rem] lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0">
-          <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
-            Notes
-          </h3>
+          <SectionHeading className="mb-2">Notes</SectionHeading>
           <ProjectNotesEditor projectId={project.id} notes={project.notes} />
         </div>
 
         <div className="min-w-0">
-          <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
-            Tasks
-          </h3>
+          <SectionHeading className="mb-2">Tasks</SectionHeading>
           {project.list ? (
             <TodoListCard list={project.list} todos={listTodos} />
           ) : (

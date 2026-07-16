@@ -1,7 +1,7 @@
 import type { Project_ProjectListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
-import { EmptyState, PageHeader } from '@/components/ui/page';
+import { CardGrid, EmptyState, PageHeader } from '@/components/ui/page';
 import { Switch } from '@/components/ui/switch';
 import { useListSection } from '@/hooks/useListSection';
 import { FolderKanban, Plus } from 'lucide-react';
@@ -82,7 +82,7 @@ export function ProjectList({ items, onSelect }: ProjectListProps) {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <CardGrid>
           {visible.map((project) => (
             <ProjectCard
               key={project.id}
@@ -91,7 +91,7 @@ export function ProjectList({ items, onSelect }: ProjectListProps) {
               onEdit={openEdit}
             />
           ))}
-        </div>
+        </CardGrid>
       )}
 
       <ProjectForm

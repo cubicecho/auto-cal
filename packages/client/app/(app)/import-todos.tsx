@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { ColorDot } from '@/components/ui/color-dot';
 import { Input } from '@/components/ui/input';
+import { Page } from '@/components/ui/page';
 import {
   GoogleTasksParseError,
   type ParsedList,
@@ -208,7 +209,7 @@ export default function ImportTodosPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl overflow-y-auto px-4 py-8">
+    <Page width="narrow" className="py-8">
       <button
         type="button"
         onClick={() => router.push('/settings')}
@@ -218,7 +219,7 @@ export default function ImportTodosPage() {
         Settings
       </button>
 
-      <h1 className="mb-1 text-2xl font-bold">Import todos</h1>
+      <h1 className="mb-1 text-xl font-semibold">Import todos</h1>
       <p className="mb-6 text-sm text-muted-foreground">
         Import your tasks from a Google Tasks JSON export. In{' '}
         <a
@@ -335,7 +336,7 @@ export default function ImportTodosPage() {
           )}
         </>
       )}
-    </div>
+    </Page>
   );
 }
 

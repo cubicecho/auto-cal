@@ -2,6 +2,7 @@ import type { ScheduledItem_ScheduleViewFragment } from '@/__generated__/graphql
 import { graphql } from '@/__generated__/index.js';
 import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
+import { Page, PageHeader } from '@/components/ui/page';
 import { useTodosUpdated } from '@/hooks/useTodosUpdated';
 import { priorityLabel } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -154,24 +155,20 @@ export default function TodayPage() {
   }
 
   return (
-    <div className="container mx-auto flex h-full min-h-0 flex-col overflow-y-auto px-4 py-6">
+    <Page fill>
       <TodoForm open={todoOpen} onOpenChange={setTodoOpen} />
 
       <div className="mx-auto w-full max-w-2xl">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold leading-none">
-              {viewingToday ? 'Today' : format(selectedDate, 'EEEE')}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {format(selectedDate, 'EEEE, MMMM d')}
-            </p>
-          </div>
-          <Button size="sm" onClick={() => setTodoOpen(true)}>
-            <Plus className="mr-1 h-4 w-4" />
-            Add todo
-          </Button>
-        </div>
+        <PageHeader
+          title={viewingToday ? 'Today' : format(selectedDate, 'EEEE')}
+          subtitle={format(selectedDate, 'EEEE, MMMM d')}
+          actions={
+            <Button size="sm" onClick={() => setTodoOpen(true)}>
+              <Plus className="mr-1 h-4 w-4" />
+              Add todo
+            </Button>
+          }
+        />
 
         <div className="mb-3 flex items-center gap-2">
           <Button
@@ -251,7 +248,7 @@ export default function TodayPage() {
           </Link>
         )}
       </div>
-    </div>
+    </Page>
   );
 }
 
