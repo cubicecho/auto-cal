@@ -1,2 +1,2 @@
-schema: packages/server/src/__generated__/schema.graphql
-documents: packages/client/src/**/*.{tsx,ts}
+schema: server/src/__generated__/schema.graphql
+documents: client/src/**/*.{tsx,ts}

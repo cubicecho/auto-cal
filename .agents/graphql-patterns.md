@@ -6,7 +6,7 @@
 2. `applyCustomResolvers()` extends with `my*` scoped queries/mutations via `extendSchema`
 3. `blockUnscopedResolvers()` locks down any unscoped fields (not prefixed `my`, not in `PUBLIC_MUTATIONS`)
 
-Generated schema written to `packages/server/src/__generated__/schema.graphql` via:
+Generated schema written to `server/src/__generated__/schema.graphql` via:
 ```bash
 npm run codegen:server
 ```
@@ -25,11 +25,11 @@ npm run codegen
 | Public mutations | Literal name (no `my` prefix); must also be added to `PUBLIC_MUTATIONS` set in `schema/index.ts` | `requestMagicLink`, `verifyMagicLink` |
 | Input types | `<Action><Resource>Args` | `CreateTodoArgs`, `UpdateHabitArgs` |
 
-The full SDL (drizzle-generated + extensions) is emitted to `packages/server/src/__generated__/schema.graphql` by `npm run codegen:server`.
+The full SDL (drizzle-generated + extensions) is emitted to `server/src/__generated__/schema.graphql` by `npm run codegen:server`.
 
 ## Extending the Schema
 
-Add new fields by extending `extensionSDL` in `packages/server/src/schema/resolvers.ts`:
+Add new fields by extending `extensionSDL` in `server/src/schema/resolvers.ts`:
 
 ```typescript
 const extensionSDL = `

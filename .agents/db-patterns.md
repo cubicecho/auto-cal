@@ -1,11 +1,11 @@
 # Database Patterns
 
-Schema lives in `packages/db/src/models/`, re-exported from `packages/db/src/schema.ts`.
+Schema lives in `db/src/models/`, re-exported from `db/src/schema.ts`.
 
 ## Table Definition
 
 ```typescript
-// packages/db/src/models/todos.ts
+// db/src/models/todos.ts
 export const todos = pgTable('todos', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
@@ -36,7 +36,7 @@ Todos no longer carry an `activityTypeId` directly — it's resolved through `to
 ## Enum Pattern
 
 ```typescript
-// packages/db/src/models/enums.ts
+// db/src/models/enums.ts
 export const FREQUENCY_UNITS = ['week', 'month'] as const;
 export type FrequencyUnit = (typeof FREQUENCY_UNITS)[number];
 
@@ -47,7 +47,7 @@ frequencyUnit: text('frequency_unit').notNull().$type<FrequencyUnit>()
 ## Dual-Backend Connection
 
 ```typescript
-// packages/db/src/index.ts
+// db/src/index.ts
 const databaseUrl = process.env.DATABASE_URL;
 
 if (databaseUrl) {
@@ -95,24 +95,9 @@ await db.delete(todos).where(and(eq(todos.id, id), eq(todos.userId, userId)));
 
 ## Seed Pattern
 
-`packages/db/src/seed.ts` exports two entry points used by the server on startup (`packages/server/src/index.ts`):
-
-- `seedDemoUser()` — runs in all environments; idempotent insert of the demo user row (`DEMO_USER_ID = '00000000-0000-0000-0000-000000000001'`).
-- `seedDemoData()` — guarded with `NODE_ENV !== 'production'`; idempotent (skips if the demo user already has activity types). Creates 3 activity types (Work / Exercise / Learning), 3 todo lists (one per activity type), 6 time blocks, 5 todos (distributed across the lists), 3 habits.
-
-`packages/db/src/seed-runner.ts` is a CLI scaffold for running the seed standalone (no `npm run db:seed` script is currently wired in `package.json`).
-
-```typescript
-// packages/db/src/seed.ts
-export const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
-
-export async function seedDemoUser(): Promise<void> {
-  const existing = await db.select().from(users).where(eq(users.id, DEMO_USER_ID)).limit(1);
-  if (existing.length === 0) {
-    await db.insert(users).values({ id: DEMO_USER_ID, email: DEMO_USER_EMAIL });
-  }
-}
-```
+There is no seed script. Users are created on demand by the magic-link flow
+(`verifyMagicLink` inserts the user if the email is new). The old demo user /
+demo data seed (`seedDemoUser` / `seedDemoData`) was removed.
 
 ## Migrations
 
@@ -122,7 +107,7 @@ npm run db:migrate    # apply migrations
 npm run db:studio     # GUI
 ```
 
-Migration files live in `packages/db/drizzle/` — never edit manually.
+Migration files live in `db/drizzle/` — never edit manually.
 
 ## Foreign Key Conventions
 

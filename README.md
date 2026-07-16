@@ -2,6 +2,8 @@
 
 **Auto Cal** is a smart todo and habit scheduling app that automatically fits your tasks into the time you have available.
 
+🌐 **[Website & self-hosting guide](https://cubicecho.github.io/auto-cal/)** — what it does and how to run it yourself.
+
 ## What It Does
 
 - **Intelligent scheduling** — tasks are placed into your calendar automatically based on priority and the time blocks you define
@@ -19,7 +21,7 @@ Simplest option. Data is stored in a Docker volume alongside the app — no sepa
 docker compose -f docker-compose.pglite.yml up -d
 ```
 
-Open http://localhost:4000.
+Open http://localhost:3001.
 
 To persist data across container recreations the named volume `auto-cal-data` is created automatically. Back it up with `docker volume` commands if needed.
 
@@ -31,7 +33,7 @@ Recommended for multi-user setups or when you want a standalone database you can
 docker compose -f docker-compose.postgres.yml up -d
 ```
 
-Open http://localhost:4000.
+Open http://localhost:3001.
 
 > **Change the default password** before exposing this to a network. Edit `POSTGRES_PASSWORD` and the matching `DATABASE_URL` in `docker-compose.postgres.yml`.
 
@@ -63,7 +65,7 @@ npm run db:migrate
 npm run dev
 ```
 
-This starts the GraphQL API at `http://localhost:4000` and the client at `http://localhost:3000`.
+This starts the GraphQL API at `http://localhost:3001` and the web client at `http://localhost:3000`.
 
 ### Commands
 

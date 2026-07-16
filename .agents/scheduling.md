@@ -8,9 +8,9 @@ The scheduler auto-assigns `scheduledAt` timestamps to todos and habit instances
 
 | File | Role |
 |------|------|
-| `packages/server/src/services/scheduler.ts` | Pure scheduling algorithm — no DB calls |
-| `packages/server/src/services/scheduler.test.ts` | Vitest coverage of `computeSchedule` |
-| `packages/server/src/services/scheduler-writeback.ts` | Fetches data, runs the algorithm, writes results back |
+| `server/src/services/scheduler.ts` | Pure scheduling algorithm — no DB calls |
+| `server/test/services/scheduler.test.ts` | Vitest coverage of `computeSchedule` |
+| `server/src/services/scheduler-writeback.ts` | Fetches data, runs the algorithm, writes results back |
 
 ## Algorithm (`computeSchedule`)
 

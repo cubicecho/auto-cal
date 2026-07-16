@@ -12,8 +12,8 @@
 
 ### #1 — Wire magic-link email delivery (auth is otherwise live)
 **Status:** Magic-link + JWT auth is implemented end-to-end:
-- `requestMagicLink` / `verifyMagicLink` mutations exist (`packages/server/src/schema/resolvers/auth.ts`)
-- JWT sign/verify via `jose` in `packages/server/src/auth.ts`
+- `requestMagicLink` / `verifyMagicLink` mutations exist (`server/src/schema/resolvers/auth.ts`)
+- JWT sign/verify via `jose` in `server/src/auth.ts`
 - Login flow (`/login`) and verify route (`/auth/verify`) live in the client
 - Apollo client attaches `Bearer <token>` from `localStorage.auth_token`; expired-auth errors redirect to `/login`
 - Server context extracts JWT first, falls back to raw UUID for dev/seed (dev-only, guarded by `NODE_ENV !== 'production'`)
@@ -110,14 +110,14 @@
 ### #15 — Expand test suite + CI
 **Status:** Substantially done. Shipped:
 - `.github/workflows/ci.yml` — runs codegen, typecheck, lint, and `npm test` on every PR and push to main; blocks merges on failure
-- `packages/server/src/schema/resolvers/resolvers.integration.test.ts` — 3 resolver integration tests (PGLite in-memory) covering `myCreateActivityType`, `myCreateTodoList` + `myCreateTodo`, and `myCompleteTodo`
+- `server/test/schema/resolvers/index.test.ts` — 3 resolver integration tests (PGLite in-memory) covering `myCreateActivityType`, `myCreateTodoList` + `myCreateTodo`, and `myCompleteTodo`
 - `vitest.config.ts` updated with a `graphql` alias to prevent duplicate-module issues in the ESM test graph
-- `packages/db/package.json` adds `./relations` export for use in test harnesses
+- `db/package.json` adds `./relations` export for use in test harnesses
 
 Existing vitest suites:
-- `packages/server/src/auth.test.ts` — JWT + magic-link helpers
-- `packages/server/src/schema/validators.test.ts` — Zod validators
-- `packages/server/src/services/scheduler.test.ts` — pure scheduler algorithm
+- `server/test/auth.test.ts` — JWT + magic-link helpers
+- `server/test/schema/validators.test.ts` — Zod validators
+- `server/test/services/scheduler.test.ts` — pure scheduler algorithm
 
 **What's left:**
 - Client component / route smoke tests
@@ -128,7 +128,7 @@ Existing vitest suites:
 ---
 
 ### #16 — Postgres production path (dual-backend shipped, end-to-end test pending)
-**Status:** The driver switch is implemented — `packages/db/src/index.ts` selects `postgres.js` when `DATABASE_URL` is set, PGLite otherwise. `docker-compose.yml` now defaults to the postgres backend.
+**Status:** The driver switch is implemented — `db/src/index.ts` selects `postgres.js` when `DATABASE_URL` is set, PGLite otherwise. `docker-compose.yml` now defaults to the postgres backend.
 
 **PGLite idle CPU (investigated 2026-05-27):** PGLite's Emscripten WASM glue (`postgres.js`) drives PostgreSQL's event loop via `setTimeout(MainLoop.runner, 0)` — a busy-wait that fires every event loop tick. Real Postgres uses OS-level sleep; the WASM port cannot. This results in significant idle CPU in Docker. The server now logs a warning when `PGLITE_DATA_DIR` is set in production. `docker-compose.yml` defaults to the real Postgres backend to avoid this. `relaxedDurability: true` is set on the PGLite client to reduce fsync-triggered `startPersist` timer frequency.
 

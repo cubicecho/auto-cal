@@ -1,0 +1,175 @@
+---
+layout: base.njk
+title: Self-hosting
+description: Self-host Auto Cal with Docker — Compose quickstart, PGLite vs Postgres, environment variables, login, the iCal feed, and security notes.
+permalink: /self-hosting/
+---
+
+<section class="section docs">
+  <div class="wrap wrap-docs">
+    <div class="docs-layout">
+      <aside class="toc">
+        <p class="toc-title">On this page</p>
+        <nav>
+          <a href="#requirements">Requirements</a>
+          <a href="#quickstart">Quickstart</a>
+          <a href="#database">Choosing a database</a>
+          <a href="#image">Prebuilt image</a>
+          <a href="#env">Environment variables</a>
+          <a href="#login">Logging in</a>
+          <a href="#ical">Calendar feed</a>
+          <a href="#updating">Updating</a>
+          <a href="#security">Security notes</a>
+        </nav>
+        <p class="toc-foot"><a href="{{ site.repo }}/blob/main/README.md">Full README ↗</a></p>
+      </aside>
+
+      <article class="docs-body">
+        <h1>Self-hosting Auto Cal</h1>
+        <p class="lede">
+          Auto Cal ships as a single Docker image that serves both the web client and the GraphQL API. Bring a
+          database (embedded PGLite for a demo, or Postgres for real use) and you're running in a couple of
+          minutes. Everything below assumes Docker; see the
+          <a href="{{ site.repo }}/blob/main/README.md">README</a> for bare-Node development.
+        </p>
+
+        <h2 id="requirements">Requirements</h2>
+        <ul class="notes">
+          <li><strong>Docker</strong> with Compose v2 (<code>docker compose</code>). That's it for the container
+            path.</li>
+          <li><strong>~256 MB RAM</strong> is plenty for a personal instance. Postgres adds a little more.</li>
+          <li>For local development instead of Docker: <strong>Node.js 22+</strong> and npm — see the README.</li>
+        </ul>
+
+        <h2 id="quickstart">Quickstart</h2>
+        <p>Clone the repo and start one of the Compose files. The web app and API are served together on
+          <strong>port 4000</strong>.</p>
+
+        <h3>Embedded database <span class="pill">simplest</span></h3>
+        <p>PGLite stores everything in a Docker volume alongside the app — no separate database container.</p>
+        <pre class="code"><code>git clone https://github.com/cubicecho/auto-cal &amp;&amp; cd auto-cal
+docker compose -f docker-compose.pglite.yml up -d</code></pre>
+        <p>Open <a href="http://localhost:4000">http://localhost:4000</a>. Data persists in the named volume
+          <code>auto-cal-data</code>.</p>
+
+        <h3>PostgreSQL <span class="pill">recommended</span></h3>
+        <p>Runs a standalone Postgres you can back up independently — and avoids PGLite's idle-CPU cost.</p>
+        <pre class="code"><code>docker compose -f docker-compose.postgres.yml up -d</code></pre>
+        <p>Open <a href="http://localhost:4000">http://localhost:4000</a>. Migrations run automatically on
+          startup, so there's no separate migrate step.</p>
+
+        <div class="callout">
+          <p>⚠️ <strong>Change the default password</strong> before exposing this anywhere. Edit
+            <code>POSTGRES_PASSWORD</code> and the matching <code>DATABASE_URL</code> in
+            <code>docker-compose.postgres.yml</code>.</p>
+        </div>
+
+        <h2 id="database">Choosing a database</h2>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Backend</th><th>Selected by</th><th>Use for</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Postgres</strong></td>
+                <td><code>DATABASE_URL</code> is set</td>
+                <td>Any real deployment. No idle CPU, back up independently.</td>
+              </tr>
+              <tr>
+                <td><strong>PGLite</strong></td>
+                <td><code>PGLITE_DATA_DIR</code> set, no <code>DATABASE_URL</code></td>
+                <td>Local dev and single-user demos only.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The runtime picks the backend from the environment: if <code>DATABASE_URL</code> is present it uses the
+          <code>postgres.js</code> driver, otherwise it falls back to PGLite at <code>PGLITE_DATA_DIR</code>.</p>
+        <div class="callout">
+          <p>PGLite compiles Postgres to WebAssembly and busy-waits its event loop, so it burns measurable CPU
+            even when idle. Fine for a laptop demo; use real Postgres for anything long-running. The server logs
+            a warning if PGLite is used with <code>NODE_ENV=production</code>.</p>
+        </div>
+
+        <h2 id="image">Prebuilt image <span class="pill">no clone</span></h2>
+        <p>Every release is published to Docker Hub
+          (<a href="{{ site.dockerHub }}"><code>vantreeseba/auto-cal</code></a>) and GHCR
+          (<code>ghcr.io/cubicecho/auto-cal</code>), tagged <code>latest</code> and the semver version. Run the
+          embedded-database variant straight from the registry:</p>
+        <pre class="code"><code>docker run -d -p 4000:4000 -v ./data:/app/pgdata \
+  vantreeseba/auto-cal:latest</code></pre>
+        <p>The image already sets <code>PGLITE_DATA_DIR=/app/pgdata</code>, so the bind mount is all you need for
+          persistence. For Postgres, pass <code>-e DATABASE_URL=…</code> instead (or use the Compose file).</p>
+
+        <h2 id="env">Environment variables</h2>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Variable</th><th>Description</th><th>Default</th></tr></thead>
+            <tbody>
+              <tr><td><code>PORT</code></td><td>Port the server listens on</td><td><code>4000</code></td></tr>
+              <tr><td><code>DATABASE_URL</code></td><td>Postgres connection string; when set, uses the Postgres driver</td><td>—</td></tr>
+              <tr><td><code>PGLITE_DATA_DIR</code></td><td>Path to embedded-database files; used when <code>DATABASE_URL</code> is unset</td><td>—</td></tr>
+              <tr><td><code>NODE_ENV</code></td><td>Set to <code>production</code> in containers</td><td><code>development</code></td></tr>
+              <tr><td><code>APP_URL</code></td><td>Public URL of the app, used in magic-link emails</td><td>derived from request</td></tr>
+              <tr><td><code>JWT_SECRET</code></td><td>Secret for signing session tokens</td><td>auto-generated</td></tr>
+              <tr><td><code>MAGIC_LINK_SECRET</code></td><td>Secret for signing magic-link tokens</td><td>auto-generated</td></tr>
+              <tr><td><code>EXPOSE_MAGIC_LINK</code></td><td>Return the magic link in the API response instead of emailing it — trusted networks only</td><td>off outside prod</td></tr>
+              <tr><td><code>BYPASS_AUTH_UUID</code></td><td>A user UUID accepted directly as a Bearer token — trusted networks only</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <p>Set <code>JWT_SECRET</code> and <code>MAGIC_LINK_SECRET</code> explicitly in production. If they're
+            auto-generated, they change on every restart and invalidate existing sessions and pending links.</p>
+        </div>
+
+        <h2 id="login">Logging in</h2>
+        <p>Auto Cal is passwordless. You enter your email, receive a <strong>magic link</strong>, and clicking it
+          signs you in — the session token is a JWT stored in the browser.</p>
+        <p>Without an email provider configured, set <code>EXPOSE_MAGIC_LINK=true</code> and the link is returned
+          directly in the <code>requestMagicLink</code> API response so you can copy it and sign in. This is
+          intended for local or secure-network deployments only. For a single trusted user you can instead set
+          <code>BYPASS_AUTH_UUID</code> to that user's UUID and use the UUID as a Bearer token.</p>
+
+        <h2 id="ical">Calendar feed</h2>
+        <p>Auto Cal exposes your computed schedule as a read-only iCal feed, so you can see it inside Google
+          Calendar, Apple Calendar, or any client that subscribes to an <code>.ics</code> URL.</p>
+        <ol class="notes">
+          <li>In the app, create an <strong>API key</strong> with the <code>read</code> scope. The token
+            (<code>acal_…</code>) is shown once — copy it.</li>
+          <li>Subscribe your calendar to the feed URL, passing the key as <code>secret</code>:</li>
+        </ol>
+        <pre class="code"><code><span class="cmt"># Your scheduled todos + habits (next two weeks)</span>
+http://your-host:4000/ical?secret=acal_your_key_here
+
+<span class="cmt"># Your recurring time blocks instead</span>
+http://your-host:4000/ical?secret=acal_your_key_here&amp;view=blocks</code></pre>
+        <p>The feed is scoped to the user who owns the key and requires the <code>read</code> scope; revoked or
+          expired keys stop working immediately.</p>
+
+        <h2 id="updating">Updating</h2>
+        <p>Pull the newest image and recreate the container. Migrations run automatically on startup.</p>
+        <pre class="code"><code>docker compose -f docker-compose.postgres.yml pull
+docker compose -f docker-compose.postgres.yml up -d</code></pre>
+        <p>Your data lives in the Postgres volume (or the PGLite volume), so it survives the recreate. Back the
+          volume up before a major upgrade.</p>
+
+        <h2 id="security">Security notes</h2>
+        <ul class="notes">
+          <li><strong>Don't expose the container directly to the internet.</strong> It speaks plain HTTP — put it
+            behind a TLS-terminating reverse proxy, or bind it to localhost / a private network.</li>
+          <li><strong>Set your own secrets.</strong> Provide <code>JWT_SECRET</code> and
+            <code>MAGIC_LINK_SECRET</code> so tokens survive restarts, and change the Postgres password from the
+            default.</li>
+          <li><strong><code>EXPOSE_MAGIC_LINK</code> and <code>BYPASS_AUTH_UUID</code> are trusted-network
+            escape hatches.</strong> Either one lets someone sign in without receiving an email — never enable
+            them on a public deployment.</li>
+          <li><strong>Treat API keys and the iCal <code>secret</code> like passwords.</strong> Only the SHA-256
+            hash is stored, the token is shown once, and anyone with the feed URL can read that user's schedule.
+            Revoke keys you no longer use.</li>
+        </ul>
+
+        <p class="docs-cta"><a class="btn btn-primary" href="{{ site.repo }}/blob/main/README.md">Read the full README ↗</a></p>
+      </article>
+    </div>
+  </div>
+</section>

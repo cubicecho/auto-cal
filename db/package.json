@@ -1,0 +1,28 @@
+{
+  "name": "@auto-cal/db",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./relations": "./src/relations.ts"
+  },
+  "scripts": {
+    "migrate": "env-cmd -f ../.env node --experimental-strip-types src/migrator.ts",
+    "db:generate": "env-cmd -f ../.env drizzle-kit generate",
+    "db:migrate": "npm run migrate",
+    "db:studio": "env-cmd -f ../.env drizzle-kit studio"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.2.15",
+    "postgres": "^3.4.9"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "~1.0.0-rc.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "drizzle-kit": "~1.0.0-rc.2",
+    "env-cmd": "^10.1.0"
+  }
+}

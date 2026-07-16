@@ -1,3 +1,7 @@
+# Required repository secrets for Docker Hub publishing:
+#   DOCKERHUB_USERNAME — your Docker Hub username
+#   DOCKERHUB_TOKEN    — a Docker Hub access token (not your password)
+
 name: Release
 
 on:
@@ -44,6 +48,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        if: steps.semantic.outputs.new_release_published == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Set up Docker Buildx
         if: steps.semantic.outputs.new_release_published == 'true'
         uses: docker/setup-buildx-action@v3
@@ -57,5 +68,7 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ steps.semantic.outputs.new_release_version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/auto-cal:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/auto-cal:${{ steps.semantic.outputs.new_release_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

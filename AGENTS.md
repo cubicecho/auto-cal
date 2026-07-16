@@ -2,14 +2,14 @@
 
 Auto Cal is a smart todo and habit scheduling application. Users create todo lists (grouped by activity type), todos (single-time tasks belonging to a list), and habits (repeated tasks) that are automatically scheduled within user-defined time blocks based on priority and activity type.
 
-Monorepo: `packages/db` (Drizzle + PGLite), `packages/server` (Express + Apollo), `packages/client` (React + Vite).
+Monorepo: `db` (Drizzle + PGLite), `server` (Express + Apollo), `client` (React + Vite).
 
 ## Commands
 
 ```bash
 # Dev
 npm run dev              # start frontend + backend
-npm run dev:server       # GraphQL server only (localhost:4000)
+npm run dev:server       # GraphQL server only (localhost:3001)
 npm run dev:client       # React client only (localhost:3000)
 
 # Quality
@@ -43,7 +43,7 @@ npm test                 # vitest
 | **drizzle-graphql** | Auto-generates GraphQL schema from Drizzle tables — zero duplication; we extend with custom resolvers |
 | **PGLite** | Embedded Postgres, zero setup for local dev and single-node deploys; swap to full Postgres via `DATABASE_URL` |
 | **--experimental-strip-types** | Node 22+ runs TypeScript directly — no tsc watch, no build step for the server; requires `.ts` extensions in all imports |
-| **Auth** | Magic-link + JWT (jose) is live. `requestMagicLink` / `verifyMagicLink` mutations are public. `DEMO_USER_ID` env var is a dev fallback only. |
+| **Auth** | Magic-link + JWT (jose) is live. `requestMagicLink` / `verifyMagicLink` mutations are public. Set `EXPOSE_MAGIC_LINK` for dev-style passwordless login on local/secure networks. |
 
 ## Key Conventions
 
@@ -108,6 +108,20 @@ Prefer scripts defined in `package.json` (e.g. `npm run db:generate`, `npm run t
 All files related to project structure, tasks, planning, and feature tracking live in `.agents/`. Agents must read from and write to `.agents/` for any such files — never create them at the repo root.
 
 Always add new `.agents/` files to the reference list below.
+
+## Keep the Website in Sync
+
+The marketing/docs site lives in `site/` (Eleventy → GitHub Pages, published at
+`https://cubicecho.github.io/auto-cal/`). When you complete a user-facing
+feature, change, or remove functionality, update the site in the same change so
+it never falls behind the app:
+
+- **New or changed features** — update the feature descriptions in `site/src/index.njk` (and the hero example if the scheduling/day view changed).
+- **Self-hosting changes** — new env vars, ports, Docker options, or setup steps go in `site/src/self-hosting.njk` (keep it consistent with `README.md`).
+- **Renamed/removed views or flows** — fix any references so screenshots, copy, and examples match what ships.
+
+Preview locally with `npm run dev` inside `site/` (serves on `localhost:8080`);
+the GitHub Pages workflow (`.github/workflows/pages.yml`) deploys on push to `main`.
 
 ## Agent Reference Files
 

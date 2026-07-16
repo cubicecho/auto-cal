@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Auto Cal",
+    "slug": "auto-cal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "autocal",
+    "userInterfaceStyle": "automatic",
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "platforms": ["ios", "android", "web"],
+    "plugins": ["expo-router", "expo-status-bar"]
+  }
+}
