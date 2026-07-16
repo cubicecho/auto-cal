@@ -81,16 +81,16 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
 
   const [uncompleteTodo, { loading: uncompleting }] = useMutation(
     UNCOMPLETE_TODO,
-    { refetchQueries: ['GetTodoListsPage'] },
+    { refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'] },
   );
 
   const [updateTodo, { loading: updatingLength }] = useMutation(
     UPDATE_TODO_LENGTH,
-    { refetchQueries: ['GetTodoListsPage'] },
+    { refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'] },
   );
 
   const [deleteTodo, { loading: deleting }] = useMutation(DELETE_TODO, {
-    refetchQueries: ['GetTodoListsPage'],
+    refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'],
   });
 
   function handleSaveLength(estimatedLength: number) {
@@ -217,7 +217,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
       <CompletionDialog
         target={completionTarget}
         onOpenChange={(open) => !open && setCompletionTarget(null)}
-        refetchQueries={['GetTodoListsPage']}
+        refetchQueries={['GetTodoListsPage', 'GetProjectDetail']}
       />
     </div>
   );

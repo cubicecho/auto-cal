@@ -54,11 +54,11 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
   const [clearCompletedOpen, setClearCompletedOpen] = useState(false);
 
   const [createTodo, { loading: creating }] = useMutation(QUICK_CREATE_TODO, {
-    refetchQueries: ['GetTodoListsPage'],
+    refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'],
   });
 
   const [deleteTodos, { loading: clearing }] = useMutation(DELETE_TODOS, {
-    refetchQueries: ['GetTodoListsPage'],
+    refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'],
   });
 
   const visibleTodos = showCompleted
