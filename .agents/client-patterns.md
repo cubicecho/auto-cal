@@ -248,6 +248,29 @@ client/src/components/
     onboarding/   — Step*.tsx wizard panels
 ```
 
+## Shared UI Primitives
+
+Beyond the raw ShadCN primitives, `components/ui/` holds a set of shared layout
+primitives extracted to kill hand-rolled boilerplate. **Prefer these over
+re-implementing the same markup** — every list/detail page is built from them.
+
+| Primitive | Purpose |
+|-----------|---------|
+| `page.tsx` — `Page` | Page shell. Variants: `fill` (full-height flex col for inner-scroll views), `scroll` (default on), `width="narrow"` (max-w-2xl). Web-only (`<div>`) — do not use in `.native.tsx`. |
+| `page.tsx` — `PageHeader` | Title / subtitle / actions row at the top of list pages. |
+| `page.tsx` — `EmptyState` | Centered icon / title / description / action for empty lists. |
+| `page.tsx` — `CardGrid` | Responsive 1→2→3→4 column card grid. |
+| `query-state.tsx` — `QueryState` | Inline loading/error text (error takes priority) for a query whose data may still render alongside it. |
+| `section-heading.tsx` — `SectionHeading` | `default` / `overline` section labels. |
+| `detail-page.tsx` — `DetailPage<T>` | `<Page>` + loading/not-found guard via a render-prop so the entity is non-null inside `children`. |
+| `detail-header.tsx` — `DetailHeader`, `EditButton` | Back-link header + color/badge/actions; standard pencil Edit button. |
+| `form-dialog.tsx` — `FormDialog` | Dialog wrapper for the create/edit form pattern. |
+| `status-chip.tsx`, `color-dot.tsx`, `confirm-dialog.tsx` | Status badge, activity-type color dot, destructive-action confirm. |
+
+Companion hook: `hooks/useListSection.ts` — owns the create/edit dialog open
+state (`formOpen`, `editing`, `openCreate`, `openEdit`, `handleOpenChange`) that
+every list component needs.
+
 ## ShadCN + Tailwind Conventions
 
 ```typescript

@@ -32,12 +32,15 @@ db/src/
     ├── enums.ts            # ACTIVITY_TYPES, FREQUENCY_UNITS, etc.
     ├── index.ts            # Re-exports all models
     ├── users.ts
-    ├── activity_types.ts
+    ├── activity_types.ts     # self-FK tree via nullable parentId
     ├── todo_lists.ts
     ├── todos.ts
     ├── habits.ts
     ├── time_blocks.ts
-    └── habit_completions.ts
+    ├── habit_completions.ts
+    ├── projects.ts
+    ├── project_notes.ts
+    └── api_keys.ts
 
 db/drizzle/         # Generated migrations — never edit manually
 ```
@@ -143,6 +146,7 @@ Full column definitions live in `db/src/models/`. Summary:
 | userId | uuid | FK users (cascade delete) |
 | name | text | notNull |
 | color | text | notNull, default `'#6366f1'` (hex with `#`) |
+| parentId | uuid | nullable self-FK → activity_types (`set null`). Makes activity types a tree; a project's dedicated type is a child of a parent. |
 | createdAt / updatedAt | timestamp | |
 
 **`todo_lists`**
@@ -154,6 +158,7 @@ Full column definitions live in `db/src/models/`. Summary:
 | name | text | notNull |
 | description | text | nullable |
 | activityTypeId | uuid | FK activity_types (restrict) — notNull |
+| projectId | uuid | nullable FK projects (`set null`) — set when the list belongs to a project, else standalone |
 | defaultPriority | integer | notNull, default 0 — seeded into new todos |
 | defaultEstimatedLength | integer | notNull, default 0 — seeded into new todos |
 | createdAt / updatedAt | timestamp | |
@@ -212,6 +217,29 @@ Full column definitions live in `db/src/models/`. Summary:
 | scheduledAt | timestamp | nullable — set for tentative (scheduler-generated) rows |
 | completedAt | timestamp | nullable — set for actual completions; null = tentative |
 | createdAt | timestamp | |
+
+**`projects`**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| userId | uuid | FK users (cascade delete) |
+| name | text | notNull |
+| status | text | notNull, default `'active'`, `'active' \| 'completed' \| 'archived'` (typed via `$type<ProjectStatus>`) |
+| activityTypeId | uuid | FK activity_types (restrict) — notNull. The project's **dedicated** activity type (a child under a parent), auto-created with the project. |
+| createdAt / updatedAt | timestamp | |
+
+**`project_notes`**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| userId | uuid | FK users (cascade delete) |
+| projectId | uuid | FK projects (cascade delete) |
+| title | text | notNull |
+| content | text | notNull, default `''` (markdown) |
+| position | integer | notNull, default 0 — manual ordering |
+| createdAt / updatedAt | timestamp | |
 
 Conventions: all PKs use `uuid`+`defaultRandom`; user-owned tables cascade-delete; required references to activity-type / list use `onDelete: 'restrict'`; timestamps are `timestamp` (not `timestamptz`). Types are inferred via `$inferSelect` / `$inferInsert` — never duplicated.
 
