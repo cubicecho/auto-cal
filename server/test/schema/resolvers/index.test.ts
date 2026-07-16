@@ -5,7 +5,7 @@
  * disk. Each test gets a fresh in-memory PGLite instance with migrations
  * applied so there is no cross-test state.
  *
- * Import note: we intentionally bypass `packages/server/src/schema/index.ts`
+ * Import note: we intentionally bypass `server/src/schema/index.ts`
  * (which pulls in the live `@auto-cal/db` singleton and requires env vars).
  * Instead we build the test schema directly from the resolver index + a
  * freshly created PGLite drizzle instance.
@@ -28,10 +28,7 @@ import { applyCustomResolvers } from '../../../src/schema/resolvers/index.ts';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const migrationsFolder = resolve(
-  __dirname,
-  '../../../../../packages/db/drizzle',
-);
+const migrationsFolder = resolve(__dirname, '../../../../db/drizzle');
 
 /** Build a fresh in-memory DB with all migrations applied. */
 async function createTestDb() {

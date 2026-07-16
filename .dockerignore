@@ -20,5 +20,5 @@ coverage
 **/node_modules
 
 # Local Expo cache / intermediate outputs — rebuilt inside Stage 1
-packages/client/.expo
-packages/client/dist
+client/.expo
+client/dist

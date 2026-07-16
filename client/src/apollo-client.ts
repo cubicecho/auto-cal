@@ -12,7 +12,7 @@ import { createClient } from 'graphql-ws';
 import { Platform } from 'react-native';
 import { storage } from './storage';
 
-// In dev set EXPO_PUBLIC_API_URL=http://localhost:3001 in packages/client/.env.
+// In dev set EXPO_PUBLIC_API_URL=http://localhost:3001 in client/.env.
 // In production the variable is unset, so the URL is relative (/graphql) and
 // resolves to the same Express server that serves the static bundle.
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';

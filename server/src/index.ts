@@ -186,7 +186,7 @@ log.info('Starting Apollo Server...');
 await server.start();
 log.info('Apollo Server started');
 
-const clientDist = path.resolve(process.cwd(), 'packages/client/dist');
+const clientDist = path.resolve(process.cwd(), 'client/dist');
 const clientDistExists = fs.existsSync(clientDist);
 
 if (clientDistExists) {

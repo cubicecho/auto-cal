@@ -12,7 +12,7 @@ Today the only credential the server accepts is a 30-day JWT (issued via magic l
 1. **Key format:** `acal_<32 random bytes, base64url>` — single opaque token. The `acal_` prefix is how the server recognises the scheme; the body is 43 url-safe chars. No separate "key id" in the token — we look up by hash.
 2. **Hashing:** SHA-256 of the full token (high-entropy secret, no need for bcrypt/argon2). Constant-time compare on the hash. Store the hash, not the token.
 3. **Display hint:** store the first 8 chars of the random body as `key_prefix` (plain text) so the Settings UI can show "acal_AbCdEfGh…" to identify which key is which. The full token is shown **once** on creation and never again.
-4. **Transport:** `Authorization: Bearer acal_<…>`. Reuses the existing header path in `packages/server/src/index.ts` — no new header, no new endpoint.
+4. **Transport:** `Authorization: Bearer acal_<…>`. Reuses the existing header path in `server/src/index.ts` — no new header, no new endpoint.
 5. **Scopes:** start with two — `read` and `write`. Stored as `text[]`. Home Assistant only needs `read`. We can split per-resource later; doing so now is premature.
 6. **Expiry:** optional `expires_at` (nullable). Default: no expiry, but the UI offers presets (30d / 90d / 1y / never).
 7. **Revocation:** soft via `revoked_at` timestamp, not a hard delete. Keeps the audit trail and `last_used_at` history intact. Lookup filters out revoked keys.
@@ -23,7 +23,7 @@ Today the only credential the server accepts is a 30-day JWT (issued via magic l
 
 ### 1. DB — `api_keys` table
 
-New model file `packages/db/src/models/api_keys.ts`:
+New model file `db/src/models/api_keys.ts`:
 
 ```typescript
 export const apiKeys = pgTable('api_keys', {
@@ -45,13 +45,13 @@ export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;
 ```
 
-`API_KEY_SCOPES = ['read', 'write'] as const` in `packages/db/src/models/enums.ts` (follow the existing enum pattern).
+`API_KEY_SCOPES = ['read', 'write'] as const` in `db/src/models/enums.ts` (follow the existing enum pattern).
 
-Re-export from `packages/db/src/schema.ts`. Run `npm run db:generate`.
+Re-export from `db/src/schema.ts`. Run `npm run db:generate`.
 
 ### 2. Server — generation + verification helpers
 
-New file `packages/server/src/api-keys.ts`:
+New file `server/src/api-keys.ts`:
 
 ```typescript
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
@@ -80,11 +80,11 @@ export function constantTimeEqual(a: string, b: string): boolean {
 }
 ```
 
-Unit tests in `packages/server/src/api-keys.test.ts`: round-trip generation, prefix detection, constant-time compare. Follows the existing `auth.test.ts` shape.
+Unit tests in `server/src/api-keys.test.ts`: round-trip generation, prefix detection, constant-time compare. Follows the existing `auth.test.ts` shape.
 
 ### 3. Server — auth chain wiring
 
-In `packages/server/src/index.ts`, extend the context resolver. New order:
+In `server/src/index.ts`, extend the context resolver. New order:
 
 1. JWT → return userId
 2. Looks-like-an-API-key (`acal_` prefix) → hash, query `api_keys` where `keyHash = ?` AND `revokedAt IS NULL` AND (`expiresAt IS NULL` OR `expiresAt > now`) → return `{ userId, apiKeyId, scopes }`
@@ -96,7 +96,7 @@ Update `last_used_at = now()` on successful match. Fire-and-forget (no `await`) 
 
 ### 4. Context — carry the auth method
 
-Extend `Context` in `packages/server/src/context.ts`:
+Extend `Context` in `server/src/context.ts`:
 
 ```typescript
 export interface Context {
@@ -111,7 +111,7 @@ Resolvers don't need to care about `apiKey` for v1 — the `userId` check is wha
 
 ### 5. GraphQL — CRUD resolvers
 
-Add to the SDL extension in `packages/server/src/schema/resolvers/index.ts`:
+Add to the SDL extension in `server/src/schema/resolvers/index.ts`:
 
 ```graphql
 type ApiKey {
@@ -145,19 +145,19 @@ input CreateApiKeyInput {
 }
 ```
 
-New resolver file `packages/server/src/schema/resolvers/api-keys.ts` following the existing `apply*Resolvers` pattern. Validators in `validators.ts`: `name` min 1 / max 60; `scopes` non-empty, subset of `API_KEY_SCOPES`; `expiresAt` must be in the future.
+New resolver file `server/src/schema/resolvers/api-keys.ts` following the existing `apply*Resolvers` pattern. Validators in `validators.ts`: `name` min 1 / max 60; `scopes` non-empty, subset of `API_KEY_SCOPES`; `expiresAt` must be in the future.
 
 **Important guard:** API-key-bound requests must not be able to mint or revoke keys. In `myCreateApiKey` and `myRevokeApiKey`: `if (context.apiKey) throw new Error('API keys cannot manage other keys')`. Forces management through the web session.
 
 ### 6. Client — Settings page
 
-New section on `/settings` (route exists). Components in `packages/client/src/components/domain/settings/`:
+New section on `/settings` (route exists). Components in `client/src/components/domain/settings/`:
 
 - `ApiKeyList` — table: name, prefix (`acal_AbCdEfGh…`), scopes, last used, expires, [Revoke] button
 - `CreateApiKeyDialog` — form: name, scope checkboxes, expiry preset dropdown. Submits, then **shows the plaintext token in a one-time reveal modal** with a copy button and clear "you won't see this again" warning
 - `RevokeApiKeyDialog` — confirmation; calls `myRevokeApiKey`
 
-Operations colocated under `packages/client/src/operations/api-keys.graphql.ts` (matching existing pattern). Apollo cache: refetch `myApiKeys` after create/revoke — small list, no need for optimistic updates.
+Operations colocated under `client/src/operations/api-keys.graphql.ts` (matching existing pattern). Apollo cache: refetch `myApiKeys` after create/revoke — small list, no need for optimistic updates.
 
 ### 7. Docs
 

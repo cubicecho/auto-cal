@@ -23,7 +23,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { runSchedulerWriteback } from '../../src/services/scheduler-writeback.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const migrationsFolder = resolve(__dirname, '../../../../packages/db/drizzle');
+const migrationsFolder = resolve(__dirname, '../../../db/drizzle');
 
 type TestDb = Awaited<ReturnType<typeof createDb>>;
 

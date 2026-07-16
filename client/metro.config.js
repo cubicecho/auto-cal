@@ -17,7 +17,7 @@ const { withNativeWind } = require('nativewind/metro');
 const config = getDefaultConfig(__dirname);
 
 // Resolve monorepo packages from the workspace root
-const workspaceRoot = path.resolve(__dirname, '../..');
+const workspaceRoot = path.resolve(__dirname, '..');
 config.watchFolders = [workspaceRoot];
 config.resolver.nodeModulesPaths = [
   localModules,

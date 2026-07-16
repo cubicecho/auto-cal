@@ -4,7 +4,7 @@ React + Vite + Apollo Client + TanStack Router + TanStack Form + ShadCN/Radix + 
 
 ## Installed ShadCN Components
 
-Only use components that are already installed — do not add new ones without checking first. Files live in `packages/client/src/components/ui/`.
+Only use components that are already installed — do not add new ones without checking first. Files live in `client/src/components/ui/`.
 
 ShadCN primitives (11): `button` `card` `dialog` `field` `form` `input` `label` `select` `tabs` `textarea` `tooltip`
 
@@ -21,7 +21,7 @@ Custom (2, not from ShadCN — keep tagged as such):
 ## Apollo Client Setup
 
 ```typescript
-// packages/client/src/main.tsx
+// client/src/main.tsx
 const httpLink = new HttpLink({
   uri: '/graphql',
   fetch: (uri, options) => {
@@ -65,7 +65,7 @@ Completion sets `localStorage.onboarding_done = '1'`. Re-runnable from Settings 
 
 ## Routes
 
-File-based routes under `packages/client/src/routes/`:
+File-based routes under `client/src/routes/`:
 
 | File | Path | Notes |
 |------|------|-------|
@@ -91,7 +91,7 @@ Auth flow: `requestMagicLink` → magic link logged to server console (and retur
 
 
 ```typescript
-// packages/client/src/routes/__root.tsx
+// client/src/routes/__root.tsx
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   component: RootLayout,
   beforeLoad: async ({ location }) => {
@@ -104,7 +104,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 Router context carries `apolloClient` and `preloadQuery`:
 ```typescript
-// packages/client/src/main.tsx
+// client/src/main.tsx
 const router = createRouter({
   routeTree,
   context: {
@@ -236,7 +236,7 @@ const form = useAppForm({
 ## Component Structure
 
 ```
-packages/client/src/components/
+client/src/components/
   ui/             — ShadCN primitives (Button, Card, Input, etc.)
   domain/         — Feature components organized by entity
     activity-type/ — ActivityTypeForm, ActivityTypeList, ActivityTypeSelect
@@ -276,7 +276,7 @@ Card layout pattern:
 ## Utility Functions
 
 ```typescript
-// packages/client/src/lib/utils.ts
+// client/src/lib/utils.ts
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
@@ -341,7 +341,7 @@ When the user picks a list in `TodoForm`, the form snapshots that list's `defaul
 
 After adding/editing GraphQL operations:
 ```bash
-npm run codegen   # regenerates packages/client/src/__generated__/
+npm run codegen   # regenerates client/src/__generated__/
 ```
 
 Types from `@/__generated__/graphql.js` are auto-imported — never write them by hand.

@@ -67,19 +67,19 @@ Scope enforcement: `read` scope for GET/PROPFIND/REPORT; `write` scope for PUT/D
 
 | File | Purpose |
 |---|---|
-| `packages/server/src/ical-data.ts` | Extract `buildCalendarEvents()` + `buildCalendarIcs()` shared by both routes |
-| `packages/server/src/caldav-auth.ts` | `caldavAuth(db)` middleware factory |
-| `packages/server/src/caldav-route.ts` | `createCaldavRouter(db)` — all handlers + XML builders |
-| `packages/server/src/caldav-auth.test.ts` | Auth middleware unit tests |
-| `packages/server/src/caldav-route.test.ts` | Handler unit tests |
+| `server/src/ical-data.ts` | Extract `buildCalendarEvents()` + `buildCalendarIcs()` shared by both routes |
+| `server/src/caldav-auth.ts` | `caldavAuth(db)` middleware factory |
+| `server/src/caldav-route.ts` | `createCaldavRouter(db)` — all handlers + XML builders |
+| `server/src/caldav-auth.test.ts` | Auth middleware unit tests |
+| `server/src/caldav-route.test.ts` | Handler unit tests |
 
 ## Modified files
 
 | File | Change |
 |---|---|
-| `packages/server/src/ical-route.ts` | Thin wrapper calling `buildCalendarIcs` |
-| `packages/server/src/index.ts` | Mount `/caldav` router after `/ical` |
-| `packages/server/package.json` | Add `node-ical` (iCal parser for PUT bodies) |
+| `server/src/ical-route.ts` | Thin wrapper calling `buildCalendarIcs` |
+| `server/src/index.ts` | Mount `/caldav` router after `/ical` |
+| `server/package.json` | Add `node-ical` (iCal parser for PUT bodies) |
 
 ---
 

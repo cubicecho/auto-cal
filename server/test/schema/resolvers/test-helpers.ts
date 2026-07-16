@@ -23,10 +23,7 @@ import { createLoaders } from '../../../src/context.ts';
 import { applyCustomResolvers } from '../../../src/schema/resolvers/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const migrationsFolder = resolve(
-  __dirname,
-  '../../../../../packages/db/drizzle',
-);
+const migrationsFolder = resolve(__dirname, '../../../../db/drizzle');
 
 export async function createTestDb() {
   const client = new PGlite('memory://');

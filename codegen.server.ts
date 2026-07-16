@@ -1,9 +1,9 @@
 import type { CodegenConfig } from '@graphql-codegen/cli';
 
 const config: CodegenConfig = {
-  schema: './packages/server/src/__generated__/schema.graphql',
+  schema: './server/src/__generated__/schema.graphql',
   generates: {
-    'packages/server/src/__generated__/resolvers.ts': {
+    'server/src/__generated__/resolvers.ts': {
       plugins: ['typescript', 'typescript-resolvers'],
       config: {
         inputMaybeValue: 'T | undefined',
