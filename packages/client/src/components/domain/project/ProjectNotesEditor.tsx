@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useMutation } from '@apollo/client/react';
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MarkdownPreview } from './MarkdownPreview';
 
 export const PROJECT_NOTE_FRAGMENT = graphql(`
@@ -68,6 +68,11 @@ export function ProjectNotesEditor({
   const [content, setContent] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Note | null>(null);
 
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  // Set to the id of a just-created note so we can focus its title once the
+  // refetch lands and the note becomes selectable.
+  const pendingFocusId = useRef<string | null>(null);
+
   const selected = notes.find((n) => n.id === selectedId) ?? null;
 
   // Keep the local draft in sync when the selected note changes (or its
@@ -85,8 +90,23 @@ export function ProjectNotesEditor({
     }
   }, [notes, selectedId]);
 
+  // After adding a note, focus its title and select the placeholder text so the
+  // user can immediately rename it. Runs once the created note is selected.
+  useEffect(() => {
+    if (!selected || pendingFocusId.current !== selected.id) return;
+    pendingFocusId.current = null;
+    // Defer past the title-sync effect so the input holds the note's title.
+    requestAnimationFrame(() => {
+      titleInputRef.current?.focus();
+      titleInputRef.current?.select();
+    });
+  }, [selected]);
+
   const [createNote, { loading: creating }] = useMutation(CREATE_NOTE, {
     refetchQueries: ['GetProjectDetail'],
+    // Wait for the refetch so the new note is in the list before we select and
+    // focus it — avoids a flash of the empty-state placeholder.
+    awaitRefetchQueries: true,
   });
   const [updateNote, { loading: saving }] = useMutation(UPDATE_NOTE, {
     refetchQueries: ['GetProjectDetail'],
@@ -103,7 +123,10 @@ export function ProjectNotesEditor({
       variables: { input: { projectId, title: 'Untitled note', content: '' } },
     });
     const created = result.data?.myCreateProjectNote;
-    if (created) setSelectedId(created.id);
+    if (created) {
+      pendingFocusId.current = created.id;
+      setSelectedId(created.id);
+    }
   }
 
   async function handleSave() {
@@ -140,7 +163,7 @@ export function ProjectNotesEditor({
   const orderedNotes = [...notes].sort((a, b) => a.position - b.position);
 
   return (
-    <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+    <div className="grid gap-4 lg:grid-cols-[200px_1fr]">
       {/* Note list */}
       <div className="space-y-2">
         <Button
@@ -213,6 +236,7 @@ export function ProjectNotesEditor({
       {selected ? (
         <div className="space-y-3">
           <Input
+            ref={titleInputRef}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Note title"

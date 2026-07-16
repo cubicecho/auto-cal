@@ -7,12 +7,11 @@ import type {
 import { graphql } from '@/__generated__/index.js';
 import { TodoListCard } from '@/components/domain/todo-list/TodoListCard';
 import { Button } from '@/components/ui/button';
-import { ColorDot } from '@/components/ui/color-dot';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
+import { DetailHeader } from '@/components/ui/detail-header';
+import { StatusChip } from '@/components/ui/status-chip';
 import { useMutation } from '@apollo/client/react';
-import { Archive, ArrowLeft, Pencil } from 'lucide-react';
+import { Archive, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { ProjectNotesEditor } from './ProjectNotesEditor';
 
@@ -43,12 +42,6 @@ const ARCHIVE_PROJECT = graphql(`
     }
   }
 `);
-
-const STATUS_STYLES: Record<string, string> = {
-  active: 'bg-primary/10 text-primary',
-  completed: 'bg-green-500/10 text-green-600',
-  archived: 'bg-muted text-muted-foreground',
-};
 
 type Project = Project_ProjectDetailFragment;
 type Todo = Todo_TodoListFragment;
@@ -86,78 +79,61 @@ export function ProjectDetail({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onBack}
-          aria-label="Back to projects"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            {project.activityType && (
-              <ColorDot
-                color={project.activityType.color}
-                title={project.activityType.name}
-              />
+      <DetailHeader
+        onBack={onBack}
+        backLabel="Back to projects"
+        color={project.activityType?.color}
+        colorLabel={project.activityType?.name}
+        title={project.name}
+        badge={<StatusChip status={project.status} />}
+        subtitle={
+          project.activityType
+            ? `Activity type: ${project.activityType.name}`
+            : undefined
+        }
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => onEdit(project)}>
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
+              Edit
+            </Button>
+            {project.status !== 'archived' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setArchiveOpen(true)}
+              >
+                <Archive className="mr-1.5 h-3.5 w-3.5" />
+                Archive
+              </Button>
             )}
-            <h2 className="text-2xl font-bold">{project.name}</h2>
-            <span
-              className={cn(
-                'rounded-full px-2 py-0.5 text-[11px] font-medium capitalize',
-                STATUS_STYLES[project.status] ?? STATUS_STYLES.active,
-              )}
-            >
-              {project.status}
-            </span>
-          </div>
-          {project.activityType && (
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Activity type: {project.activityType.name}
-            </p>
-          )}
-        </div>
-        <Button variant="outline" size="sm" onClick={() => onEdit(project)}>
-          <Pencil className="mr-1.5 h-3.5 w-3.5" />
-          Edit
-        </Button>
-        {project.status !== 'archived' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setArchiveOpen(true)}
-          >
-            <Archive className="mr-1.5 h-3.5 w-3.5" />
-            Archive
-          </Button>
-        )}
-      </div>
+          </>
+        }
+      />
 
-      <Tabs defaultValue="notes">
-        <TabsList>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
-          <TabsTrigger value="tasks">Tasks</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="notes" className="pt-2">
+      {/* Notes and tasks sit side by side on medium+ screens and stack on
+          narrow ones. */}
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_18rem] lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0">
+          <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
+            Notes
+          </h3>
           <ProjectNotesEditor projectId={project.id} notes={project.notes} />
-        </TabsContent>
+        </div>
 
-        <TabsContent value="tasks" className="pt-2">
+        <div className="min-w-0">
+          <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
+            Tasks
+          </h3>
           {project.list ? (
-            <div className="max-w-md">
-              <TodoListCard list={project.list} todos={listTodos} />
-            </div>
+            <TodoListCard list={project.list} todos={listTodos} />
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
               This project has no todo list.
             </p>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       <ConfirmDialog
         open={archiveOpen}
