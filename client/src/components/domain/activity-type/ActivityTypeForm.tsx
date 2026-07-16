@@ -3,7 +3,7 @@ import type {
   CreateActivityTypeMutationVariables,
   DeleteActivityTypeMutation,
   DeleteActivityTypeMutationVariables,
-  GetMyActivityTypesQuery,
+  GetActivityTypesPageQuery,
   UpdateActivityTypeMutation,
   UpdateActivityTypeMutationVariables,
 } from '@/__generated__/graphql.js';
@@ -58,7 +58,7 @@ type ActivityTypeFormValues = z.infer<typeof activityTypeSchema>;
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type ActivityTypeItem = GetMyActivityTypesQuery['myActivityTypes'][number];
+type ActivityTypeItem = GetActivityTypesPageQuery['myActivityTypes'][number];
 
 interface ActivityTypeFormProps {
   open: boolean;

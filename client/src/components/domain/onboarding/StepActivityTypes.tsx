@@ -1,7 +1,7 @@
 import type {
   CreateActivityTypeMutation,
   CreateActivityTypeMutationVariables,
-  GetMyActivityTypesQuery,
+  GetActivityTypesForOnboardingQuery,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
@@ -47,7 +47,8 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
-type ActivityType = GetMyActivityTypesQuery['myActivityTypes'][number];
+type ActivityType =
+  GetActivityTypesForOnboardingQuery['myActivityTypes'][number];
 
 interface StepActivityTypesProps {
   onNext: () => void;

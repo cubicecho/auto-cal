@@ -1,10 +1,10 @@
 import type {
   ActivityType_ActivityTypeListFragment,
-  GetActivityTypeStatsQuery,
+  GetActivityTypesPageQuery,
 } from '@/__generated__/graphql.js';
 
 type ActivityTypeStats =
-  GetActivityTypeStatsQuery['myActivityTypeStats'][number];
+  GetActivityTypesPageQuery['myActivityTypeStats'][number];
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { ColorBar } from '@/components/ui/color-bar';
