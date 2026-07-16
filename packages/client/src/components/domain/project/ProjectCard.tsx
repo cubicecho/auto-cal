@@ -7,16 +7,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { StatusChip } from '@/components/ui/status-chip';
 import { Pencil } from 'lucide-react';
 
 type Project = Project_ProjectListFragment;
-
-const STATUS_STYLES: Record<string, string> = {
-  active: 'bg-primary/10 text-primary',
-  completed: 'bg-green-500/10 text-green-600',
-  archived: 'bg-muted text-muted-foreground',
-};
 
 type ProjectCardProps = {
   project: Project;
@@ -43,14 +37,7 @@ export function ProjectCard({ project, onSelect, onEdit }: ProjectCardProps) {
             )}
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <span
-              className={cn(
-                'rounded-full px-2 py-0.5 text-[11px] font-medium capitalize',
-                STATUS_STYLES[project.status] ?? STATUS_STYLES.active,
-              )}
-            >
-              {project.status}
-            </span>
+            <StatusChip status={project.status} />
             <Button
               size="icon"
               variant="ghost"

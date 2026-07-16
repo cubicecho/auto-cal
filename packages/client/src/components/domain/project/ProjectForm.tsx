@@ -6,16 +6,8 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { FieldWrapper, Form } from '@/components/ui/form';
+import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
 import { z } from 'zod';
@@ -128,111 +120,76 @@ export function ProjectForm({ project, open, onOpenChange }: ProjectFormProps) {
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Project' : 'New Project'}</DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? 'Update the project name and status.'
-              : 'A dedicated activity type and todo list are created automatically under the parent you choose.'}
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? 'Edit Project' : 'New Project'}
+      description={
+        isEdit
+          ? 'Update the project name and status.'
+          : 'A dedicated activity type and todo list are created automatically under the parent you choose.'
+      }
+    >
+      {isEdit ? (
+        <editForm.AppForm>
+          <Form className="space-y-4">
+            <editForm.AppField name="name">
+              {(field) => (
+                <field.InputField label="Name" placeholder="Project name" />
+              )}
+            </editForm.AppField>
 
-        {isEdit ? (
-          <editForm.AppForm>
-            <Form className="space-y-4">
-              <editForm.AppField name="name">
-                {(field) => (
-                  <field.InputField label="Name" placeholder="Project name" />
-                )}
-              </editForm.AppField>
+            <editForm.AppField name="status">
+              {(field) => (
+                <field.SelectField
+                  label="Status"
+                  options={STATUS_OPTIONS}
+                  placeholder="Select status"
+                />
+              )}
+            </editForm.AppField>
 
-              <editForm.AppField name="status">
-                {(field) => (
-                  <field.SelectField
-                    label="Status"
-                    options={STATUS_OPTIONS}
-                    placeholder="Select status"
-                  />
-                )}
-              </editForm.AppField>
+            <FormDialogFooter onCancel={() => onOpenChange(false)}>
+              <editForm.SubmitButton isEdit />
+            </FormDialogFooter>
+          </Form>
+        </editForm.AppForm>
+      ) : (
+        <createForm.AppForm>
+          <Form className="space-y-4">
+            <createForm.AppField name="name">
+              {(field) => (
+                <field.InputField
+                  label="Name"
+                  placeholder="e.g. Website redesign"
+                />
+              )}
+            </createForm.AppField>
 
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Cancel
-                </Button>
-                <editForm.Subscribe
-                  selector={(s) => [s.canSubmit, s.isSubmitting]}
-                >
-                  {([canSubmit, isSubmitting]) => (
-                    <Button
-                      type="submit"
-                      disabled={!canSubmit || !!isSubmitting}
-                    >
-                      {isSubmitting ? 'Saving…' : 'Save changes'}
-                    </Button>
-                  )}
-                </editForm.Subscribe>
-              </DialogFooter>
-            </Form>
-          </editForm.AppForm>
-        ) : (
-          <createForm.AppForm>
-            <Form className="space-y-4">
-              <createForm.AppField name="name">
-                {(field) => (
-                  <field.InputField
-                    label="Name"
-                    placeholder="e.g. Website redesign"
-                  />
-                )}
-              </createForm.AppField>
+            <createForm.AppField name="parentActivityTypeId">
+              {(field) => (
+                <FieldWrapper
+                  label="Parent activity type"
+                  control={
+                    <ActivityTypeSelect
+                      value={field.state.value || undefined}
+                      onValueChange={(v) => field.handleChange(v ?? '')}
+                      onBlur={field.handleBlur}
+                    />
+                  }
+                />
+              )}
+            </createForm.AppField>
 
-              <createForm.AppField name="parentActivityTypeId">
-                {(field) => (
-                  <FieldWrapper
-                    label="Parent activity type"
-                    control={
-                      <ActivityTypeSelect
-                        value={field.state.value || undefined}
-                        onValueChange={(v) => field.handleChange(v ?? '')}
-                        onBlur={field.handleBlur}
-                      />
-                    }
-                  />
-                )}
-              </createForm.AppField>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Cancel
-                </Button>
-                <createForm.Subscribe
-                  selector={(s) => [s.canSubmit, s.isSubmitting]}
-                >
-                  {([canSubmit, isSubmitting]) => (
-                    <Button
-                      type="submit"
-                      disabled={!canSubmit || !!isSubmitting}
-                    >
-                      {isSubmitting ? 'Creating…' : 'Create project'}
-                    </Button>
-                  )}
-                </createForm.Subscribe>
-              </DialogFooter>
-            </Form>
-          </createForm.AppForm>
-        )}
-      </DialogContent>
-    </Dialog>
+            <FormDialogFooter onCancel={() => onOpenChange(false)}>
+              <createForm.SubmitButton
+                createLabel="Create project"
+                savingLabel="Creating…"
+              />
+            </FormDialogFooter>
+          </Form>
+        </createForm.AppForm>
+      )}
+    </FormDialog>
   );
 }

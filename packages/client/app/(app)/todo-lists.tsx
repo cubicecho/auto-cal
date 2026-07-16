@@ -1,6 +1,7 @@
 import type { Todo_TodoListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { TodoListList } from '@/components/domain/todo-list/TodoListList';
+import { Page } from '@/components/ui/page';
 import type { TodoListEvent } from '@/hooks/useTodoListsUpdated';
 import { useTodoListsUpdated } from '@/hooks/useTodoListsUpdated';
 import type { TodoEvent } from '@/hooks/useTodosUpdated';
@@ -113,7 +114,7 @@ export default function TodoListsPage() {
   }, [data?.myTodos]);
 
   return (
-    <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6">
+    <Page>
       {error && (
         <p className="text-destructive text-sm">
           Error loading todos: {error.message}
@@ -126,6 +127,6 @@ export default function TodoListsPage() {
         lists={data?.myTodoLists ?? []}
         todosByListId={todosByListId}
       />
-    </div>
+    </Page>
   );
 }

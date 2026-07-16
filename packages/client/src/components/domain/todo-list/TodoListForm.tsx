@@ -10,15 +10,8 @@ import type {
 import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { FieldWrapper, Form } from '@/components/ui/form';
+import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
 import { Trash2 } from 'lucide-react';
@@ -167,117 +160,93 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit List' : 'New Todo List'}</DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? 'Update this list and its defaults.'
-              : 'Lists group todos by activity. New todos inherit the list’s defaults.'}
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? 'Edit List' : 'New Todo List'}
+      description={
+        isEdit
+          ? 'Update this list and its defaults.'
+          : 'Lists group todos by activity. New todos inherit the list’s defaults.'
+      }
+    >
+      <form.AppForm>
+        <Form className="space-y-4">
+          <form.AppField name="name">
+            {(field) => (
+              <field.InputField
+                label="Name"
+                placeholder="e.g. Work, Side project, Errands"
+              />
+            )}
+          </form.AppField>
 
-        <form.AppForm>
-          <Form className="space-y-4">
-            <form.AppField name="name">
-              {(field) => (
-                <field.InputField
-                  label="Name"
-                  placeholder="e.g. Work, Side project, Errands"
-                />
-              )}
-            </form.AppField>
+          <form.AppField name="description">
+            {(field) => (
+              <field.TextAreaField
+                label="Description (optional)"
+                placeholder="What kind of todos go in this list?"
+              />
+            )}
+          </form.AppField>
 
-            <form.AppField name="description">
-              {(field) => (
-                <field.TextAreaField
-                  label="Description (optional)"
-                  placeholder="What kind of todos go in this list?"
-                />
-              )}
-            </form.AppField>
-
-            <form.AppField name="activityTypeId">
-              {(field) => (
-                <FieldWrapper
-                  label="Activity Type"
-                  control={
-                    <ActivityTypeSelect
-                      value={field.state.value || undefined}
-                      onValueChange={(v) => field.handleChange(v ?? '')}
-                      onBlur={field.handleBlur}
-                    />
-                  }
-                />
-              )}
-            </form.AppField>
-
-            <div className="grid grid-cols-2 gap-4">
-              <form.AppField name="defaultPriority">
-                {(field) => (
-                  <field.SelectField
-                    label="Default priority"
-                    options={PRIORITY_OPTIONS}
-                    placeholder="Select priority"
+          <form.AppField name="activityTypeId">
+            {(field) => (
+              <FieldWrapper
+                label="Activity Type"
+                control={
+                  <ActivityTypeSelect
+                    value={field.state.value || undefined}
+                    onValueChange={(v) => field.handleChange(v ?? '')}
+                    onBlur={field.handleBlur}
                   />
-                )}
-              </form.AppField>
+                }
+              />
+            )}
+          </form.AppField>
 
-              <form.AppField name="defaultEstimatedLength">
-                {(field) => (
-                  <field.SelectField
-                    label="Default duration"
-                    options={DURATION_OPTIONS}
-                    placeholder="Select duration"
-                  />
-                )}
-              </form.AppField>
-            </div>
+          <div className="grid grid-cols-2 gap-4">
+            <form.AppField name="defaultPriority">
+              {(field) => (
+                <field.SelectField
+                  label="Default priority"
+                  options={PRIORITY_OPTIONS}
+                  placeholder="Select priority"
+                />
+              )}
+            </form.AppField>
 
-            <DialogFooter className="flex items-center justify-between">
-              <div>
-                {isEdit && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDelete}
-                  >
-                    <Trash2 className="mr-1 h-4 w-4" />
-                    Delete
-                  </Button>
-                )}
-              </div>
-              <div className="flex gap-2">
+            <form.AppField name="defaultEstimatedLength">
+              {(field) => (
+                <field.SelectField
+                  label="Default duration"
+                  options={DURATION_OPTIONS}
+                  placeholder="Select duration"
+                />
+              )}
+            </form.AppField>
+          </div>
+
+          <FormDialogFooter
+            onCancel={() => onOpenChange(false)}
+            secondary={
+              isEdit ? (
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDelete}
                 >
-                  Cancel
+                  <Trash2 className="mr-1 h-4 w-4" />
+                  Delete
                 </Button>
-                <form.Subscribe
-                  selector={(state) => [state.canSubmit, state.isSubmitting]}
-                >
-                  {([canSubmit, isSubmitting]) => (
-                    <Button
-                      type="submit"
-                      disabled={!canSubmit || !!isSubmitting}
-                    >
-                      {isSubmitting
-                        ? 'Saving…'
-                        : isEdit
-                          ? 'Save changes'
-                          : 'Create list'}
-                    </Button>
-                  )}
-                </form.Subscribe>
-              </div>
-            </DialogFooter>
-          </Form>
-        </form.AppForm>
-      </DialogContent>
-    </Dialog>
+              ) : undefined
+            }
+          >
+            <form.SubmitButton isEdit={isEdit} createLabel="Create list" />
+          </FormDialogFooter>
+        </Form>
+      </form.AppForm>
+    </FormDialog>
   );
 }

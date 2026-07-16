@@ -1,5 +1,6 @@
 import { graphql } from '@/__generated__/index.js';
 import { ProjectList } from '@/components/domain/project/ProjectList';
+import { Page } from '@/components/ui/page';
 import { useQuery } from '@apollo/client/react';
 import { useRouter } from 'expo-router';
 
@@ -18,11 +19,11 @@ export default function ProjectsPage() {
   });
 
   return (
-    <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6">
+    <Page>
       <ProjectList
         items={data?.myProjects ?? []}
         onSelect={(project) => router.push(`/projects/${project.id}`)}
       />
-    </div>
+    </Page>
   );
 }

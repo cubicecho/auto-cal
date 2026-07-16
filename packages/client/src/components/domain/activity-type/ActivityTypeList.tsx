@@ -8,8 +8,9 @@ type ActivityTypeStats =
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { ColorBar } from '@/components/ui/color-bar';
+import { EmptyState, PageHeader } from '@/components/ui/page';
+import { useListSection } from '@/hooks/useListSection';
 import { Pencil, Plus, Tag } from 'lucide-react';
-import { useState } from 'react';
 import { ActivityTypeForm } from './ActivityTypeForm';
 
 // ─── GraphQL ────────────────────────────────────────────────────────────────
@@ -34,55 +35,34 @@ type ActivityTypeListProps = {
 };
 
 export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<ActivityTypeItem | null>(null);
-
-  function openCreate() {
-    setEditingItem(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(item: ActivityTypeItem) {
-    setEditingItem(item);
-    setFormOpen(true);
-  }
-
-  function handleFormOpenChange(open: boolean) {
-    setFormOpen(open);
-    if (!open) setEditingItem(null);
-  }
+  const { formOpen, editing, openCreate, openEdit, handleOpenChange } =
+    useListSection<ActivityTypeItem>();
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Activity Types</h2>
-          <p className="text-sm text-muted-foreground">
-            Categories for your todos, habits, and time blocks
-          </p>
-        </div>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Activity Type
-        </Button>
-      </div>
-
-      {items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-10 text-center">
-          <div className="rounded-full bg-muted p-3">
-            <Tag className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <div>
-            <p className="font-medium text-sm">No activity types yet</p>
-            <p className="text-sm text-muted-foreground">
-              Activity types categorize your todos, habits, and time blocks
-            </p>
-          </div>
+      <PageHeader
+        title="Activity Types"
+        subtitle="Categories for your todos, habits, and time blocks"
+        actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
-            Add activity type
+            New Activity Type
           </Button>
-        </div>
+        }
+      />
+
+      {items.length === 0 ? (
+        <EmptyState
+          icon={Tag}
+          title="No activity types yet"
+          description="Activity types categorize your todos, habits, and time blocks"
+          action={
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add activity type
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-2">
           {items.map((item) => {
@@ -120,9 +100,9 @@ export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
       )}
 
       <ActivityTypeForm
-        {...(editingItem !== null ? { activityType: editingItem } : {})}
+        {...(editing !== null ? { activityType: editing } : {})}
         open={formOpen}
-        onOpenChange={handleFormOpenChange}
+        onOpenChange={handleOpenChange}
       />
     </>
   );

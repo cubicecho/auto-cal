@@ -1,8 +1,9 @@
 import type { TimeBlock_TimeBlockListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { EmptyState, PageHeader } from '@/components/ui/page';
+import { useListSection } from '@/hooks/useListSection';
 import { Clock, Plus } from 'lucide-react';
-import { useState } from 'react';
 import { TimeBlockForm } from './TimeBlockForm';
 import { TimeBlockItem } from './TimeBlockItem';
 
@@ -31,40 +32,21 @@ type TimeBlockListProps = {
 };
 
 export function TimeBlockList({ items, loading, error }: TimeBlockListProps) {
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingTimeBlock, setEditingTimeBlock] = useState<TimeBlock | null>(
-    null,
-  );
-
-  function openCreate() {
-    setEditingTimeBlock(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(timeBlock: TimeBlock) {
-    setEditingTimeBlock(timeBlock);
-    setFormOpen(true);
-  }
-
-  function handleFormOpenChange(open: boolean) {
-    setFormOpen(open);
-    if (!open) setEditingTimeBlock(null);
-  }
+  const { formOpen, editing, openCreate, openEdit, handleOpenChange } =
+    useListSection<TimeBlock>();
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Time Blocks</h2>
-          <p className="text-sm text-muted-foreground">
-            Designated time periods for different activity types
-          </p>
-        </div>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Time Block
-        </Button>
-      </div>
+      <PageHeader
+        title="Time Blocks"
+        subtitle="Designated time periods for different activity types"
+        actions={
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Time Block
+          </Button>
+        }
+      />
 
       {loading && (
         <p className="text-sm text-muted-foreground">Loading time blocks…</p>
@@ -75,22 +57,17 @@ export function TimeBlockList({ items, loading, error }: TimeBlockListProps) {
         </p>
       )}
       {!loading && items.length === 0 && (
-        <div className="flex flex-col items-center gap-3 py-10 text-center">
-          <div className="rounded-full bg-muted p-3">
-            <Clock className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <div>
-            <p className="font-medium text-sm">No time blocks yet</p>
-            <p className="text-sm text-muted-foreground">
-              Time blocks define when the scheduler can place your todos and
-              habits
-            </p>
-          </div>
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add time block
-          </Button>
-        </div>
+        <EmptyState
+          icon={Clock}
+          title="No time blocks yet"
+          description="Time blocks define when the scheduler can place your todos and habits"
+          action={
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add time block
+            </Button>
+          }
+        />
       )}
       {items.length > 0 && (
         <div className="space-y-2">
@@ -101,9 +78,9 @@ export function TimeBlockList({ items, loading, error }: TimeBlockListProps) {
       )}
 
       <TimeBlockForm
-        {...(editingTimeBlock !== null ? { timeBlock: editingTimeBlock } : {})}
+        {...(editing !== null ? { timeBlock: editing } : {})}
         open={formOpen}
-        onOpenChange={handleFormOpenChange}
+        onOpenChange={handleOpenChange}
       />
     </>
   );

@@ -2,6 +2,7 @@ import type { Habit_HabitListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { HabitDetail } from '@/components/domain/habit/HabitDetail';
 import { HabitForm } from '@/components/domain/habit/HabitForm';
+import { Page } from '@/components/ui/page';
 import { useQuery } from '@apollo/client/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -29,14 +30,14 @@ export default function HabitDetailPage() {
 
   if (!habit) {
     return (
-      <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6">
+      <Page>
         <p className="text-muted-foreground">Habit not found.</p>
-      </div>
+      </Page>
     );
   }
 
   return (
-    <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6">
+    <Page>
       <HabitDetail
         habit={habit}
         onBack={() => router.push('/habits')}
@@ -53,6 +54,6 @@ export default function HabitDetailPage() {
           if (!open) setEditingHabit(null);
         }}
       />
-    </div>
+    </Page>
   );
 }

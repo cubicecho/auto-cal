@@ -4,6 +4,7 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Page } from '@/components/ui/page';
 import { useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
@@ -396,7 +397,7 @@ export default function StatsPage() {
   const isLoading = loading || activityLoading;
 
   return (
-    <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6 space-y-6">
+    <Page className="space-y-6">
       <div className="flex gap-1 flex-wrap">
         {DATE_RANGES.map((r) => (
           <button
@@ -448,6 +449,6 @@ export default function StatsPage() {
           activityTypes={activityData.myActivityTypes}
         />
       )}
-    </div>
+    </Page>
   );
 }

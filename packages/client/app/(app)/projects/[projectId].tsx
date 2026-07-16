@@ -1,6 +1,7 @@
 import { graphql } from '@/__generated__/index.js';
 import { ProjectDetail } from '@/components/domain/project/ProjectDetail';
 import { ProjectForm } from '@/components/domain/project/ProjectForm';
+import { Page } from '@/components/ui/page';
 import { useQuery } from '@apollo/client/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -30,16 +31,16 @@ export default function ProjectDetailPage() {
 
   if (!project) {
     return (
-      <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6">
+      <Page className="px-3 py-4">
         <p className="text-muted-foreground">
           {loading ? 'Loading…' : 'Project not found.'}
         </p>
-      </div>
+      </Page>
     );
   }
 
   return (
-    <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6">
+    <Page className="px-3 py-4">
       <ProjectDetail
         project={project}
         todos={data?.myTodos ?? []}
@@ -55,6 +56,6 @@ export default function ProjectDetailPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
       />
-    </div>
+    </Page>
   );
 }

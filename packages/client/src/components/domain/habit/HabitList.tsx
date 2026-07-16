@@ -1,8 +1,9 @@
 import type { Habit_HabitListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { EmptyState, PageHeader } from '@/components/ui/page';
+import { useListSection } from '@/hooks/useListSection';
 import { Plus, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
 import { HabitForm } from './HabitForm';
 import { HabitItem } from './HabitItem';
 
@@ -39,55 +40,34 @@ type HabitListProps = {
 };
 
 export function HabitList({ items, onSelect }: HabitListProps) {
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
-
-  function openCreate() {
-    setEditingHabit(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(habit: Habit) {
-    setEditingHabit(habit);
-    setFormOpen(true);
-  }
-
-  function handleFormOpenChange(open: boolean) {
-    setFormOpen(open);
-    if (!open) setEditingHabit(null);
-  }
+  const { formOpen, editing, openCreate, openEdit, handleOpenChange } =
+    useListSection<Habit>();
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Habits</h2>
-          <p className="text-sm text-muted-foreground">
-            Recurring tasks scheduled regularly
-          </p>
-        </div>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Habit
-        </Button>
-      </div>
-
-      {items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-10 text-center">
-          <div className="rounded-full bg-muted p-3">
-            <RefreshCw className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <div>
-            <p className="font-medium text-sm">No habits yet</p>
-            <p className="text-sm text-muted-foreground">
-              Add a habit to track recurring tasks
-            </p>
-          </div>
+      <PageHeader
+        title="Habits"
+        subtitle="Recurring tasks scheduled regularly"
+        actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
-            Add habit
+            New Habit
           </Button>
-        </div>
+        }
+      />
+
+      {items.length === 0 ? (
+        <EmptyState
+          icon={RefreshCw}
+          title="No habits yet"
+          description="Add a habit to track recurring tasks"
+          action={
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add habit
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-2">
           {items.map((habit) => (
@@ -102,9 +82,9 @@ export function HabitList({ items, onSelect }: HabitListProps) {
       )}
 
       <HabitForm
-        {...(editingHabit !== null ? { habit: editingHabit } : {})}
+        {...(editing !== null ? { habit: editing } : {})}
         open={formOpen}
-        onOpenChange={handleFormOpenChange}
+        onOpenChange={handleOpenChange}
       />
     </>
   );

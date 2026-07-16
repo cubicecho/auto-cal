@@ -11,15 +11,8 @@ import {
   TodoListSelect,
 } from '@/components/domain/todo-list/TodoListSelect';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { FieldWrapper, Form } from '@/components/ui/form';
+import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
 import { Check } from 'lucide-react';
@@ -228,137 +221,113 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Todo' : 'New Todo'}</DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? 'Update the details of your todo.'
-              : 'Add a new task to one of your lists.'}
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? 'Edit Todo' : 'New Todo'}
+      description={
+        isEdit
+          ? 'Update the details of your todo.'
+          : 'Add a new task to one of your lists.'
+      }
+    >
+      <form.AppForm>
+        <Form className="space-y-4">
+          <form.AppField name="title">
+            {(field) => (
+              <field.InputField
+                label="Title"
+                placeholder="What needs to be done?"
+              />
+            )}
+          </form.AppField>
 
-        <form.AppForm>
-          <Form className="space-y-4">
-            <form.AppField name="title">
-              {(field) => (
-                <field.InputField
-                  label="Title"
-                  placeholder="What needs to be done?"
-                />
-              )}
-            </form.AppField>
+          <form.AppField name="description">
+            {(field) => (
+              <field.TextAreaField
+                label="Description (optional)"
+                placeholder="Add any notes or details..."
+              />
+            )}
+          </form.AppField>
 
-            <form.AppField name="description">
-              {(field) => (
-                <field.TextAreaField
-                  label="Description (optional)"
-                  placeholder="Add any notes or details..."
-                />
-              )}
-            </form.AppField>
-
-            <form.AppField name="listId">
-              {(field) => (
-                <FieldWrapper
-                  label="List"
-                  control={
-                    <TodoListSelect
-                      value={field.state.value || undefined}
-                      onValueChange={(v, list) => {
-                        field.handleChange(v ?? '');
-                        applyListDefaults(list);
-                      }}
-                      onBlur={field.handleBlur}
-                    />
-                  }
-                />
-              )}
-            </form.AppField>
-
-            <div className="grid grid-cols-2 gap-4">
-              <form.AppField name="priority">
-                {(field) => (
-                  <field.SelectField
-                    label="Priority"
-                    options={PRIORITY_OPTIONS}
-                    placeholder="Select priority"
-                  />
-                )}
-              </form.AppField>
-
-              <form.AppField name="estimatedLength">
-                {(field) => (
-                  <field.SelectField
-                    label="Duration"
-                    options={DURATION_OPTIONS}
-                    placeholder="Select duration"
-                  />
-                )}
-              </form.AppField>
-            </div>
-
-            <form.AppField name="dueAt">
-              {(field) => (
-                <field.InputField
-                  label="Due date (optional)"
-                  type="datetime-local"
-                />
-              )}
-            </form.AppField>
-
-            <DialogFooter className="flex items-center justify-between">
-              <div>
-                {isEdit && !todo?.completedAt && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={completing}
-                    onClick={async () => {
-                      await completeTodo({ variables: { id: todo?.id } });
-                      onOpenChange(false);
+          <form.AppField name="listId">
+            {(field) => (
+              <FieldWrapper
+                label="List"
+                control={
+                  <TodoListSelect
+                    value={field.state.value || undefined}
+                    onValueChange={(v, list) => {
+                      field.handleChange(v ?? '');
+                      applyListDefaults(list);
                     }}
-                    className="text-green-600 border-green-600 hover:bg-green-50"
-                  >
-                    <Check className="mr-1 h-4 w-4" />
-                    Mark Complete
-                  </Button>
-                )}
-                {isEdit && !!todo?.completedAt && (
-                  <span className="text-sm text-muted-foreground">
-                    ✓ Completed
-                  </span>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <form.Subscribe
-                  selector={(state) => [state.canSubmit, state.isSubmitting]}
+                    onBlur={field.handleBlur}
+                  />
+                }
+              />
+            )}
+          </form.AppField>
+
+          <div className="grid grid-cols-2 gap-4">
+            <form.AppField name="priority">
+              {(field) => (
+                <field.SelectField
+                  label="Priority"
+                  options={PRIORITY_OPTIONS}
+                  placeholder="Select priority"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="estimatedLength">
+              {(field) => (
+                <field.SelectField
+                  label="Duration"
+                  options={DURATION_OPTIONS}
+                  placeholder="Select duration"
+                />
+              )}
+            </form.AppField>
+          </div>
+
+          <form.AppField name="dueAt">
+            {(field) => (
+              <field.InputField
+                label="Due date (optional)"
+                type="datetime-local"
+              />
+            )}
+          </form.AppField>
+
+          <FormDialogFooter
+            onCancel={() => onOpenChange(false)}
+            secondary={
+              isEdit && !todo?.completedAt ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={completing}
+                  onClick={async () => {
+                    await completeTodo({ variables: { id: todo?.id } });
+                    onOpenChange(false);
+                  }}
+                  className="text-green-600 border-green-600 hover:bg-green-50"
                 >
-                  {([canSubmit, isSubmitting]) => (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => onOpenChange(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={!canSubmit}>
-                        {isSubmitting
-                          ? 'Saving...'
-                          : isEdit
-                            ? 'Save Changes'
-                            : 'Create Todo'}
-                      </Button>
-                    </>
-                  )}
-                </form.Subscribe>
-              </div>
-            </DialogFooter>
-          </Form>
-        </form.AppForm>
-      </DialogContent>
-    </Dialog>
+                  <Check className="mr-1 h-4 w-4" />
+                  Mark Complete
+                </Button>
+              ) : isEdit && !!todo?.completedAt ? (
+                <span className="text-sm text-muted-foreground">
+                  ✓ Completed
+                </span>
+              ) : undefined
+            }
+          >
+            <form.SubmitButton isEdit={isEdit} createLabel="Create Todo" />
+          </FormDialogFooter>
+        </Form>
+      </form.AppForm>
+    </FormDialog>
   );
 }

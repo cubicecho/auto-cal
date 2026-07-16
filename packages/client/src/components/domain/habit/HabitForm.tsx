@@ -7,16 +7,8 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { FieldWrapper, Form } from '@/components/ui/form';
+import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAppForm } from '@/hooks/form-hook';
@@ -281,237 +273,214 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
   }, [open, habit?.id]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Habit' : 'New Habit'}</DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? 'Update the details of this habit.'
-              : 'Add a recurring habit to your schedule.'}
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? 'Edit Habit' : 'New Habit'}
+      description={
+        isEdit
+          ? 'Update the details of this habit.'
+          : 'Add a recurring habit to your schedule.'
+      }
+    >
+      <form.AppForm>
+        <Form className="space-y-4">
+          {/* Title */}
+          <form.AppField name="title">
+            {(field) => (
+              <field.InputField
+                label="Title"
+                placeholder="What habit do you want to build?"
+              />
+            )}
+          </form.AppField>
 
-        <form.AppForm>
-          <Form className="space-y-4">
-            {/* Title */}
-            <form.AppField name="title">
-              {(field) => (
-                <field.InputField
-                  label="Title"
-                  placeholder="What habit do you want to build?"
-                />
-              )}
-            </form.AppField>
+          {/* Description */}
+          <form.AppField name="description">
+            {(field) => (
+              <field.TextAreaField
+                label="Description (optional)"
+                placeholder="Add any notes or details..."
+              />
+            )}
+          </form.AppField>
 
-            {/* Description */}
-            <form.AppField name="description">
-              {(field) => (
-                <field.TextAreaField
-                  label="Description (optional)"
-                  placeholder="Add any notes or details..."
-                />
-              )}
-            </form.AppField>
-
-            {/* Activity Type */}
-            <form.AppField name="activityTypeId">
-              {(field) => (
-                <FieldWrapper
-                  label="Activity Type"
-                  control={
-                    <ActivityTypeSelect
-                      value={field.state.value || undefined}
-                      onValueChange={(v) => field.handleChange(v ?? '')}
-                      onBlur={field.handleBlur}
-                    />
-                  }
-                />
-              )}
-            </form.AppField>
-
-            {/* Priority — always visible */}
-            <form.AppField name="priority">
-              {(field) => (
-                <field.SelectField
-                  label="Priority"
-                  options={PRIORITY_OPTIONS}
-                  placeholder="Select priority"
-                />
-              )}
-            </form.AppField>
-
-            {/* Pomodoro toggle */}
-            <form.AppField name="pomodoroEnabled">
-              {(field) => (
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <Label
-                      htmlFor="pomodoro-toggle"
-                      className="text-sm font-medium"
-                    >
-                      Auto-generate pomodoros
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Fill remaining time with timed work units
-                    </p>
-                  </div>
-                  <Switch
-                    id="pomodoro-toggle"
-                    checked={field.state.value}
-                    onCheckedChange={(checked) => field.handleChange(checked)}
+          {/* Activity Type */}
+          <form.AppField name="activityTypeId">
+            {(field) => (
+              <FieldWrapper
+                label="Activity Type"
+                control={
+                  <ActivityTypeSelect
+                    value={field.state.value || undefined}
+                    onValueChange={(v) => field.handleChange(v ?? '')}
+                    onBlur={field.handleBlur}
                   />
+                }
+              />
+            )}
+          </form.AppField>
+
+          {/* Priority — always visible */}
+          <form.AppField name="priority">
+            {(field) => (
+              <field.SelectField
+                label="Priority"
+                options={PRIORITY_OPTIONS}
+                placeholder="Select priority"
+              />
+            )}
+          </form.AppField>
+
+          {/* Pomodoro toggle */}
+          <form.AppField name="pomodoroEnabled">
+            {(field) => (
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <Label
+                    htmlFor="pomodoro-toggle"
+                    className="text-sm font-medium"
+                  >
+                    Auto-generate pomodoros
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Fill remaining time with timed work units
+                  </p>
                 </div>
-              )}
-            </form.AppField>
+                <Switch
+                  id="pomodoro-toggle"
+                  checked={field.state.value}
+                  onCheckedChange={(checked) => field.handleChange(checked)}
+                />
+              </div>
+            )}
+          </form.AppField>
 
-            {/* Scheduling fields (hidden when pomodoro mode is on) or pomodoro config */}
-            <form.Subscribe selector={(s) => s.values.pomodoroEnabled}>
-              {(pomodoroEnabled) =>
-                pomodoroEnabled ? (
-                  <div className="space-y-3 rounded-lg border p-3">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Pomodoro Settings
-                    </p>
+          {/* Scheduling fields (hidden when pomodoro mode is on) or pomodoro config */}
+          <form.Subscribe selector={(s) => s.values.pomodoroEnabled}>
+            {(pomodoroEnabled) =>
+              pomodoroEnabled ? (
+                <div className="space-y-3 rounded-lg border p-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Pomodoro Settings
+                  </p>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <form.AppField name="pomodoroUnitLength">
-                        {(field) => (
-                          <field.InputField
-                            label="Unit length (min)"
-                            type="number"
-                            min={1}
-                            max={120}
-                          />
-                        )}
-                      </form.AppField>
-
-                      <form.AppField name="pomodoroShortBreakLength">
-                        {(field) => (
-                          <field.InputField
-                            label="Short break (min)"
-                            type="number"
-                            min={1}
-                            max={60}
-                          />
-                        )}
-                      </form.AppField>
-
-                      <form.AppField name="pomodoroUnitsBeforeLongBreak">
-                        {(field) => (
-                          <field.InputField
-                            label="Units before long break"
-                            type="number"
-                            min={1}
-                            max={20}
-                          />
-                        )}
-                      </form.AppField>
-
-                      <form.AppField name="pomodoroLongBreakLength">
-                        {(field) => (
-                          <field.InputField
-                            label="Long break (min)"
-                            type="number"
-                            min={1}
-                            max={120}
-                          />
-                        )}
-                      </form.AppField>
-
-                      <form.AppField name="pomodoroMaxPerDay">
-                        {(field) => (
-                          <field.InputField
-                            label="Max per day (optional)"
-                            type="number"
-                            min={1}
-                            max={100}
-                            placeholder="No limit"
-                          />
-                        )}
-                      </form.AppField>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Duration */}
-                    <form.AppField name="estimatedLength">
-                      {(field) => (
-                        <field.SelectField
-                          label="Duration"
-                          options={DURATION_OPTIONS}
-                          placeholder="Select duration"
-                        />
-                      )}
-                    </form.AppField>
-
-                    {/* Frequency — count + unit side by side */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <form.AppField name="frequencyCount">
-                        {(field) => (
-                          <field.InputField
-                            label="Times"
-                            type="number"
-                            min={1}
-                            max={30}
-                          />
-                        )}
-                      </form.AppField>
-
-                      <form.AppField name="frequencyUnit">
-                        {(field) => (
-                          <field.SelectField
-                            label="Frequency"
-                            options={FREQUENCY_UNIT_OPTIONS}
-                            placeholder="Select frequency"
-                          />
-                        )}
-                      </form.AppField>
-                    </div>
-
-                    {/* Minimum time between instances */}
-                    <form.AppField name="minTimeBetweenInstances">
+                  <div className="grid grid-cols-2 gap-3">
+                    <form.AppField name="pomodoroUnitLength">
                       {(field) => (
                         <field.InputField
-                          label="Min hours between sessions (optional)"
+                          label="Unit length (min)"
                           type="number"
-                          min={0}
-                          placeholder="e.g. 24"
+                          min={1}
+                          max={120}
+                        />
+                      )}
+                    </form.AppField>
+
+                    <form.AppField name="pomodoroShortBreakLength">
+                      {(field) => (
+                        <field.InputField
+                          label="Short break (min)"
+                          type="number"
+                          min={1}
+                          max={60}
+                        />
+                      )}
+                    </form.AppField>
+
+                    <form.AppField name="pomodoroUnitsBeforeLongBreak">
+                      {(field) => (
+                        <field.InputField
+                          label="Units before long break"
+                          type="number"
+                          min={1}
+                          max={20}
+                        />
+                      )}
+                    </form.AppField>
+
+                    <form.AppField name="pomodoroLongBreakLength">
+                      {(field) => (
+                        <field.InputField
+                          label="Long break (min)"
+                          type="number"
+                          min={1}
+                          max={120}
+                        />
+                      )}
+                    </form.AppField>
+
+                    <form.AppField name="pomodoroMaxPerDay">
+                      {(field) => (
+                        <field.InputField
+                          label="Max per day (optional)"
+                          type="number"
+                          min={1}
+                          max={100}
+                          placeholder="No limit"
                         />
                       )}
                     </form.AppField>
                   </div>
-                )
-              }
-            </form.Subscribe>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Duration */}
+                  <form.AppField name="estimatedLength">
+                    {(field) => (
+                      <field.SelectField
+                        label="Duration"
+                        options={DURATION_OPTIONS}
+                        placeholder="Select duration"
+                      />
+                    )}
+                  </form.AppField>
 
-            <DialogFooter>
-              <form.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
-              >
-                {([canSubmit, isSubmitting]) => (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => onOpenChange(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={!canSubmit}>
-                      {isSubmitting
-                        ? 'Saving...'
-                        : isEdit
-                          ? 'Save Changes'
-                          : 'Create Habit'}
-                    </Button>
-                  </>
-                )}
-              </form.Subscribe>
-            </DialogFooter>
-          </Form>
-        </form.AppForm>
-      </DialogContent>
-    </Dialog>
+                  {/* Frequency — count + unit side by side */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <form.AppField name="frequencyCount">
+                      {(field) => (
+                        <field.InputField
+                          label="Times"
+                          type="number"
+                          min={1}
+                          max={30}
+                        />
+                      )}
+                    </form.AppField>
+
+                    <form.AppField name="frequencyUnit">
+                      {(field) => (
+                        <field.SelectField
+                          label="Frequency"
+                          options={FREQUENCY_UNIT_OPTIONS}
+                          placeholder="Select frequency"
+                        />
+                      )}
+                    </form.AppField>
+                  </div>
+
+                  {/* Minimum time between instances */}
+                  <form.AppField name="minTimeBetweenInstances">
+                    {(field) => (
+                      <field.InputField
+                        label="Min hours between sessions (optional)"
+                        type="number"
+                        min={0}
+                        placeholder="e.g. 24"
+                      />
+                    )}
+                  </form.AppField>
+                </div>
+              )
+            }
+          </form.Subscribe>
+
+          <FormDialogFooter onCancel={() => onOpenChange(false)}>
+            <form.SubmitButton isEdit={isEdit} createLabel="Create Habit" />
+          </FormDialogFooter>
+        </Form>
+      </form.AppForm>
+    </FormDialog>
   );
 }

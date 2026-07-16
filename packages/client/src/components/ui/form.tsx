@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import {
   FieldDescription as FieldDescriptionPrimitive,
   FieldError as FieldErrorPrimitive,
@@ -251,6 +252,33 @@ function SelectField({ label, options, placeholder }: SelectFieldProps) {
   );
 }
 
+type SubmitButtonProps = {
+  isEdit?: boolean;
+  createLabel?: string;
+  editLabel?: string;
+  savingLabel?: string;
+} & Omit<React.ComponentProps<typeof Button>, 'type' | 'disabled' | 'children'>;
+
+// Standardizes the submit control across every form dialog: reads canSubmit /
+// isSubmitting from form context and always guards against double-submit.
+function SubmitButton({
+  isEdit = false,
+  createLabel = 'Create',
+  editLabel = 'Save changes',
+  savingLabel = 'Saving…',
+  ...props
+}: SubmitButtonProps) {
+  const form = useFormContext();
+  const canSubmit = useStore(form.store, (s) => s.canSubmit);
+  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
+
+  return (
+    <Button type="submit" disabled={!canSubmit || isSubmitting} {...props}>
+      {isSubmitting ? savingLabel : isEdit ? editLabel : createLabel}
+    </Button>
+  );
+}
+
 export {
   Form,
   Field,
@@ -262,4 +290,5 @@ export {
   InputField,
   TextAreaField,
   SelectField,
+  SubmitButton,
 };

@@ -15,9 +15,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ColorDot } from '@/components/ui/color-dot';
+import { DetailHeader } from '@/components/ui/detail-header';
 import { useQuery } from '@apollo/client/react';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { useMemo } from 'react';
 
 const GET_HABIT_DETAIL = graphql(`
@@ -81,35 +81,20 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onBack}
-          aria-label="Back to habits"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            {habit.activityType && (
-              <ColorDot
-                color={habit.activityType.color}
-                title={habit.activityType.name}
-              />
-            )}
-            <h2 className="text-2xl font-bold">{habit.title}</h2>
-          </div>
-          {habit.description && (
-            <p className="text-muted-foreground mt-0.5">{habit.description}</p>
-          )}
-        </div>
-        <Button variant="outline" size="sm" onClick={() => onEdit(habit)}>
-          <Pencil className="mr-1.5 h-3.5 w-3.5" />
-          Edit
-        </Button>
-      </div>
+      <DetailHeader
+        onBack={onBack}
+        backLabel="Back to habits"
+        color={habit.activityType?.color}
+        colorLabel={habit.activityType?.name}
+        title={habit.title}
+        subtitle={habit.description || undefined}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => onEdit(habit)}>
+            <Pencil className="mr-1.5 h-3.5 w-3.5" />
+            Edit
+          </Button>
+        }
+      />
 
       {/* Quick-stats grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

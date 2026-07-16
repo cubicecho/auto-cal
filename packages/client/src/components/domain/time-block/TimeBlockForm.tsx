@@ -7,16 +7,8 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { FieldWrapper, Form } from '@/components/ui/form';
+import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
 import { cn } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
@@ -160,165 +152,141 @@ export function TimeBlockForm({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit ? 'Edit Time Block' : 'New Time Block'}
-          </DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? 'Update the details of this time block.'
-              : 'Define a recurring time slot for a specific activity type.'}
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? 'Edit Time Block' : 'New Time Block'}
+      description={
+        isEdit
+          ? 'Update the details of this time block.'
+          : 'Define a recurring time slot for a specific activity type.'
+      }
+    >
+      <form.AppForm>
+        <Form className="space-y-4">
+          {/* Activity Type */}
+          <form.AppField name="activityTypeId">
+            {(field) => (
+              <FieldWrapper
+                label="Activity Type"
+                control={
+                  <ActivityTypeSelect
+                    value={field.state.value || undefined}
+                    onValueChange={(v) => field.handleChange(v ?? '')}
+                    onBlur={field.handleBlur}
+                  />
+                }
+              />
+            )}
+          </form.AppField>
 
-        <form.AppForm>
-          <Form className="space-y-4">
-            {/* Activity Type */}
-            <form.AppField name="activityTypeId">
-              {(field) => (
-                <FieldWrapper
-                  label="Activity Type"
-                  control={
-                    <ActivityTypeSelect
-                      value={field.state.value || undefined}
-                      onValueChange={(v) => field.handleChange(v ?? '')}
-                      onBlur={field.handleBlur}
-                    />
-                  }
-                />
-              )}
-            </form.AppField>
-
-            {/* Days of Week — toggle button group */}
-            <form.AppField name="daysOfWeek">
-              {(field) => (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium leading-none">
-                    Days of Week
-                  </p>
-                  <div className="flex gap-1 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => field.handleChange([...WEEKDAYS])}
-                      className="px-2 py-1 rounded text-xs font-medium border border-border bg-background text-muted-foreground hover:bg-muted transition-colors"
-                    >
-                      Weekdays
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => field.handleChange([...WEEKEND])}
-                      className="px-2 py-1 rounded text-xs font-medium border border-border bg-background text-muted-foreground hover:bg-muted transition-colors"
-                    >
-                      Weekend
-                    </button>
-                    <span className="self-center text-muted-foreground text-xs">
-                      ·
-                    </span>
-                  </div>
-                  <div className="flex gap-1 flex-wrap">
-                    {DAY_NAMES.map((day, index) => {
-                      const current = field.state.value as number[];
-                      const selected = current.includes(index);
-                      const isLastSelected = selected && current.length === 1;
-                      return (
-                        <button
-                          key={day}
-                          type="button"
-                          disabled={isLastSelected}
-                          onClick={() => {
-                            if (selected) {
-                              if (isLastSelected) return;
-                              field.handleChange(
-                                current.filter((d) => d !== index),
-                              );
-                            } else {
-                              field.handleChange(
-                                [...current, index].sort((a, b) => a - b),
-                              );
-                            }
-                          }}
-                          className={cn(
-                            'px-2 py-1 rounded text-sm font-medium border transition-colors',
-                            selected
-                              ? 'bg-primary text-primary-foreground border-primary'
-                              : 'bg-background text-foreground border-border hover:bg-muted',
-                            isLastSelected && 'opacity-60 cursor-not-allowed',
-                          )}
-                        >
-                          {day}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {field.state.meta.errors.length > 0 && (
-                    <p className="text-sm text-destructive">
-                      {(() => {
-                        const err = field.state.meta.errors[0];
-                        if (typeof err === 'string') return err;
-                        if (err && typeof err === 'object' && 'message' in err)
-                          return String((err as { message: unknown }).message);
-                        return String(err);
-                      })()}
-                    </p>
-                  )}
+          {/* Days of Week — toggle button group */}
+          <form.AppField name="daysOfWeek">
+            {(field) => (
+              <div className="space-y-2">
+                <p className="text-sm font-medium leading-none">Days of Week</p>
+                <div className="flex gap-1 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => field.handleChange([...WEEKDAYS])}
+                    className="px-2 py-1 rounded text-xs font-medium border border-border bg-background text-muted-foreground hover:bg-muted transition-colors"
+                  >
+                    Weekdays
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => field.handleChange([...WEEKEND])}
+                    className="px-2 py-1 rounded text-xs font-medium border border-border bg-background text-muted-foreground hover:bg-muted transition-colors"
+                  >
+                    Weekend
+                  </button>
+                  <span className="self-center text-muted-foreground text-xs">
+                    ·
+                  </span>
                 </div>
-              )}
-            </form.AppField>
-
-            {/* Start + End Time — two columns */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Start Time */}
-              <form.AppField name="startTime">
-                {(field) => <field.InputField label="Start Time" type="time" />}
-              </form.AppField>
-
-              {/* End Time */}
-              <form.AppField name="endTime">
-                {(field) => <field.InputField label="End Time" type="time" />}
-              </form.AppField>
-            </div>
-
-            {/* Priority */}
-            <form.AppField name="priority">
-              {(field) => (
-                <field.InputField
-                  label="Priority (0 = lowest)"
-                  type="number"
-                  min={0}
-                  max={100}
-                />
-              )}
-            </form.AppField>
-
-            <DialogFooter>
-              <form.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
-              >
-                {([canSubmit, isSubmitting]) => (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => onOpenChange(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={!canSubmit}>
-                      {isSubmitting
-                        ? 'Saving...'
-                        : isEdit
-                          ? 'Save Changes'
-                          : 'Create Time Block'}
-                    </Button>
-                  </>
+                <div className="flex gap-1 flex-wrap">
+                  {DAY_NAMES.map((day, index) => {
+                    const current = field.state.value as number[];
+                    const selected = current.includes(index);
+                    const isLastSelected = selected && current.length === 1;
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        disabled={isLastSelected}
+                        onClick={() => {
+                          if (selected) {
+                            if (isLastSelected) return;
+                            field.handleChange(
+                              current.filter((d) => d !== index),
+                            );
+                          } else {
+                            field.handleChange(
+                              [...current, index].sort((a, b) => a - b),
+                            );
+                          }
+                        }}
+                        className={cn(
+                          'px-2 py-1 rounded text-sm font-medium border transition-colors',
+                          selected
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-foreground border-border hover:bg-muted',
+                          isLastSelected && 'opacity-60 cursor-not-allowed',
+                        )}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+                {field.state.meta.errors.length > 0 && (
+                  <p className="text-sm text-destructive">
+                    {(() => {
+                      const err = field.state.meta.errors[0];
+                      if (typeof err === 'string') return err;
+                      if (err && typeof err === 'object' && 'message' in err)
+                        return String((err as { message: unknown }).message);
+                      return String(err);
+                    })()}
+                  </p>
                 )}
-              </form.Subscribe>
-            </DialogFooter>
-          </Form>
-        </form.AppForm>
-      </DialogContent>
-    </Dialog>
+              </div>
+            )}
+          </form.AppField>
+
+          {/* Start + End Time — two columns */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Start Time */}
+            <form.AppField name="startTime">
+              {(field) => <field.InputField label="Start Time" type="time" />}
+            </form.AppField>
+
+            {/* End Time */}
+            <form.AppField name="endTime">
+              {(field) => <field.InputField label="End Time" type="time" />}
+            </form.AppField>
+          </div>
+
+          {/* Priority */}
+          <form.AppField name="priority">
+            {(field) => (
+              <field.InputField
+                label="Priority (0 = lowest)"
+                type="number"
+                min={0}
+                max={100}
+              />
+            )}
+          </form.AppField>
+
+          <FormDialogFooter onCancel={() => onOpenChange(false)}>
+            <form.SubmitButton
+              isEdit={isEdit}
+              createLabel="Create Time Block"
+            />
+          </FormDialogFooter>
+        </Form>
+      </form.AppForm>
+    </FormDialog>
   );
 }

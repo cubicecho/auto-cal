@@ -1,5 +1,6 @@
 import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeList } from '@/components/domain/activity-type/ActivityTypeList';
+import { Page } from '@/components/ui/page';
 import { useQuery } from '@apollo/client/react';
 
 const GET_MY_ACTIVITY_TYPES = graphql(`
@@ -29,11 +30,11 @@ export default function ActivityTypesPage() {
   const rawStats = statsData?.myActivityTypeStats ?? [];
   const statsById = new Map(rawStats.map((s) => [s.activityTypeId, s]));
   return (
-    <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6">
+    <Page>
       <ActivityTypeList
         items={data?.myActivityTypes ?? []}
         statsById={statsById}
       />
-    </div>
+    </Page>
   );
 }

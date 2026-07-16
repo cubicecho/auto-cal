@@ -9,15 +9,8 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { FieldWrapper, Form } from '@/components/ui/form';
+import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
@@ -130,103 +123,78 @@ export function ActivityTypeForm({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit ? 'Edit Activity Type' : 'New Activity Type'}
-          </DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? 'Update this activity type used to categorize your tasks.'
-              : 'Create an activity type to categorize your todos, habits, and time blocks.'}
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      className="sm:max-w-[400px]"
+      title={isEdit ? 'Edit Activity Type' : 'New Activity Type'}
+      description={
+        isEdit
+          ? 'Update this activity type used to categorize your tasks.'
+          : 'Create an activity type to categorize your todos, habits, and time blocks.'
+      }
+    >
+      <form.AppForm>
+        <Form className="space-y-4">
+          <div className="flex flex-col gap-4 py-2">
+            {/* Name */}
+            <form.AppField name="name">
+              {(field) => (
+                <field.InputField
+                  label="Name"
+                  placeholder="e.g. Work, Exercise, Learning"
+                />
+              )}
+            </form.AppField>
 
-        <form.AppForm>
-          <Form className="space-y-4">
-            <div className="flex flex-col gap-4 py-2">
-              {/* Name */}
-              <form.AppField name="name">
-                {(field) => (
-                  <field.InputField
-                    label="Name"
-                    placeholder="e.g. Work, Exercise, Learning"
-                  />
-                )}
-              </form.AppField>
+            {/* Color */}
+            <form.AppField name="color">
+              {(field) => (
+                <FieldWrapper
+                  label="Color"
+                  control={
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        className="h-10 w-16 cursor-pointer rounded border border-input bg-background p-1"
+                      />
+                      <Input
+                        placeholder="#6366f1"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        className="font-mono"
+                      />
+                    </div>
+                  }
+                />
+              )}
+            </form.AppField>
+          </div>
 
-              {/* Color */}
-              <form.AppField name="color">
-                {(field) => (
-                  <FieldWrapper
-                    label="Color"
-                    control={
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="color"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          onBlur={field.handleBlur}
-                          className="h-10 w-16 cursor-pointer rounded border border-input bg-background p-1"
-                        />
-                        <Input
-                          placeholder="#6366f1"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          onBlur={field.handleBlur}
-                          className="font-mono"
-                        />
-                      </div>
-                    }
-                  />
-                )}
-              </form.AppField>
-            </div>
-
-            <DialogFooter className="mt-4 flex items-center justify-between">
-              <div>
-                {isEdit && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDelete}
-                  >
-                    <Trash2 className="mr-1 h-4 w-4" />
-                    Delete
-                  </Button>
-                )}
-              </div>
-              <div className="flex gap-2">
+          <FormDialogFooter
+            onCancel={() => onOpenChange(false)}
+            secondary={
+              isEdit ? (
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDelete}
                 >
-                  Cancel
+                  <Trash2 className="mr-1 h-4 w-4" />
+                  Delete
                 </Button>
-                <form.Subscribe
-                  selector={(state) => [state.canSubmit, state.isSubmitting]}
-                >
-                  {([canSubmit, isSubmitting]) => (
-                    <Button
-                      type="submit"
-                      disabled={!canSubmit || !!isSubmitting}
-                    >
-                      {isSubmitting
-                        ? 'Saving...'
-                        : isEdit
-                          ? 'Save Changes'
-                          : 'Create'}
-                    </Button>
-                  )}
-                </form.Subscribe>
-              </div>
-            </DialogFooter>
-          </Form>
-        </form.AppForm>
-      </DialogContent>
-    </Dialog>
+              ) : undefined
+            }
+          >
+            <form.SubmitButton isEdit={isEdit} createLabel="Create" />
+          </FormDialogFooter>
+        </Form>
+      </form.AppForm>
+    </FormDialog>
   );
 }
