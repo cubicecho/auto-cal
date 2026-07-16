@@ -1,11 +1,11 @@
 # Database Patterns
 
-Schema lives in `packages/db/src/models/`, re-exported from `packages/db/src/schema.ts`.
+Schema lives in `db/src/models/`, re-exported from `db/src/schema.ts`.
 
 ## Table Definition
 
 ```typescript
-// packages/db/src/models/todos.ts
+// db/src/models/todos.ts
 export const todos = pgTable('todos', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
@@ -36,7 +36,7 @@ Todos no longer carry an `activityTypeId` directly — it's resolved through `to
 ## Enum Pattern
 
 ```typescript
-// packages/db/src/models/enums.ts
+// db/src/models/enums.ts
 export const FREQUENCY_UNITS = ['week', 'month'] as const;
 export type FrequencyUnit = (typeof FREQUENCY_UNITS)[number];
 
@@ -47,7 +47,7 @@ frequencyUnit: text('frequency_unit').notNull().$type<FrequencyUnit>()
 ## Dual-Backend Connection
 
 ```typescript
-// packages/db/src/index.ts
+// db/src/index.ts
 const databaseUrl = process.env.DATABASE_URL;
 
 if (databaseUrl) {
@@ -107,7 +107,7 @@ npm run db:migrate    # apply migrations
 npm run db:studio     # GUI
 ```
 
-Migration files live in `packages/db/drizzle/` — never edit manually.
+Migration files live in `db/drizzle/` — never edit manually.
 
 ## Foreign Key Conventions
 

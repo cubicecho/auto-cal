@@ -10,23 +10,23 @@ docker build -t auto-cal .
 ```
 
 The Dockerfile installs only production deps, then copies:
-- `packages/server` — TypeScript source (run with `--experimental-strip-types`)
-- `packages/db` — TypeScript source + migration files
-- `packages/client/dist` — built static assets
+- `server` — TypeScript source (run with `--experimental-strip-types`)
+- `db` — TypeScript source + migration files
+- `client/dist` — built static assets
 
-Migrations run automatically when the server starts — `packages/db/src/index.ts` calls `migrate()` for whichever backend is active before exporting `db`. The Dockerfile `CMD` is:
+Migrations run automatically when the server starts — `db/src/index.ts` calls `migrate()` for whichever backend is active before exporting `db`. The Dockerfile `CMD` is:
 
 ```sh
-node --experimental-strip-types packages/server/src/index.ts
+node --experimental-strip-types server/src/index.ts
 ```
 
-**Do not use the separate `src/migrator.ts` script in Docker.** When `DATABASE_URL` is set, postgres.js keeps its connection pool open after `migrate()` returns, so the migrator process never exits. The `&&`-chained CMD would hang forever before the server starts. `packages/db/src/index.ts` already handles migrations for both backends.
+**Do not use the separate `src/migrator.ts` script in Docker.** When `DATABASE_URL` is set, postgres.js keeps its connection pool open after `migrate()` returns, so the migrator process never exits. The `&&`-chained CMD would hang forever before the server starts. `db/src/index.ts` already handles migrations for both backends.
 
 ## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `PORT` | No | Server port (default `4000`) |
+| `PORT` | No | Server port (default `3001`) |
 | `DATABASE_URL` | Conditional | Postgres connection string (e.g. `postgresql://user:pass@host:5432/db`); when set, uses `postgres.js` driver |
 | `PGLITE_DATA_DIR` | Conditional | Path to PGLite data directory; required when `DATABASE_URL` is not set |
 | `NODE_ENV` | No | `production` / `development` |

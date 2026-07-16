@@ -13,7 +13,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['packages/*/test/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
+    include: [
+      '{client,db,server}/test/**/*.test.ts',
+      '{client,db,server}/src/**/*.test.ts',
+    ],
     // Prevent .env's PGLITE_DATA_DIR from leaking into tests.
     // Any test that accidentally imports @auto-cal/db without mocking it will
     // throw immediately ("Set DATABASE_URL or PGLITE_DATA_DIR") rather than
@@ -25,11 +28,11 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
-      include: ['packages/*/src/**/*.ts'],
+      include: ['{client,db,server}/src/**/*.ts'],
       exclude: [
-        'packages/*/test/**',
-        'packages/*/src/**/*.test.ts',
-        'packages/*/src/__generated__/**',
+        '{client,db,server}/test/**',
+        '{client,db,server}/src/**/*.test.ts',
+        '{client,db,server}/src/__generated__/**',
       ],
     },
   },

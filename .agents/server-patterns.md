@@ -9,7 +9,7 @@ No data is seeded on startup. Users are created on demand by `verifyMagicLink`.
 ## Magic-link exposure (`EXPOSE_MAGIC_LINK`)
 
 `requestMagicLink` only returns the `magicLink` in its response when
-`magicLinkExposed()` (`packages/server/src/config.ts`) is true: outside
+`magicLinkExposed()` (`server/src/config.ts`) is true: outside
 production, or in any environment when `EXPOSE_MAGIC_LINK` is set (`1`/`true`/`yes`).
 This gives the dev-style passwordless login on local/secure-network deployments
 that have no email provider. In production without the flag, the link is only
@@ -17,7 +17,7 @@ logged server-side and the response returns `magicLink: null`.
 
 ## Auth — UUID Bearer Fallback (Dev Only, currently active in prod too — see todo.md #25)
 
-The server context accepts a raw UUID as a Bearer token (dev convenience). The fallback runs in **all environments today** — there is no `NODE_ENV` guard. The check lives in `packages/server/src/index.ts` after JWT verification fails:
+The server context accepts a raw UUID as a Bearer token (dev convenience). The fallback runs in **all environments today** — there is no `NODE_ENV` guard. The check lives in `server/src/index.ts` after JWT verification fails:
 
 ```typescript
 // Try JWT first
@@ -55,7 +55,7 @@ Do not await it. Do not surface scheduler errors to the client.
 ## Context
 
 ```typescript
-// packages/server/src/context.ts
+// server/src/context.ts
 export interface Context {
   db: DB;
   userId?: string;           // undefined = not authenticated
@@ -90,12 +90,12 @@ Only two mutations bypass the `my*` scoping requirement and are accessible witho
 const PUBLIC_MUTATIONS = new Set(['requestMagicLink', 'verifyMagicLink']);
 ```
 
-Any new public endpoint (e.g. a webhook or health check) must be added to this set in `packages/server/src/schema/index.ts`.
+Any new public endpoint (e.g. a webhook or health check) must be added to this set in `server/src/schema/index.ts`.
 
 ## Schema Pipeline
 
 ```typescript
-// packages/server/src/schema/index.ts
+// server/src/schema/index.ts
 const { schema: drizzleSchema } = buildSchema(db, {
   prefixes: { insert: 'create', update: 'update', delete: 'delete' },
   suffixes: { list: 's', single: '' },
@@ -109,7 +109,7 @@ blockUnscopedResolvers(schema); // blocks anything not prefixed "my" or in PUBLI
 ## Custom Resolver Pattern (extendSchema)
 
 ```typescript
-// packages/server/src/schema/resolvers.ts
+// server/src/schema/resolvers.ts
 const extensionSDL = `
   extend type Query {
     myTodos(activityTypeId: ID, completed: Boolean): [Todo!]!
@@ -165,7 +165,7 @@ if (todo.userId !== context.userId) throw new Error('Forbidden');
 
 ## Zod Validation at Resolver Boundary
 
-All validators live in `packages/server/src/schema/validators.ts`, with coverage in `packages/server/test/schema/validators.test.ts`. Key constraints:
+All validators live in `server/src/schema/validators.ts`, with coverage in `server/test/schema/validators.test.ts`. Key constraints:
 
 | Field | Rule |
 |-------|------|
@@ -187,7 +187,7 @@ const input = CreateTodoInput.parse(args.input);
 ## Auth (JWT + Magic Links)
 
 ```typescript
-// packages/server/src/auth.ts — jose library
+// server/src/auth.ts — jose library
 export async function signSessionToken(userId: string, email: string): Promise<string> {
   return new SignJWT({ sub: userId, email })
     .setProtectedHeader({ alg: 'HS256' })
@@ -225,7 +225,7 @@ Personal, per-user, revocable Bearer tokens for headless integrations.
 
 **Hash stored, not token:** Only the SHA-256 hex of the full token is persisted in `api_keys.keyHash`. The raw token is returned once to the user on creation and never stored.
 
-**Generation and verification live in `packages/server/src/api-keys.ts`:**
+**Generation and verification live in `server/src/api-keys.ts`:**
 - `generateApiKey()` — creates a token + hash + 8-char display prefix
 - `isApiKey(raw)` — prefix detection
 - `hashApiKey(raw)` — SHA-256 hex
@@ -271,7 +271,7 @@ Magic links are logged to the server console in both dev and prod. In dev, `requ
 Each domain has its own resolver file exporting an `apply*Resolvers(queryFields, mutationFields)` function:
 
 ```
-packages/server/src/schema/resolvers/
+server/src/schema/resolvers/
   index.ts          — extensionSDL + wires all apply* functions
   todo-lists.ts     — applyTodoListResolvers
   todos.ts          — applyTodoResolvers
@@ -289,7 +289,7 @@ New resolver domains follow the same pattern. SDL goes in `extensionSDL` in `ind
 ## Scheduler Service (Pure Function)
 
 ```typescript
-// packages/server/src/services/scheduler.ts
+// server/src/services/scheduler.ts
 export type TodoWithActivityType = Todo & { activityTypeId: string | null };
 
 export function computeSchedule(
@@ -301,7 +301,7 @@ export function computeSchedule(
 ): ScheduledItem[] { ... }
 ```
 
-Pure function — deterministic, easy to unit test. Coverage in `packages/server/test/services/scheduler.test.ts`.
+Pure function — deterministic, easy to unit test. Coverage in `server/test/services/scheduler.test.ts`.
 
 Since `todos.activityTypeId` no longer exists on the DB row, callers (`schedule.ts`, `scheduler-writeback.ts`, `ical-route.ts`) fetch `todoLists` alongside `todos`, build a `Map<listId, activityTypeId>`, and enrich each todo before passing it in.
 
@@ -309,8 +309,8 @@ Since `todos.activityTypeId` no longer exists on the DB row, callers (`schedule.
 
 The server package has the following vitest suites — run with `npm test` from the repo root:
 
-- `packages/server/test/auth.test.ts` — magic-link token + JWT helpers
-- `packages/server/test/schema/validators.test.ts` — Zod validator coverage
-- `packages/server/test/services/scheduler.test.ts` — pure scheduler algorithm
+- `server/test/auth.test.ts` — magic-link token + JWT helpers
+- `server/test/schema/validators.test.ts` — Zod validator coverage
+- `server/test/services/scheduler.test.ts` — pure scheduler algorithm
 
 Resolver-level integration tests (PGLite in-memory) are not yet in place — see todo.md #15.

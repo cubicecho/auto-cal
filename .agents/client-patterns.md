@@ -4,7 +4,7 @@ React + Vite + Apollo Client + TanStack Router + TanStack Form + ShadCN/Radix + 
 
 ## Installed ShadCN Components
 
-Only use components that are already installed — do not add new ones without checking first. Files live in `packages/client/src/components/ui/`.
+Only use components that are already installed — do not add new ones without checking first. Files live in `client/src/components/ui/`.
 
 ShadCN primitives (11): `button` `card` `dialog` `field` `form` `input` `label` `select` `tabs` `textarea` `tooltip`
 
@@ -21,7 +21,7 @@ Custom (2, not from ShadCN — keep tagged as such):
 ## Apollo Client Setup
 
 ```typescript
-// packages/client/src/main.tsx
+// client/src/main.tsx
 const httpLink = new HttpLink({
   uri: '/graphql',
   fetch: (uri, options) => {
@@ -65,7 +65,7 @@ Completion sets `localStorage.onboarding_done = '1'`. Re-runnable from Settings 
 
 ## Routes
 
-File-based routes under `packages/client/src/routes/`:
+File-based routes under `client/src/routes/`:
 
 | File | Path | Notes |
 |------|------|-------|
@@ -91,7 +91,7 @@ Auth flow: `requestMagicLink` → magic link logged to server console (and retur
 
 
 ```typescript
-// packages/client/src/routes/__root.tsx
+// client/src/routes/__root.tsx
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   component: RootLayout,
   beforeLoad: async ({ location }) => {
@@ -104,7 +104,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 Router context carries `apolloClient` and `preloadQuery`:
 ```typescript
-// packages/client/src/main.tsx
+// client/src/main.tsx
 const router = createRouter({
   routeTree,
   context: {
@@ -236,7 +236,7 @@ const form = useAppForm({
 ## Component Structure
 
 ```
-packages/client/src/components/
+client/src/components/
   ui/             — ShadCN primitives (Button, Card, Input, etc.)
   domain/         — Feature components organized by entity
     activity-type/ — ActivityTypeForm, ActivityTypeList, ActivityTypeSelect
@@ -247,6 +247,29 @@ packages/client/src/components/
     dashboard/    — CalendarView, ScheduleView
     onboarding/   — Step*.tsx wizard panels
 ```
+
+## Shared UI Primitives
+
+Beyond the raw ShadCN primitives, `components/ui/` holds a set of shared layout
+primitives extracted to kill hand-rolled boilerplate. **Prefer these over
+re-implementing the same markup** — every list/detail page is built from them.
+
+| Primitive | Purpose |
+|-----------|---------|
+| `page.tsx` — `Page` | Page shell. Variants: `fill` (full-height flex col for inner-scroll views), `scroll` (default on), `width="narrow"` (max-w-2xl). Web-only (`<div>`) — do not use in `.native.tsx`. |
+| `page.tsx` — `PageHeader` | Title / subtitle / actions row at the top of list pages. |
+| `page.tsx` — `EmptyState` | Centered icon / title / description / action for empty lists. |
+| `page.tsx` — `CardGrid` | Responsive 1→2→3→4 column card grid. |
+| `query-state.tsx` — `QueryState` | Inline loading/error text (error takes priority) for a query whose data may still render alongside it. |
+| `section-heading.tsx` — `SectionHeading` | `default` / `overline` section labels. |
+| `detail-page.tsx` — `DetailPage<T>` | `<Page>` + loading/not-found guard via a render-prop so the entity is non-null inside `children`. |
+| `detail-header.tsx` — `DetailHeader`, `EditButton` | Back-link header + color/badge/actions; standard pencil Edit button. |
+| `form-dialog.tsx` — `FormDialog` | Dialog wrapper for the create/edit form pattern. |
+| `status-chip.tsx`, `color-dot.tsx`, `confirm-dialog.tsx` | Status badge, activity-type color dot, destructive-action confirm. |
+
+Companion hook: `hooks/useListSection.ts` — owns the create/edit dialog open
+state (`formOpen`, `editing`, `openCreate`, `openEdit`, `handleOpenChange`) that
+every list component needs.
 
 ## ShadCN + Tailwind Conventions
 
@@ -276,7 +299,7 @@ Card layout pattern:
 ## Utility Functions
 
 ```typescript
-// packages/client/src/lib/utils.ts
+// client/src/lib/utils.ts
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
@@ -341,7 +364,7 @@ When the user picks a list in `TodoForm`, the form snapshots that list's `defaul
 
 After adding/editing GraphQL operations:
 ```bash
-npm run codegen   # regenerates packages/client/src/__generated__/
+npm run codegen   # regenerates client/src/__generated__/
 ```
 
 Types from `@/__generated__/graphql.js` are auto-imported — never write them by hand.

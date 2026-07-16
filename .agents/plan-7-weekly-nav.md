@@ -15,7 +15,7 @@ Today the dashboard is locked to the current week. Add prev/next/today controls 
 
 ## Work units
 
-1. **Route search params** (`packages/client/src/routes/dashboard.tsx`)
+1. **Route search params** (`client/src/routes/dashboard.tsx`)
    - Add `validateSearch` with Zod schema: `{ weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }`
    - Default `weekStart` to "this week's Monday" computed at render time
    - When `day` is set, the calendar should snap to day view for that date; `weekStart` derives from the day if both are present, with `day` taking precedence for view-mode
@@ -27,7 +27,7 @@ Today the dashboard is locked to the current week. Add prev/next/today controls 
    - When `day` is set, derive `weekStart` from it for the query (the schedule is still week-scoped; day param only changes the view)
 
 3. **Header component with prev/today/next**
-   - New `WeekNavigator` component in `packages/client/src/components/domain/dashboard/`
+   - New `WeekNavigator` component in `client/src/components/domain/dashboard/`
    - Shows: `[<] [Today] [>]  Week of Mon, Apr 27 – Sun, May 3` (or day label when day-mode)
    - Buttons update the URL via `useNavigate({ search: { weekStart: nextWeekStr } })` (or `day` when day-mode)
    - "Today" sets `weekStart` to current Monday (and clears `day`)

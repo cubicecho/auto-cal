@@ -2,14 +2,14 @@
 
 Auto Cal is a smart todo and habit scheduling application. Users create todo lists (grouped by activity type), todos (single-time tasks belonging to a list), and habits (repeated tasks) that are automatically scheduled within user-defined time blocks based on priority and activity type.
 
-Monorepo: `packages/db` (Drizzle + PGLite), `packages/server` (Express + Apollo), `packages/client` (React + Vite).
+Monorepo: `db` (Drizzle + PGLite), `server` (Express + Apollo), `client` (React + Vite).
 
 ## Commands
 
 ```bash
 # Dev
 npm run dev              # start frontend + backend
-npm run dev:server       # GraphQL server only (localhost:4000)
+npm run dev:server       # GraphQL server only (localhost:3001)
 npm run dev:client       # React client only (localhost:3000)
 
 # Quality

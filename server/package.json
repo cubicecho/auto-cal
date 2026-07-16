@@ -1,0 +1,41 @@
+{
+  "name": "@auto-cal/server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file=../.env --experimental-strip-types src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@apollo/server": "^5.5.1",
+    "@as-integrations/express4": "^1.1.2",
+    "@auto-cal/db": "*",
+    "@vantreeseba/drizzle-graphql": "^1.0.3",
+    "cors": "^2.8.5",
+    "dataloader": "^2.2.3",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "drizzle-orm": "~1.0.0-rc.2",
+    "express": "^4.21.2",
+    "graphql": "^16.9.0",
+    "graphql-subscriptions": "^3.0.0",
+    "graphql-ws": "^6.0.8",
+    "ical-generator": "^10.2.0",
+    "jose": "^5.10.0",
+    "js-logger": "^1.6.1",
+    "pluralize": "^8.0.0",
+    "ws": "^8.20.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^25.6.0",
+    "@types/pluralize": "^0.0.33",
+    "@types/ws": "^8.18.1"
+  },
+  "resolutions": {
+    "graphql": "16.10.0"
+  }
+}

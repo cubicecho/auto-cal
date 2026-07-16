@@ -6,13 +6,13 @@
 
 Auto Cal is a smart todo + habit scheduling app. Users create **todo lists** (grouped by activity type), **todos** (one-shot tasks that belong to a list), and **habits** (repeated targets), which the scheduler places into user-defined **time blocks** by priority and activity type. Stats track habit consistency and todo throughput per activity type.
 
-The repo is a **npm workspace** monorepo (`workspaces: ["packages/*"]` in the root `package.json`). There is no `pnpm-workspace.yaml` and no `sst.config.ts`.
+The repo is a **npm workspace** monorepo (`workspaces: ["client", "db", "server"]` in the root `package.json`). The three workspace folders live at the repo root, alongside the `site/` folder. There is no `pnpm-workspace.yaml` and no `sst.config.ts`.
 
 | Package | Role |
 |---------|------|
-| `packages/db/` | Drizzle ORM schema, PGLite/Postgres connection, seed + migration runners |
-| `packages/server/` | Node 22 GraphQL API (Express + Apollo) — runs `.ts` directly via `--experimental-strip-types` |
-| `packages/client/` | React + Vite + Apollo Client + TanStack Router + ShadCN/Tailwind |
+| `db/` | Drizzle ORM schema, PGLite/Postgres connection, seed + migration runners |
+| `server/` | Node 22 GraphQL API (Express + Apollo) — runs `.ts` directly via `--experimental-strip-types` |
+| `client/` | React + Vite + Apollo Client + TanStack Router + ShadCN/Tailwind |
 
 Key tech choices: **Biome** (lint+format), `@vantreeseba/drizzle-graphql` (auto-generates GraphQL schema from Drizzle tables — feature-fork of upstream), **PGLite** (embedded Postgres default; swap to real Postgres via `DATABASE_URL`), **vitest** for tests.
 
@@ -20,10 +20,10 @@ Key tech choices: **Biome** (lint+format), `@vantreeseba/drizzle-graphql` (auto-
 
 ## 2. Package Layout
 
-### `packages/db/`
+### `db/`
 
 ```
-packages/db/src/
+db/src/
 ├── index.ts            # PGLite/Postgres dual-backend, exports `db` instance
 ├── schema.ts           # Aggregates all model exports
 ├── relations.ts        # Drizzle relations
@@ -32,20 +32,23 @@ packages/db/src/
     ├── enums.ts            # ACTIVITY_TYPES, FREQUENCY_UNITS, etc.
     ├── index.ts            # Re-exports all models
     ├── users.ts
-    ├── activity_types.ts
+    ├── activity_types.ts     # self-FK tree via nullable parentId
     ├── todo_lists.ts
     ├── todos.ts
     ├── habits.ts
     ├── time_blocks.ts
-    └── habit_completions.ts
+    ├── habit_completions.ts
+    ├── projects.ts
+    ├── project_notes.ts
+    └── api_keys.ts
 
-packages/db/drizzle/         # Generated migrations — never edit manually
+db/drizzle/         # Generated migrations — never edit manually
 ```
 
-### `packages/server/`
+### `server/`
 
 ```
-packages/server/src/
+server/src/
 ├── index.ts                  # Express + Apollo bootstrap, auth context
 ├── auth.ts                   # JWT sign/verify (jose), magic-link token helpers
 ├── auth.test.ts
@@ -80,10 +83,10 @@ packages/server/src/
 
 Imports **must** include `.ts` extension (Node 22 `--experimental-strip-types`).
 
-### `packages/client/`
+### `client/`
 
 ```
-packages/client/src/
+client/src/
 ├── main.tsx              # App entry — Apollo + Router providers
 ├── lib/utils.ts          # cn(), priorityLabel()
 ├── lib/google-tasks.ts   # parseGoogleTasks() — Takeout Tasks.json parser
@@ -124,7 +127,7 @@ There is no centralized `App.tsx` — routing and providers live in `main.tsx`.
 
 ## 3. Database Schema
 
-Full column definitions live in `packages/db/src/models/`. Summary:
+Full column definitions live in `db/src/models/`. Summary:
 
 **`users`**
 
@@ -143,6 +146,7 @@ Full column definitions live in `packages/db/src/models/`. Summary:
 | userId | uuid | FK users (cascade delete) |
 | name | text | notNull |
 | color | text | notNull, default `'#6366f1'` (hex with `#`) |
+| parentId | uuid | nullable self-FK → activity_types (`set null`). Makes activity types a tree; a project's dedicated type is a child of a parent. |
 | createdAt / updatedAt | timestamp | |
 
 **`todo_lists`**
@@ -154,6 +158,7 @@ Full column definitions live in `packages/db/src/models/`. Summary:
 | name | text | notNull |
 | description | text | nullable |
 | activityTypeId | uuid | FK activity_types (restrict) — notNull |
+| projectId | uuid | nullable FK projects (`set null`) — set when the list belongs to a project, else standalone |
 | defaultPriority | integer | notNull, default 0 — seeded into new todos |
 | defaultEstimatedLength | integer | notNull, default 0 — seeded into new todos |
 | createdAt / updatedAt | timestamp | |
@@ -213,13 +218,36 @@ Full column definitions live in `packages/db/src/models/`. Summary:
 | completedAt | timestamp | nullable — set for actual completions; null = tentative |
 | createdAt | timestamp | |
 
+**`projects`**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| userId | uuid | FK users (cascade delete) |
+| name | text | notNull |
+| status | text | notNull, default `'active'`, `'active' \| 'completed' \| 'archived'` (typed via `$type<ProjectStatus>`) |
+| activityTypeId | uuid | FK activity_types (restrict) — notNull. The project's **dedicated** activity type (a child under a parent), auto-created with the project. |
+| createdAt / updatedAt | timestamp | |
+
+**`project_notes`**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| userId | uuid | FK users (cascade delete) |
+| projectId | uuid | FK projects (cascade delete) |
+| title | text | notNull |
+| content | text | notNull, default `''` (markdown) |
+| position | integer | notNull, default 0 — manual ordering |
+| createdAt / updatedAt | timestamp | |
+
 Conventions: all PKs use `uuid`+`defaultRandom`; user-owned tables cascade-delete; required references to activity-type / list use `onDelete: 'restrict'`; timestamps are `timestamp` (not `timestamptz`). Types are inferred via `$inferSelect` / `$inferInsert` — never duplicated.
 
 ---
 
 ## 4. GraphQL Schema (high level)
 
-The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`, then extended in `packages/server/src/schema/resolvers/index.ts` (`extensionSDL`) and locked down by `blockUnscopedResolvers()` so only `my*` fields and the `PUBLIC_MUTATIONS` set are reachable. Full SDL details in `graphql-patterns.md` and `server-patterns.md`.
+The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`, then extended in `server/src/schema/resolvers/index.ts` (`extensionSDL`) and locked down by `blockUnscopedResolvers()` so only `my*` fields and the `PUBLIC_MUTATIONS` set are reachable. Full SDL details in `graphql-patterns.md` and `server-patterns.md`.
 
 ### Queries (`my*` scoped)
 
@@ -254,7 +282,7 @@ The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`
 `requestMagicLink(email)` → `RequestMagicLinkResult { ok, magicLink }`
 `verifyMagicLink(token)` → `VerifyMagicLinkResult { token, userId }`
 
-`PUBLIC_MUTATIONS` is a hard-coded set in `packages/server/src/schema/index.ts`; new public endpoints must be added there.
+`PUBLIC_MUTATIONS` is a hard-coded set in `server/src/schema/index.ts`; new public endpoints must be added there.
 
 ### Custom types
 
@@ -312,9 +340,9 @@ Resolvers are split per-domain under `schema/resolvers/`. New domains follow the
 
 There are existing vitest suites — the project is not test-free:
 
-- `packages/server/test/auth.test.ts` — magic-link token + JWT helpers
-- `packages/server/test/schema/validators.test.ts` — Zod validator coverage
-- `packages/server/test/services/scheduler.test.ts` — pure scheduler algorithm
+- `server/test/auth.test.ts` — magic-link token + JWT helpers
+- `server/test/schema/validators.test.ts` — Zod validator coverage
+- `server/test/services/scheduler.test.ts` — pure scheduler algorithm
 
 Run with `npm test`. todo.md #15 ("test suite") covers the gaps that remain (resolver integration tests, CI workflow, coverage targets).
 
@@ -324,9 +352,9 @@ Run with `npm test`. todo.md #15 ("test suite") covers the gaps that remain (res
 
 | Location | What | Regenerate |
 |----------|------|------------|
-| `packages/server/src/__generated__/schema.graphql` | Full SDL (drizzle-generated + extensions) | `npm run codegen:server` |
-| `packages/server/src/__generated__/resolvers.ts` | Resolver types | `npm run codegen:server` |
-| `packages/client/src/__generated__/gql.ts` + `graphql.ts` | Typed operations + result types | `npm run codegen` (requires server running on :4000) |
+| `server/src/__generated__/schema.graphql` | Full SDL (drizzle-generated + extensions) | `npm run codegen:server` |
+| `server/src/__generated__/resolvers.ts` | Resolver types | `npm run codegen:server` |
+| `client/src/__generated__/gql.ts` + `graphql.ts` | Typed operations + result types | `npm run codegen` (requires server running on :3001) |
 
 All `__generated__/` directories are gitignored.
 
@@ -337,7 +365,7 @@ All `__generated__/` directories are gitignored.
 | Command | Purpose |
 |---------|---------|
 | `npm run dev` | Frontend + backend (concurrently) |
-| `npm run dev:server` | API only on :4000 |
+| `npm run dev:server` | API only on :3001 |
 | `npm run dev:client` | Vite on :3000 |
 | `npm run typecheck` | `tsc --noEmit` across packages |
 | `npm run lint` / `lint:fix` | Biome |
