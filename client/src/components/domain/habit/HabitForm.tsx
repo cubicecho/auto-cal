@@ -167,7 +167,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
     UpdateHabitMutation,
     UpdateHabitMutationVariables
   >(UPDATE_HABIT, {
-    refetchQueries: ['GetMyHabits'],
+    refetchQueries: ['GetMyHabits', 'GetHabitDetail'],
   });
 
   const defaultValues: HabitFormValues = {

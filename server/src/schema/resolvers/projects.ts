@@ -16,6 +16,7 @@ import {
   UpdateProjectInput,
   UpdateProjectNoteInput,
 } from '../validators.ts';
+import { publishDataChanged } from './subscriptions.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
 
@@ -118,6 +119,9 @@ export function applyProjectResolvers(
 
     // A newly-attached list can hold todos later; recompute is cheap and safe.
     runSchedulerWriteback(context.db, userId).catch(console.error);
+    // Creating a project also mints a backing activity type (and maybe a list).
+    publishDataChanged(userId, 'project', [project.id]);
+    publishDataChanged(userId, 'activityType', [project.activityTypeId]);
     return project;
   };
 
@@ -145,6 +149,7 @@ export function applyProjectResolvers(
       .where(eq(projects.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update project ${input.id}`);
+    publishDataChanged(context.userId, 'project', [updated.id]);
     return updated;
   };
 
@@ -167,6 +172,7 @@ export function applyProjectResolvers(
       .where(eq(projects.id, args.id))
       .returning();
     if (!updated) throw new Error(`Failed to archive project ${args.id}`);
+    publishDataChanged(context.userId, 'project', [updated.id]);
     return updated;
   };
 
@@ -207,6 +213,7 @@ export function applyProjectResolvers(
       })
       .returning();
     if (!note) throw new Error('Failed to create project note');
+    publishDataChanged(context.userId, 'project', [input.projectId]);
     return note;
   };
 
@@ -234,6 +241,7 @@ export function applyProjectResolvers(
       .where(eq(projectNotes.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update project note ${input.id}`);
+    publishDataChanged(context.userId, 'project', [existing.projectId]);
     return updated;
   };
 
@@ -275,6 +283,7 @@ export function applyProjectResolvers(
       );
     });
 
+    publishDataChanged(userId, 'project', [input.projectId]);
     return context.db.query.projectNotes.findMany({
       where: { projectId: input.projectId },
       orderBy: { position: 'asc' },
@@ -301,6 +310,7 @@ export function applyProjectResolvers(
           eq(projectNotes.userId, context.userId),
         ),
       );
+    publishDataChanged(context.userId, 'project', [existing.projectId]);
     return true;
   };
 }

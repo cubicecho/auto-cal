@@ -3,6 +3,7 @@ import { CalendarView } from '@/components/domain/dashboard/CalendarView';
 import { ScheduleView } from '@/components/domain/dashboard/ScheduleView';
 import { WeekNavigator } from '@/components/domain/dashboard/WeekNavigator';
 import { Page, PageHeader } from '@/components/ui/page';
+import { useDataChanged } from '@/hooks/useDataChanged';
 import { useTodosUpdated } from '@/hooks/useTodosUpdated';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { addDays, addMonths, addWeeks, format, startOfMonth } from 'date-fns';
@@ -160,9 +161,12 @@ export default function CalendarPage() {
     );
   }, []);
 
-  const { data: calendarViewData } = useQuery(GET_CALENDAR_DATA, {
-    fetchPolicy: 'cache-and-network',
-  });
+  const { data: calendarViewData, refetch: refetchCalendarData } = useQuery(
+    GET_CALENDAR_DATA,
+    {
+      fetchPolicy: 'cache-and-network',
+    },
+  );
 
   const weekStart = toMonday(date);
   const { data: scheduleData, refetch: refetchSchedule } = useQuery(
@@ -177,6 +181,15 @@ export default function CalendarPage() {
 
   // Refetch the schedule whenever any todo changes.
   useTodosUpdated(() => {
+    refetchSchedule().catch(console.error);
+  });
+  // Time-block edits change both the calendar overlay and the schedule layout.
+  useDataChanged('timeBlock', () => {
+    refetchCalendarData().catch(console.error);
+    refetchSchedule().catch(console.error);
+  });
+  // Habit create/complete/delete changes what's scheduled.
+  useDataChanged('habit', () => {
     refetchSchedule().catch(console.error);
   });
 

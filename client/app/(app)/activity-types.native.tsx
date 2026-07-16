@@ -1,6 +1,7 @@
 import type { ActivityType_ActivityTypeListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { ACTIVITY_TYPE_LIST_FRAGMENT } from '@/components/domain/activity-type/ActivityTypeList';
+import { useDataChanged } from '@/hooks/useDataChanged';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useState } from 'react';
@@ -225,8 +226,11 @@ function ActivityTypeRow({
 
 export default function ActivityTypesScreen() {
   const [modalItem, setModalItem] = useState<ActivityType | 'new' | null>(null);
-  const { data, loading } = useQuery(GET_MY_ACTIVITY_TYPES, {
+  const { data, loading, refetch } = useQuery(GET_MY_ACTIVITY_TYPES, {
     fetchPolicy: 'cache-and-network',
+  });
+  useDataChanged('activityType', () => {
+    refetch();
   });
   const items = data?.myActivityTypes ?? [];
 

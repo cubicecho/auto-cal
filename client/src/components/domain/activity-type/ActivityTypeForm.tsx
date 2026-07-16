@@ -78,17 +78,23 @@ export function ActivityTypeForm({
   const [createActivityType] = useMutation<
     CreateActivityTypeMutation,
     CreateActivityTypeMutationVariables
-  >(CREATE_ACTIVITY_TYPE, { refetchQueries: ['GetMyActivityTypes'] });
+  >(CREATE_ACTIVITY_TYPE, {
+    refetchQueries: ['GetMyActivityTypes', 'GetActivityTypeStats'],
+  });
 
   const [updateActivityType] = useMutation<
     UpdateActivityTypeMutation,
     UpdateActivityTypeMutationVariables
-  >(UPDATE_ACTIVITY_TYPE, { refetchQueries: ['GetMyActivityTypes'] });
+  >(UPDATE_ACTIVITY_TYPE, {
+    refetchQueries: ['GetMyActivityTypes', 'GetActivityTypeStats'],
+  });
 
   const [deleteActivityType] = useMutation<
     DeleteActivityTypeMutation,
     DeleteActivityTypeMutationVariables
-  >(DELETE_ACTIVITY_TYPE, { refetchQueries: ['GetMyActivityTypes'] });
+  >(DELETE_ACTIVITY_TYPE, {
+    refetchQueries: ['GetMyActivityTypes', 'GetActivityTypeStats'],
+  });
 
   const form = useAppForm({
     defaultValues: {

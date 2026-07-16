@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { Context } from '../../context.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { CreateTimeBlockInput } from '../validators.ts';
+import { publishDataChanged } from './subscriptions.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
 
@@ -83,6 +84,7 @@ export function applyTimeBlockResolvers(
       .returning();
     if (!block) throw new Error('Failed to create time block');
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    publishDataChanged(context.userId, 'timeBlock', [block.id]);
     return block;
   };
 
@@ -115,6 +117,7 @@ export function applyTimeBlockResolvers(
       .returning();
     if (!updated) throw new Error(`Failed to update time block ${input.id}`);
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    publishDataChanged(context.userId, 'timeBlock', [updated.id]);
     return updated;
   };
 
@@ -132,6 +135,7 @@ export function applyTimeBlockResolvers(
     if (existing.userId !== context.userId) throw new Error('Forbidden');
     await context.db.delete(timeBlocks).where(eq(timeBlocks.id, args.id));
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    publishDataChanged(context.userId, 'timeBlock', [args.id]);
     return true;
   };
 }

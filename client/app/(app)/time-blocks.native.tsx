@@ -1,6 +1,7 @@
 import type { TimeBlock_TimeBlockListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { TIME_BLOCK_LIST_FRAGMENT } from '@/components/domain/time-block/TimeBlockList';
+import { useDataChanged } from '@/hooks/useDataChanged';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useState } from 'react';
@@ -220,8 +221,11 @@ function TimeBlockRow({ timeBlock }: { timeBlock: TimeBlock }) {
 
 export default function TimeBlocksScreen() {
   const [showModal, setShowModal] = useState(false);
-  const { data, loading } = useQuery(GET_MY_TIME_BLOCKS, {
+  const { data, loading, refetch } = useQuery(GET_MY_TIME_BLOCKS, {
     fetchPolicy: 'cache-and-network',
+  });
+  useDataChanged('timeBlock', () => {
+    refetch();
   });
   const timeBlocks = data?.myTimeBlocks ?? [];
 

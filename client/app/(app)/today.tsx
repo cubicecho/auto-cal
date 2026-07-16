@@ -3,6 +3,7 @@ import { graphql } from '@/__generated__/index.js';
 import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
 import { Page, PageHeader } from '@/components/ui/page';
+import { useDataChanged } from '@/hooks/useDataChanged';
 import { useTodosUpdated } from '@/hooks/useTodosUpdated';
 import { priorityLabel } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -88,6 +89,13 @@ export default function TodayPage() {
   });
 
   useTodosUpdated(() => {
+    refetch().catch(console.error);
+  });
+  // The schedule also reflects habits and their time blocks.
+  useDataChanged('habit', () => {
+    refetch().catch(console.error);
+  });
+  useDataChanged('timeBlock', () => {
     refetch().catch(console.error);
   });
 

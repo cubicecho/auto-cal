@@ -3,6 +3,7 @@ import { graphql } from '@/__generated__/index.js';
 import { HabitDetail } from '@/components/domain/habit/HabitDetail';
 import { HabitForm } from '@/components/domain/habit/HabitForm';
 import { DetailPage } from '@/components/ui/detail-page';
+import { useDataChanged } from '@/hooks/useDataChanged';
 import { useQuery } from '@apollo/client/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -23,8 +24,11 @@ export default function HabitDetailPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
-  const { data, loading } = useQuery(GET_MY_HABITS, {
+  const { data, loading, refetch } = useQuery(GET_MY_HABITS, {
     fetchPolicy: 'cache-and-network',
+  });
+  useDataChanged('habit', () => {
+    refetch();
   });
   const habit = data?.myHabits.find((h) => h.id === habitId);
 

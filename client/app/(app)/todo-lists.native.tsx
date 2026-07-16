@@ -5,6 +5,8 @@ import type {
 import { graphql } from '@/__generated__/index.js';
 import { TODO_LIST_LIST_FRAGMENT } from '@/components/domain/todo-list/TodoListList';
 import { TODO_LIST_FRAGMENT } from '@/components/domain/todo/TodoItem';
+import { useTodoListsUpdated } from '@/hooks/useTodoListsUpdated';
+import { useTodosUpdated } from '@/hooks/useTodosUpdated';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
@@ -373,8 +375,16 @@ export default function TodoListsScreen() {
   const [showCreateList, setShowCreateList] = useState(false);
   const [addingToList, setAddingToList] = useState<List | null>(null);
 
-  const { data, loading } = useQuery(GET_TODO_LISTS_PAGE, {
+  const { data, loading, refetch } = useQuery(GET_TODO_LISTS_PAGE, {
     fetchPolicy: 'cache-and-network',
+  });
+  // The typed todo/todo-list streams patch the web query by name; the native
+  // query is separate, so just refetch it when either entity changes anywhere.
+  useTodosUpdated(() => {
+    refetch();
+  });
+  useTodoListsUpdated(() => {
+    refetch();
   });
 
   const todosByListId = useMemo(() => {

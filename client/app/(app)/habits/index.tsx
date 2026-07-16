@@ -1,6 +1,7 @@
 import { graphql } from '@/__generated__/index.js';
 import { HabitList } from '@/components/domain/habit/HabitList';
 import { Page } from '@/components/ui/page';
+import { useDataChanged } from '@/hooks/useDataChanged';
 import { useQuery } from '@apollo/client/react';
 import { useRouter } from 'expo-router';
 
@@ -14,8 +15,11 @@ const GET_MY_HABITS = graphql(`
 
 export default function HabitsPage() {
   const router = useRouter();
-  const { data } = useQuery(GET_MY_HABITS, {
+  const { data, refetch } = useQuery(GET_MY_HABITS, {
     fetchPolicy: 'cache-and-network',
+  });
+  useDataChanged('habit', () => {
+    refetch();
   });
 
   return (

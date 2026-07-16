@@ -1,6 +1,7 @@
 import { graphql } from '@/__generated__/index.js';
 import { TimeBlockList } from '@/components/domain/time-block/TimeBlockList';
 import { Page } from '@/components/ui/page';
+import { useDataChanged } from '@/hooks/useDataChanged';
 import { useQuery } from '@apollo/client/react';
 
 const GET_MY_TIME_BLOCKS = graphql(`
@@ -12,8 +13,11 @@ const GET_MY_TIME_BLOCKS = graphql(`
 `);
 
 export default function TimeBlocksPage() {
-  const { data } = useQuery(GET_MY_TIME_BLOCKS, {
+  const { data, refetch } = useQuery(GET_MY_TIME_BLOCKS, {
     fetchPolicy: 'cache-and-network',
+  });
+  useDataChanged('timeBlock', () => {
+    refetch();
   });
   return (
     <Page>

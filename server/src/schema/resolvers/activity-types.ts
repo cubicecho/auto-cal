@@ -13,6 +13,7 @@ import {
   CreateActivityTypeInput,
   UpdateActivityTypeInput,
 } from '../validators.ts';
+import { publishDataChanged } from './subscriptions.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
 
@@ -127,6 +128,7 @@ export function applyActivityTypeResolvers(
       .values({ userId: context.userId, name: input.name, color: input.color })
       .returning();
     if (!activityType) throw new Error('Failed to create activity type');
+    publishDataChanged(context.userId, 'activityType', [activityType.id]);
     return activityType;
   };
 
@@ -153,6 +155,7 @@ export function applyActivityTypeResolvers(
       .where(eq(activityTypes.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update activity type ${input.id}`);
+    publishDataChanged(context.userId, 'activityType', [updated.id]);
     return updated;
   };
 
@@ -170,6 +173,7 @@ export function applyActivityTypeResolvers(
     if (existing.userId !== context.userId) throw new Error('Forbidden');
     await context.db.delete(activityTypes).where(eq(activityTypes.id, args.id));
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    publishDataChanged(context.userId, 'activityType', [args.id]);
     return true;
   };
 }

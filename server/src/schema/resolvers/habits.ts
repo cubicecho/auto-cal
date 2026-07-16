@@ -12,6 +12,7 @@ import type { Context } from '../../context.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { startOfISOWeek } from '../../services/scheduler.ts';
 import { CompleteHabitInput, CreateHabitInput } from '../validators.ts';
+import { publishDataChanged } from './subscriptions.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
 
@@ -244,6 +245,7 @@ export function applyHabitResolvers(
       .returning();
     if (!habit) throw new Error('Failed to create habit');
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    publishDataChanged(context.userId, 'habit', [habit.id]);
     return habit;
   };
 
@@ -261,6 +263,7 @@ export function applyHabitResolvers(
     if (existing.userId !== context.userId) throw new Error('Forbidden');
     await context.db.delete(habits).where(eq(habits.id, args.id));
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    publishDataChanged(context.userId, 'habit', [args.id]);
     return true;
   };
 
@@ -324,6 +327,7 @@ export function applyHabitResolvers(
       .returning();
     if (!updated) throw new Error(`Failed to update habit ${input.id}`);
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    publishDataChanged(context.userId, 'habit', [updated.id]);
     return updated;
   };
 
@@ -352,6 +356,7 @@ export function applyHabitResolvers(
       .returning();
     if (!completion) throw new Error('Failed to record habit completion');
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    publishDataChanged(context.userId, 'habit', [input.habitId]);
     return completion;
   };
 
@@ -378,6 +383,7 @@ export function applyHabitResolvers(
       .delete(habitCompletions)
       .where(eq(habitCompletions.id, args.completionId));
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    publishDataChanged(context.userId, 'habit', [completion.habitId]);
     return true;
   };
 }

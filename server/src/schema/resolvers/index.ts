@@ -306,9 +306,25 @@ const extensionSDL = `
     deletedId: ID
   }
 
+  # Entities without a typed, payload-carrying event stream. Pages that render
+  # these (or their derived stats/detail) refetch on any matching signal — the
+  # ids are informational, letting a listener narrow its response if it wants.
+  enum DataEntity {
+    habit
+    activityType
+    timeBlock
+    project
+  }
+
+  type DataChangedEvent {
+    entity: DataEntity!
+    ids: [ID!]!
+  }
+
   type Subscription {
     myTodoListsUpdated: TodoListEvent!
     myTodosUpdated: TodoEvent!
+    myDataChanged: DataChangedEvent!
   }
 
   # drizzle-graphql's buildSchema sets the query/mutation root operations
