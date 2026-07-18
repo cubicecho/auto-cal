@@ -33,7 +33,9 @@ npm run build:docker     # docker build -t auto-cal .
 npm test                 # vitest
 ```
 
-**Before every commit:** run `npm test` and `npm run lint`. CI will fail if either does not pass.
+**Before every commit:** run `npm test` and `npm run lint`, and do not complete
+the commit until both pass. A commit is not done until lint and tests are green
+— fix any failures first, then commit. CI will fail if either does not pass.
 
 ## Tech Stack
 
