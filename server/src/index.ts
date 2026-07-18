@@ -24,7 +24,10 @@ import { schema } from './schema/index.ts';
 // `node src/index.ts` in Docker where npm_package_version is unset.
 const { version: appVersion } = JSON.parse(
   fs.readFileSync(
-    path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../package.json'),
+    path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../package.json',
+    ),
     'utf8',
   ),
 ) as { version: string };
