@@ -31,6 +31,9 @@ Logger.useDefaults({
   },
 });
 
+// Resolved level name (e.g. 'INFO'), for the startup banner.
+export const logLevelName = defaultLevel.name;
+
 export const log = Logger.get('server');
 export const authLog = Logger.get('auth');
 export const wsLog = Logger.get('ws');

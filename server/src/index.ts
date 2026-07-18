@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ApolloServer } from '@apollo/server';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import { expressMiddleware } from '@as-integrations/express4';
@@ -16,8 +17,23 @@ import { verifyToken } from './auth.ts';
 import { createLoaders } from './context.ts';
 import type { Context } from './context.ts';
 import { icalHandler } from './ical-route.ts';
-import { authLog, log, wsLog } from './logger.ts';
+import { authLog, log, logLevelName, wsLog } from './logger.ts';
 import { schema } from './schema/index.ts';
+
+// Read version from server/package.json (../ from src/). Works under
+// `node src/index.ts` in Docker where npm_package_version is unset.
+const { version: appVersion } = JSON.parse(
+  fs.readFileSync(
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../package.json'),
+    'utf8',
+  ),
+) as { version: string };
+
+const dbBackend = process.env.DATABASE_URL
+  ? 'postgres'
+  : process.env.PGLITE_DATA_DIR
+    ? 'pglite'
+    : 'unset';
 
 process.on('uncaughtException', (err) => {
   log.error('Uncaught exception:', err);
@@ -224,6 +240,11 @@ if (clientDistExists) {
 const PORT = Number(process.env.PORT ?? 3001);
 
 httpServer.listen(PORT, '0.0.0.0', () => {
+  log.info(
+    `auto-cal server v${appVersion} | node ${process.version} | ` +
+      `env=${process.env.NODE_ENV ?? 'development'} | db=${dbBackend} | ` +
+      `log=${logLevelName} | port=${PORT} | pid=${process.pid}`,
+  );
   log.info(`Server ready at http://0.0.0.0:${PORT}/graphql`);
   if (clientDistExists) {
     log.info('Client served from', clientDist);

@@ -1,5 +1,5 @@
 # ── Stage 1: bundle the Expo web client ──────────────────────────────────────
-FROM node:22-alpine AS client-builder
+FROM node:24-alpine AS client-builder
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ RUN npm run codegen
 RUN cd client && npx expo export --platform web
 
 # ── Stage 2: production server ────────────────────────────────────────────────
-FROM node:22-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
