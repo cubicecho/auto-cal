@@ -214,6 +214,41 @@ export const UpdateTimeBlockInput = z
     { message: 'End time must be after start time', path: ['endTime'] },
   );
 
+const isoDateString = z
+  .string()
+  .refine((s) => !Number.isNaN(new Date(s).getTime()), {
+    message: 'Invalid date',
+  });
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
+export const CreateManualEventInput = z
+  .object({
+    title: z.string().min(1).max(200),
+    description: z.string().max(2000).optional(),
+    color: hexColor.optional(),
+    startAt: isoDateString,
+    endAt: isoDateString,
+  })
+  .refine((d) => new Date(d.endAt) > new Date(d.startAt), {
+    message: 'End must be after start',
+    path: ['endAt'],
+  });
+
+export const UpdateManualEventInput = z
+  .object({
+    id: z.string().uuid(),
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(2000).nullable().optional(),
+    color: hexColor.nullable().optional(),
+    startAt: isoDateString.optional(),
+    endAt: isoDateString.optional(),
+  })
+  .refine(
+    (d) =>
+      d.startAt && d.endAt ? new Date(d.endAt) > new Date(d.startAt) : true,
+    { message: 'End must be after start', path: ['endAt'] },
+  );
+
 export const CompleteHabitInput = z.object({
   habitId: z.string().uuid(),
   scheduledAt: z.string().datetime({ local: true }).optional(),

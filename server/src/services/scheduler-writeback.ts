@@ -3,6 +3,7 @@ import type {
   DB,
   Habit,
   HabitCompletion,
+  ManualEvent,
   TimeBlock,
   Todo,
   TodoList,
@@ -107,6 +108,7 @@ export async function runSchedulerWriteback(
     userHabits,
     userActivityTypes,
     allActualCompletions,
+    userManualEvents,
   ] = (await Promise.all([
     db.query.timeBlocks.findMany({
       where: { userId },
@@ -137,6 +139,9 @@ export async function runSchedulerWriteback(
         completedAt: { isNotNull: true },
       },
     }),
+    db.query.manualEvents.findMany({
+      where: { userId, endAt: { gte: now } },
+    }),
   ])) as [
     TimeBlock[],
     Todo[],
@@ -144,6 +149,7 @@ export async function runSchedulerWriteback(
     Habit[],
     ActivityType[],
     HabitCompletion[],
+    ManualEvent[],
   ];
 
   const listActivityTypeMap = new Map(
@@ -290,6 +296,7 @@ export async function runSchedulerWriteback(
       habitInstances,
       activityTypeMap,
       'UTC',
+      userManualEvents,
       preScheduledHabitTimes,
     );
 

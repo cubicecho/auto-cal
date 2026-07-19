@@ -71,6 +71,7 @@ const DATA_CHANGED = graphql(`
 const DATA_FIELDS: Record<DataEntity, readonly RootField[]> = {
   activityType: ['myActivityTypes', ...DERIVED],
   habit: ['myHabits', ...DERIVED],
+  manualEvent: ['myManualEvents', ...DERIVED],
   project: ['myProjects', 'myProject'],
   timeBlock: ['myTimeBlocks', ...DERIVED],
 };

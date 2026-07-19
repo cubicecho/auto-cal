@@ -47,6 +47,7 @@ export const TABLE_SCOPE: ScopeConfig<Context> = {
   habits: ownedByUser,
   timeBlocks: ownedByUser,
   projects: ownedByUser,
+  manualEvents: ownedByUser,
   apiKeys: (context) => ({
     userId: { eq: requireUser(context) },
     revokedAt: { isNull: true },
@@ -100,6 +101,7 @@ export const QUERY_SCOPE: Record<string, ScopedField> = {
   apiKeys: { as: 'myApiKeys', table: 'apiKeys' },
   projects: { as: 'myProjects', table: 'projects' },
   project: { as: 'myProject', table: 'projects' },
+  manualEvents: { as: 'myManualEvents', table: 'manualEvents' },
 };
 
 /**
@@ -122,6 +124,7 @@ export const UNEXPOSED: ReadonlySet<string> = new Set([
   'habitCompletions',
   'habitCompletion',
   'habit',
+  'manualEvent',
   'projectNotes',
   'projectNote',
   'timeBlock',

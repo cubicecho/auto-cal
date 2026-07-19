@@ -1,4 +1,4 @@
-import type { ActivityType, Habit, TimeBlock } from '@auto-cal/db';
+import type { ActivityType, Habit, ManualEvent, TimeBlock } from '@auto-cal/db';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   type TodoWithActivityType,
@@ -259,6 +259,73 @@ describe('computeSchedule', () => {
       const laterResult = results.find((r) => r.id === 'todo-later');
       expect(soonResult?.isScheduled).toBe(true);
       expect(laterResult?.isScheduled).toBe(false);
+    });
+  });
+
+  describe('manual events', () => {
+    function makeEvent(startISO: string, endISO: string): ManualEvent {
+      return {
+        id: `me-${startISO}`,
+        userId: 'user-1',
+        title: 'Meeting',
+        description: null,
+        color: null,
+        startAt: new Date(startISO),
+        endAt: new Date(endISO),
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+    }
+
+    it('does not schedule over a manual event, splitting the slot around it', () => {
+      const results = computeSchedule(
+        WEEK,
+        [makeBlock({ daysOfWeek: [1], startTime: '09:00', endTime: '12:00' })],
+        [
+          makeTodo({ id: 'a', estimatedLength: 60 }),
+          makeTodo({ id: 'b', estimatedLength: 60 }),
+        ],
+        [],
+        AT_MAP,
+        'UTC',
+        [makeEvent('2026-05-04T10:00:00.000Z', '2026-05-04T11:00:00.000Z')],
+      );
+      const starts = [
+        results.find((r) => r.id === 'a')?.scheduledStart,
+        results.find((r) => r.id === 'b')?.scheduledStart,
+      ].sort();
+      // 10:00–11:00 is blocked, so tasks land at 09:00 and 11:00.
+      expect(starts).toEqual([
+        '2026-05-04T09:00:00.000Z',
+        '2026-05-04T11:00:00.000Z',
+      ]);
+    });
+
+    it('removes a slot fully covered by a manual event', () => {
+      const [result] = computeSchedule(
+        WEEK,
+        [makeBlock({ daysOfWeek: [1], startTime: '09:00', endTime: '10:00' })],
+        [makeTodo({ estimatedLength: 60 })],
+        [],
+        AT_MAP,
+        'UTC',
+        [makeEvent('2026-05-04T09:00:00.000Z', '2026-05-04T10:00:00.000Z')],
+      );
+      expect(result?.isScheduled).toBe(false);
+    });
+
+    it('trims a slot partially overlapped at the start', () => {
+      const [result] = computeSchedule(
+        WEEK,
+        [makeBlock({ daysOfWeek: [1], startTime: '09:00', endTime: '12:00' })],
+        [makeTodo({ estimatedLength: 60 })],
+        [],
+        AT_MAP,
+        'UTC',
+        [makeEvent('2026-05-04T08:00:00.000Z', '2026-05-04T10:00:00.000Z')],
+      );
+      expect(result?.isScheduled).toBe(true);
+      expect(result?.scheduledStart).toBe('2026-05-04T10:00:00.000Z');
     });
   });
 

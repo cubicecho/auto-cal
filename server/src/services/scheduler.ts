@@ -1,4 +1,10 @@
-import type { ActivityType, Habit, TimeBlock, Todo } from '@auto-cal/db';
+import type {
+  ActivityType,
+  Habit,
+  ManualEvent,
+  TimeBlock,
+  Todo,
+} from '@auto-cal/db';
 import { fromZonedTime } from 'date-fns-tz';
 
 /** A Todo plus the activityTypeId resolved from its list — what computeSchedule needs */
@@ -156,6 +162,69 @@ function expandSlots(weekStartStr: string, block: TimeBlock): Slot[] {
 }
 
 /**
+ * Remove time occupied by manual events from the given slots, splitting a slot
+ * into free sub-slots around any overlapping event. Manual events are absolute
+ * (UTC) instants projected onto each slot's local day using the timezone; an
+ * event covering a whole slot removes it entirely. This is what makes manual
+ * events "override" time blocks — nothing is scheduled over their time.
+ */
+function carveSlots(
+  slots: Slot[],
+  manualEvents: ManualEvent[],
+  timezone: string,
+): Slot[] {
+  if (manualEvents.length === 0) return slots;
+  const result: Slot[] = [];
+  for (const slot of slots) {
+    const slotEnd = slot.startMinutes + slot.totalMinutes;
+    const dayMidnightMs = new Date(
+      localToUtcIso(slot.dateStr, 0, timezone),
+    ).getTime();
+    // Busy sub-ranges (minutes since slot-day midnight), clamped to the slot.
+    const busy: Array<[number, number]> = [];
+    for (const ev of manualEvents) {
+      const evStart = (ev.startAt.getTime() - dayMidnightMs) / 60_000;
+      const evEnd = (ev.endAt.getTime() - dayMidnightMs) / 60_000;
+      const s = Math.max(slot.startMinutes, evStart);
+      const e = Math.min(slotEnd, evEnd);
+      if (e > s) busy.push([s, e]);
+    }
+    if (busy.length === 0) {
+      result.push(slot);
+      continue;
+    }
+    busy.sort((a, b) => a[0] - b[0]);
+    const merged: Array<[number, number]> = [];
+    for (const [s, e] of busy) {
+      const last = merged[merged.length - 1];
+      if (last && s <= last[1]) last[1] = Math.max(last[1], e);
+      else merged.push([s, e]);
+    }
+    let cursor = slot.startMinutes;
+    for (const [s, e] of merged) {
+      if (s > cursor) {
+        result.push({
+          ...slot,
+          startMinutes: cursor,
+          totalMinutes: s - cursor,
+          usedMinutes: 0,
+        });
+      }
+      cursor = Math.max(cursor, e);
+    }
+    if (cursor < slotEnd) {
+      result.push({
+        ...slot,
+        startMinutes: cursor,
+        totalMinutes: slotEnd - cursor,
+        usedMinutes: 0,
+      });
+    }
+  }
+  return result;
+}
+
+/**
  * Per-level penalty applied to inherited (ancestor) time-block slots. Block
  * priorities are constrained to 0–100, so a penalty this large guarantees any
  * own-type slot outranks every ancestor slot, and a nearer ancestor outranks a
@@ -273,10 +342,16 @@ export function computeSchedule(
   habits: Array<Habit & { instanceIndex: number }>,
   activityTypeMap: Map<string, ActivityType>,
   timezone = 'UTC',
+  manualEvents: ManualEvent[] = [],
   preScheduledHabitTimes?: Map<string, Date[]>,
 ): ScheduledItem[] {
-  // 1. Expand all time blocks into slots for this week
-  const allSlots = timeBlocks.flatMap((b) => expandSlots(weekStartStr, b));
+  // 1. Expand all time blocks into slots for this week, then carve out any time
+  //    occupied by manual events so nothing is scheduled over them.
+  const allSlots = carveSlots(
+    timeBlocks.flatMap((b) => expandSlots(weekStartStr, b)),
+    manualEvents,
+    timezone,
+  );
 
   // 2. Group slots by activityTypeId, sorted by (dateStr, startMinutes)
   const slotsByActivityType = new Map<string, Slot[]>();

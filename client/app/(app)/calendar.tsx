@@ -35,6 +35,15 @@ const MY_SCHEDULE = graphql(`
   }
 `);
 
+const GET_MANUAL_EVENTS = graphql(`
+  query GetManualEvents {
+    myManualEvents {
+      id
+      ...ManualEvent_CalendarView
+    }
+  }
+`);
+
 type CalendarViewMode = 'day' | 'week' | 'month';
 
 function resolveViewAndDate(params: {
@@ -148,6 +157,13 @@ export default function CalendarPage() {
     },
   });
 
+  // A manual event changes both the calendar overlay and the schedule layout.
+  // Neither is refetched here: `useLiveUpdates` turns the server's
+  // `manualEvent` signal into cache invalidation for both fields.
+  const { data: manualEventsData } = useQuery(GET_MANUAL_EVENTS, {
+    fetchPolicy: 'cache-and-network',
+  });
+
   return (
     <Page fill scroll={false} className="pt-4 pb-0">
       <PageHeader
@@ -180,6 +196,7 @@ export default function CalendarPage() {
         <CalendarView
           timeBlocks={calendarViewData?.myTimeBlocks ?? []}
           schedule={scheduleData?.mySchedule ?? []}
+          manualEvents={manualEventsData?.myManualEvents ?? []}
           date={date}
           view={view}
         />

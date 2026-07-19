@@ -1,8 +1,10 @@
 import type {
+  ManualEvent_CalendarViewFragment,
   ScheduledItem_CalendarViewFragment,
   TimeBlock_CalendarViewFragment,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
+import { ManualEventForm } from '@/components/domain/dashboard/ManualEventForm';
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
 import {
@@ -13,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Check, LoaderCircle, Pin } from '@/components/ui/icons';
+import { Check, LoaderCircle, Pin, Plus } from '@/components/ui/icons';
 import { useToast } from '@/components/ui/toast';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { weekStart } from '@/lib/date';
@@ -21,10 +23,12 @@ import { priorityLabel } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import FullCalendar, {
   type CalendarRef,
+  type DateSelectInfo,
   type EventClickInfo,
   type EventDisplayInfo,
   type EventDropInfo,
   type EventInput,
+  type EventResizeDoneInfo,
 } from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/react/daygrid';
 import interactionPlugin from '@fullcalendar/react/interaction';
@@ -32,6 +36,7 @@ import classicTheme from '@fullcalendar/react/themes/classic';
 import timeGridPlugin from '@fullcalendar/react/timegrid';
 import {
   addDays,
+  addHours,
   format,
   parseISO,
   setHours,
@@ -78,6 +83,21 @@ graphql(`
       color
     }
   }
+
+  fragment ManualEvent_CalendarView on ManualEvent {
+    id
+    title
+    description
+    color
+    startAt
+    endAt
+  }
+`);
+
+const MOVE_MANUAL_EVENT = graphql(`
+  mutation MoveManualEvent($input: UpdateManualEventArgs!) {
+    myUpdateManualEvent(input: $input) { id startAt endAt }
+  }
 `);
 
 const PIN_TODO = graphql(`
@@ -113,6 +133,7 @@ interface EventMeta {
   isTask: boolean;
   isBackground: boolean;
   isCompleted: boolean;
+  isManualEvent?: boolean;
   kind?: string;
   itemId?: string;
   habitId?: string;
@@ -300,9 +321,20 @@ function TaskEventContent({ arg }: { arg: EventDisplayInfo }) {
 
 function renderEventContent(arg: EventDisplayInfo) {
   const meta = arg.event.extendedProps as EventMeta;
-  // Background time-block shading uses FullCalendar's default (empty) rendering.
-  if (meta.isBackground) return undefined;
+  // Background shading and manual events use FullCalendar's default rendering
+  // (manual events show their time + title, with no task controls).
+  if (meta.isBackground || meta.isManualEvent) return undefined;
   return <TaskEventContent arg={arg} />;
+}
+
+/** "YYYY-MM-DDTHH:mm" local string for a datetime-local input prefill. */
+function toLocalInput(date: Date): string {
+  return format(date, "yyyy-MM-dd'T'HH:mm");
+}
+
+/** Naive local datetime (no Z) for the server, matching pinned-todo storage. */
+function toNaiveLocal(date: Date): string {
+  return format(date, "yyyy-MM-dd'T'HH:mm:ss");
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -318,24 +350,40 @@ const FC_VIEW: Record<CalendarViewMode, string> = {
 type CalendarViewProps = {
   timeBlocks: Array<TimeBlock_CalendarViewFragment>;
   schedule: Array<ScheduledItem_CalendarViewFragment>;
+  manualEvents: Array<ManualEvent_CalendarViewFragment>;
   date: Date;
   view: CalendarViewMode;
+};
+
+type EventFormState = {
+  open: boolean;
+  event?: ManualEvent_CalendarViewFragment | undefined;
+  start?: string | undefined;
+  end?: string | undefined;
 };
 
 export function CalendarView({
   timeBlocks,
   schedule,
+  manualEvents,
   date,
   view,
 }: CalendarViewProps) {
   const calendarRef = useRef<CalendarRef>(null);
   const [selected, setSelected] = useState<EventMeta | null>(null);
+  const [eventForm, setEventForm] = useState<EventFormState>({ open: false });
   const toast = useToast();
   // A drop is applied to the calendar before the server confirms it, so a
   // rejection snaps the event back with no other sign it failed.
   const [pinTodo] = useMutation(PIN_TODO, {
     update: (cache) => invalidate(cache, ...DERIVED),
     onError: (err) => toast(err.message || 'Could not move this item'),
+  });
+  const [moveManualEvent] = useMutation(MOVE_MANUAL_EVENT, {
+    // The mutation result patches the entity itself, but `myManualEvents` is
+    // ordered by `startAt`, so a move can reorder the list it came from.
+    update: (cache) => invalidate(cache, 'myManualEvents', ...DERIVED),
+    onError: (err) => toast(err.message || 'Could not move this event'),
   });
   const [unscheduleTodo] = useMutation(UNSCHEDULE_TODO, {
     update: (cache) => invalidate(cache, ...DERIVED),
@@ -469,13 +517,106 @@ export function CalendarView({
       });
   }, [schedule]);
 
+  const manualEventFcEvents = useMemo<EventInput[]>(() => {
+    return manualEvents.map((ev) => {
+      const meta: EventMeta = {
+        isTask: false,
+        isBackground: false,
+        isCompleted: false,
+        isManualEvent: true,
+        itemId: ev.id,
+      };
+      return {
+        id: `manual-${ev.id}`,
+        title: ev.title,
+        start: new Date(ev.startAt as string),
+        end: new Date(ev.endAt as string),
+        color: ev.color ?? '#3b82f6',
+        // Manual events are freely movable and resizable.
+        editable: true,
+        startEditable: true,
+        durationEditable: true,
+        extendedProps: meta,
+      } satisfies EventInput;
+    });
+  }, [manualEvents]);
+
   const events = useMemo<EventInput[]>(
-    () => [...backgroundEvents, ...scheduledEvents, ...completedEvents],
-    [backgroundEvents, scheduledEvents, completedEvents],
+    () => [
+      ...backgroundEvents,
+      ...manualEventFcEvents,
+      ...scheduledEvents,
+      ...completedEvents,
+    ],
+    [backgroundEvents, manualEventFcEvents, scheduledEvents, completedEvents],
   );
+
+  function saveManualEventTimes(
+    id: string,
+    start: Date | null,
+    end: Date | null,
+    revert: () => void,
+  ) {
+    if (!start || !end) {
+      revert();
+      return;
+    }
+    moveManualEvent({
+      variables: {
+        input: { id, startAt: toNaiveLocal(start), endAt: toNaiveLocal(end) },
+      },
+    }).catch((err) => {
+      console.error(err);
+      revert();
+    });
+  }
+
+  function onEventResize(info: EventResizeDoneInfo) {
+    const meta = info.event.extendedProps as EventMeta;
+    if (!meta.isManualEvent || !meta.itemId) {
+      info.revert();
+      return;
+    }
+    saveManualEventTimes(
+      meta.itemId,
+      info.event.start,
+      info.event.end,
+      info.revert,
+    );
+  }
+
+  function onSelect(info: DateSelectInfo) {
+    setEventForm({
+      open: true,
+      event: undefined,
+      start: toLocalInput(info.start),
+      end: toLocalInput(info.end),
+    });
+    calendarRef.current?.getApi().unselect();
+  }
+
+  function openCreateEvent() {
+    const start = addHours(new Date(), 1);
+    start.setMinutes(0, 0, 0);
+    setEventForm({
+      open: true,
+      event: undefined,
+      start: toLocalInput(start),
+      end: toLocalInput(addHours(start, 1)),
+    });
+  }
 
   function onEventDrop(info: EventDropInfo) {
     const meta = info.event.extendedProps as EventMeta;
+    if (meta.isManualEvent && meta.itemId) {
+      saveManualEventTimes(
+        meta.itemId,
+        info.event.start,
+        info.event.end,
+        info.revert,
+      );
+      return;
+    }
     if (meta.kind !== 'todo' || meta.isCompleted || !meta.itemId) {
       info.revert();
       return;
@@ -507,6 +648,11 @@ export function CalendarView({
     const target = info.jsEvent.target as HTMLElement | null;
     if (target?.closest('button')) return;
     info.jsEvent.preventDefault();
+    if (meta.isManualEvent) {
+      const ev = manualEvents.find((e) => e.id === meta.itemId);
+      if (ev) setEventForm({ open: true, event: ev });
+      return;
+    }
     setSelected(meta);
   }
 
@@ -522,38 +668,50 @@ export function CalendarView({
   );
 
   return (
-    <div className="fc-calendar-wrapper h-full" style={{ minHeight: '400px' }}>
-      <FullCalendar
-        ref={calendarRef}
-        plugins={[
-          classicTheme,
-          dayGridPlugin,
-          timeGridPlugin,
-          interactionPlugin,
-        ]}
-        initialView={fcView}
-        initialDate={date}
-        headerToolbar={false}
-        firstDay={1}
-        height="100%"
-        expandRows={true}
-        nowIndicator={true}
-        allDaySlot={false}
-        slotDuration="00:30:00"
-        scrollTime="07:00:00"
-        editable={true}
-        eventDurationEditable={false}
-        events={events}
-        eventContent={renderEventContent}
-        eventDrop={onEventDrop}
-        eventClick={onEventClick}
-        eventTimeFormat={{
-          hour: 'numeric',
-          minute: '2-digit',
-          meridiem: 'short',
-        }}
-        slotHeaderFormat={{ hour: 'numeric', meridiem: 'short' }}
-      />
+    <div className="flex h-full flex-col" style={{ minHeight: '400px' }}>
+      <div className="mb-1.5 flex flex-shrink-0 justify-end">
+        <Button size="sm" variant="outline" onPress={openCreateEvent}>
+          <Plus className="mr-1 h-4 w-4" />
+          Add event
+        </Button>
+      </div>
+      <div className="fc-calendar-wrapper min-h-0 flex-1">
+        <FullCalendar
+          ref={calendarRef}
+          plugins={[
+            classicTheme,
+            dayGridPlugin,
+            timeGridPlugin,
+            interactionPlugin,
+          ]}
+          initialView={fcView}
+          initialDate={date}
+          headerToolbar={false}
+          firstDay={1}
+          height="100%"
+          expandRows={true}
+          nowIndicator={true}
+          allDaySlot={false}
+          slotDuration="00:30:00"
+          scrollTime="07:00:00"
+          editable={true}
+          eventDurationEditable={false}
+          selectable={true}
+          selectMirror={true}
+          select={onSelect}
+          events={events}
+          eventContent={renderEventContent}
+          eventDrop={onEventDrop}
+          eventResize={onEventResize}
+          eventClick={onEventClick}
+          eventTimeFormat={{
+            hour: 'numeric',
+            minute: '2-digit',
+            meridiem: 'short',
+          }}
+          slotHeaderFormat={{ hour: 'numeric', meridiem: 'short' }}
+        />
+      </div>
 
       <Dialog
         open={selected !== null}
@@ -650,6 +808,16 @@ export function CalendarView({
           )}
         </DialogContent>
       </Dialog>
+
+      <ManualEventForm
+        open={eventForm.open}
+        onOpenChange={(open) =>
+          setEventForm((s) => (open ? { ...s, open } : { open: false }))
+        }
+        event={eventForm.event}
+        defaultStart={eventForm.start}
+        defaultEnd={eventForm.end}
+      />
     </div>
   );
 }

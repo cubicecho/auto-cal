@@ -10,6 +10,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 interface Props {
   timeBlocks: readonly TimeBlock_CalendarViewFragment[];
   schedule: readonly ScheduledItem_CalendarViewFragment[];
+  manualEvents: readonly unknown[];
   date: Date;
   view: 'day' | 'week' | 'month';
 }
