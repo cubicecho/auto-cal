@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
 import { Trash2 } from 'lucide-react';
+import { useEffect } from 'react';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -96,11 +97,13 @@ export function ActivityTypeForm({
     refetchQueries: ['GetMyActivityTypes', 'GetActivityTypeStats'],
   });
 
+  const defaultValues: ActivityTypeFormValues = {
+    name: activityType?.name ?? '',
+    color: activityType?.color ?? '#6366f1',
+  };
+
   const form = useAppForm({
-    defaultValues: {
-      name: activityType?.name ?? '',
-      color: activityType?.color ?? '#6366f1',
-    } as ActivityTypeFormValues,
+    defaultValues,
     validators: { onChange: activityTypeSchema },
     onSubmit: async ({ value }) => {
       if (isEdit) {
@@ -121,6 +124,14 @@ export function ActivityTypeForm({
       onOpenChange(false);
     },
   });
+
+  // Reset to the selected item's values whenever the dialog opens or a
+  // different activity type is edited — defaultValues only apply on mount and
+  // this form instance is reused across create/edit targets.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on activityType?.id — we reset when a different item is selected, not on every field change; form.reset and defaultValues are derived from the current render
+  useEffect(() => {
+    if (open) form.reset(defaultValues);
+  }, [open, activityType?.id]);
 
   async function handleDelete() {
     if (!isEdit) return;

@@ -16,6 +16,7 @@ import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
 import { Check } from 'lucide-react';
+import { useEffect } from 'react';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -150,15 +151,17 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
     refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'],
   });
 
+  const defaultValues: TodoFormValues = {
+    title: todo?.title ?? '',
+    description: todo?.description ?? '',
+    listId: todo?.list?.id ?? '',
+    priority: String(todo?.priority ?? 0),
+    estimatedLength: String(todo?.estimatedLength ?? 30),
+    dueAt: toDateTimeLocal(todo?.dueAt as string | null | undefined),
+  };
+
   const form = useAppForm({
-    defaultValues: {
-      title: todo?.title ?? '',
-      description: todo?.description ?? '',
-      listId: todo?.list?.id ?? '',
-      priority: String(todo?.priority ?? 0),
-      estimatedLength: String(todo?.estimatedLength ?? 30),
-      dueAt: toDateTimeLocal(todo?.dueAt as string | null | undefined),
-    } as TodoFormValues,
+    defaultValues,
     validators: {
       onChange: todoSchema,
     },
@@ -197,6 +200,14 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
       onOpenChange(false);
     },
   });
+
+  // Reset to the selected todo's values whenever the dialog opens or a
+  // different todo is edited — defaultValues only apply on mount and this form
+  // instance is reused across create/edit targets.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on todo?.id — we reset when a different item is selected, not on every field change; form.reset and defaultValues are derived from the current render
+  useEffect(() => {
+    if (open) form.reset(defaultValues);
+  }, [open, todo?.id]);
 
   // Snapshot the list's defaults into the priority/duration fields when the
   // user picks a list (only if they haven't customized those fields yet).

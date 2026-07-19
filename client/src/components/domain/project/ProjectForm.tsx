@@ -10,6 +10,7 @@ import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
+import { useEffect } from 'react';
 import { z } from 'zod';
 
 const CREATE_PROJECT = graphql(`
@@ -102,11 +103,13 @@ export function ProjectForm({ project, open, onOpenChange }: ProjectFormProps) {
     },
   });
 
+  const editDefaultValues = {
+    name: project?.name ?? '',
+    status: project?.status ?? 'active',
+  };
+
   const editForm = useAppForm({
-    defaultValues: {
-      name: project?.name ?? '',
-      status: project?.status ?? 'active',
-    },
+    defaultValues: editDefaultValues,
     validators: { onChange: editSchema },
     onSubmit: async ({ value }) => {
       if (!project) return;
@@ -118,6 +121,14 @@ export function ProjectForm({ project, open, onOpenChange }: ProjectFormProps) {
       onOpenChange(false);
     },
   });
+
+  // Reset to the selected project's values whenever the dialog opens or a
+  // different project is edited — defaultValues only apply on mount and this
+  // form instance is reused across edit targets.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on project?.id — we reset when a different item is selected, not on every field change; editForm.reset and editDefaultValues are derived from the current render
+  useEffect(() => {
+    if (open) editForm.reset(editDefaultValues);
+  }, [open, project?.id]);
 
   return (
     <FormDialog

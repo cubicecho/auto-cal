@@ -15,6 +15,7 @@ import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
 import { Trash2 } from 'lucide-react';
+import { useEffect } from 'react';
 import { z } from 'zod';
 
 const CREATE_TODO_LIST = graphql(`
@@ -108,14 +109,16 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
     refetchQueries: ['GetTodoListsPage', 'GetTodoListsForSelect'],
   });
 
+  const defaultValues: FormValues = {
+    name: list?.name ?? '',
+    description: list?.description ?? '',
+    activityTypeId: list?.activityType?.id ?? '',
+    defaultPriority: String(list?.defaultPriority ?? 0),
+    defaultEstimatedLength: String(list?.defaultEstimatedLength ?? 30),
+  };
+
   const form = useAppForm({
-    defaultValues: {
-      name: list?.name ?? '',
-      description: list?.description ?? '',
-      activityTypeId: list?.activityType?.id ?? '',
-      defaultPriority: String(list?.defaultPriority ?? 0),
-      defaultEstimatedLength: String(list?.defaultEstimatedLength ?? 30),
-    } as FormValues,
+    defaultValues,
     validators: { onChange: schema },
     onSubmit: async ({ value }) => {
       if (isEdit) {
@@ -147,6 +150,14 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
       onOpenChange(false);
     },
   });
+
+  // Reset to the selected list's values whenever the dialog opens or a
+  // different list is edited — defaultValues only apply on mount and this form
+  // instance is reused across create/edit targets.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on list?.id — we reset when a different item is selected, not on every field change; form.reset and defaultValues are derived from the current render
+  useEffect(() => {
+    if (open) form.reset(defaultValues);
+  }, [open, list?.id]);
 
   async function handleDelete() {
     if (!isEdit) return;

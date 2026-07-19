@@ -250,26 +250,12 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
     },
   });
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on habit?.id — we reset when a different habit is selected, not on every individual field change; form.reset is stable
+  // Reset to the selected item's values whenever the dialog opens or a
+  // different habit is edited — defaultValues only apply on mount and this form
+  // instance is reused across create/edit targets.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on habit?.id — we reset when a different item is selected, not on every field change; form.reset and defaultValues are derived from the current render
   useEffect(() => {
-    if (open) {
-      form.reset({
-        title: habit?.title ?? '',
-        description: habit?.description ?? '',
-        activityTypeId: habit?.activityType?.id ?? '',
-        priority: String(habit?.priority ?? 0),
-        estimatedLength: String(habit?.estimatedLength ?? 30),
-        frequencyCount: habit?.frequencyCount ?? 1,
-        frequencyUnit: habit?.frequencyUnit ?? 'week',
-        minTimeBetweenInstances: habit?.minTimeBetweenInstances ?? null,
-        pomodoroEnabled: habit?.pomodoroEnabled ?? false,
-        pomodoroUnitLength: habit?.pomodoroUnitLength ?? 25,
-        pomodoroShortBreakLength: habit?.pomodoroShortBreakLength ?? 5,
-        pomodoroUnitsBeforeLongBreak: habit?.pomodoroUnitsBeforeLongBreak ?? 4,
-        pomodoroLongBreakLength: habit?.pomodoroLongBreakLength ?? 15,
-        pomodoroMaxPerDay: habit?.pomodoroMaxPerDay ?? null,
-      });
-    }
+    if (open) form.reset(defaultValues);
   }, [open, habit?.id]);
 
   return (
