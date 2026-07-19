@@ -139,6 +139,165 @@ describe('computeSchedule', () => {
     expect(computeSchedule(WEEK, [makeBlock()], [], [], AT_MAP)).toEqual([]);
   });
 
+  describe('dueAt constraint', () => {
+    const MON_BLOCK = makeBlock({
+      daysOfWeek: [1],
+      startTime: '09:00',
+      endTime: '17:00',
+    });
+
+    it('schedules a todo when its due date is after the slot start', () => {
+      const [result] = computeSchedule(
+        WEEK,
+        [MON_BLOCK],
+        [
+          makeTodo({
+            estimatedLength: 60,
+            dueAt: new Date('2026-05-04T12:00:00.000Z'),
+          }),
+        ],
+        [],
+        AT_MAP,
+      );
+      expect(result?.isScheduled).toBe(true);
+      expect(result?.scheduledStart).toBe('2026-05-04T09:00:00.000Z');
+    });
+
+    it('leaves a todo unscheduled when it cannot finish by its due date', () => {
+      // 60-min task at 09:00 would finish at 10:00, past the 09:30 deadline.
+      const [result] = computeSchedule(
+        WEEK,
+        [MON_BLOCK],
+        [
+          makeTodo({
+            estimatedLength: 60,
+            dueAt: new Date('2026-05-04T09:30:00.000Z'),
+          }),
+        ],
+        [],
+        AT_MAP,
+      );
+      expect(result?.isScheduled).toBe(false);
+      expect(result?.scheduledStart).toBeNull();
+      expect(result?.unschedulableReason).toBe('past-due');
+    });
+
+    it('allows placement when the task finishes exactly at the due date', () => {
+      // 60-min task at 09:00 finishes at 10:00 == the deadline.
+      const [result] = computeSchedule(
+        WEEK,
+        [MON_BLOCK],
+        [
+          makeTodo({
+            estimatedLength: 60,
+            dueAt: new Date('2026-05-04T10:00:00.000Z'),
+          }),
+        ],
+        [],
+        AT_MAP,
+      );
+      expect(result?.isScheduled).toBe(true);
+      expect(result?.scheduledStart).toBe('2026-05-04T09:00:00.000Z');
+    });
+
+    it('excludes a later slot when an earlier one is past due', () => {
+      // Only slot is Wednesday; a Monday-night due date rules it out.
+      const [result] = computeSchedule(
+        WEEK,
+        [
+          makeBlock({
+            daysOfWeek: [3],
+            startTime: '09:00',
+            endTime: '17:00',
+          }),
+        ],
+        [
+          makeTodo({
+            estimatedLength: 60,
+            dueAt: new Date('2026-05-04T23:59:00.000Z'),
+          }),
+        ],
+        [],
+        AT_MAP,
+      );
+      expect(result?.isScheduled).toBe(false);
+    });
+
+    it('schedules normally when no due date is set', () => {
+      const [result] = computeSchedule(
+        WEEK,
+        [MON_BLOCK],
+        [makeTodo({ estimatedLength: 60, dueAt: null })],
+        [],
+        AT_MAP,
+      );
+      expect(result?.isScheduled).toBe(true);
+    });
+
+    it('breaks equal-priority ties by earliest due date', () => {
+      // One 60-min slot; two equal-priority todos. The sooner-due one wins.
+      const soon = makeTodo({
+        id: 'todo-soon',
+        priority: 5,
+        estimatedLength: 60,
+        dueAt: new Date('2026-05-05T00:00:00.000Z'),
+      });
+      const later = makeTodo({
+        id: 'todo-later',
+        priority: 5,
+        estimatedLength: 60,
+        dueAt: new Date('2026-05-30T00:00:00.000Z'),
+      });
+      const results = computeSchedule(
+        WEEK,
+        [makeBlock({ daysOfWeek: [1], startTime: '09:00', endTime: '10:00' })],
+        [later, soon],
+        [],
+        AT_MAP,
+      );
+      const soonResult = results.find((r) => r.id === 'todo-soon');
+      const laterResult = results.find((r) => r.id === 'todo-later');
+      expect(soonResult?.isScheduled).toBe(true);
+      expect(laterResult?.isScheduled).toBe(false);
+    });
+  });
+
+  describe('unschedulableReason', () => {
+    it('reports no-time-block when no block matches the activity type', () => {
+      const [result] = computeSchedule(
+        WEEK,
+        [makeBlock({ activityTypeId: WORK.id })],
+        [makeTodo({ activityTypeId: EXERCISE.id })],
+        [],
+        AT_MAP,
+      );
+      expect(result?.unschedulableReason).toBe('no-time-block');
+    });
+
+    it('reports no-capacity when the task is too long for any slot', () => {
+      const [result] = computeSchedule(
+        WEEK,
+        [makeBlock({ daysOfWeek: [1], startTime: '09:00', endTime: '10:00' })],
+        [makeTodo({ estimatedLength: 90 })],
+        [],
+        AT_MAP,
+      );
+      expect(result?.unschedulableReason).toBe('no-capacity');
+    });
+
+    it('reports null when the task is scheduled', () => {
+      const [result] = computeSchedule(
+        WEEK,
+        [makeBlock({ daysOfWeek: [1], startTime: '09:00', endTime: '17:00' })],
+        [makeTodo({ estimatedLength: 60 })],
+        [],
+        AT_MAP,
+      );
+      expect(result?.isScheduled).toBe(true);
+      expect(result?.unschedulableReason).toBeNull();
+    });
+  });
+
   it('schedules a todo into a matching time block', () => {
     const [result] = computeSchedule(
       WEEK,

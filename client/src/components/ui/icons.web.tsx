@@ -34,6 +34,7 @@ export {
   LoaderCircle,
   Moon,
   Pencil,
+  Pin,
   Plus,
   RefreshCw,
   Settings,

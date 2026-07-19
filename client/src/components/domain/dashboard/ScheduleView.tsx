@@ -37,6 +37,7 @@ graphql(`
     isScheduled
     scheduledStart
     scheduledEnd
+    unschedulableReason
     activityType {
       id
       name
@@ -250,7 +251,21 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
   );
 }
 
+const UNSCHEDULABLE_REASON_TEXT: Record<string, string> = {
+  'no-activity-type': 'No activity type — assign this todo’s list to one',
+  'no-time-block': 'No matching time block — add one for this activity type',
+  'no-capacity':
+    'No free slot is long enough — add capacity or shorten the estimate',
+  'past-due':
+    'Can’t finish before its due date — extend the due date or add earlier time blocks',
+  'gap-constraint': 'Blocked by the minimum spacing between instances',
+  'invalid-length': 'Estimated length must be greater than zero',
+};
+
 function unschedulableReason(item: ScheduledItem_ScheduleViewFragment): string {
+  const code = item.unschedulableReason;
+  if (code && UNSCHEDULABLE_REASON_TEXT[code])
+    return UNSCHEDULABLE_REASON_TEXT[code];
   if (!item.activityType) return 'No activity type assigned';
   return 'No available slot — add a matching time block or reduce the estimated length';
 }

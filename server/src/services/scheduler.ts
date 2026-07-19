@@ -8,6 +8,15 @@ export type TodoWithActivityType = Todo & { activityTypeId: string | null };
 
 export type ScheduledItemKind = 'todo' | 'habit' | 'pomodoro';
 
+/** Why a task could not be placed — null when it was scheduled. */
+export type UnschedulableReason =
+  | 'no-activity-type'
+  | 'no-time-block'
+  | 'no-capacity'
+  | 'past-due'
+  | 'gap-constraint'
+  | 'invalid-length';
+
 export type ScheduledItem = {
   kind: ScheduledItemKind;
   id: string;
@@ -20,6 +29,8 @@ export type ScheduledItem = {
   scheduledEnd: string | null; // UTC ISO string (e.g. "2026-05-04T10:00:00.000Z")
   isScheduled: boolean;
   isOverdue: boolean;
+  /** Set only when isScheduled is false; explains the failure for the UI. */
+  unschedulableReason: UnschedulableReason | null;
 };
 
 // ─── Internal Types ──────────────────────────────────────────────────────────
@@ -47,6 +58,8 @@ type Task = {
   activityTypeId: string | null;
   isOverdue?: boolean;
   minTimeBetweenInstances?: number; // hours; only relevant for habit tasks
+  /** Hard deadline — the task may not be placed in a slot starting after this */
+  dueAt?: Date | null;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -201,10 +214,18 @@ function slotsForTaskType(
   return combined.map((c) => c.slot);
 }
 
-/** Sort tasks: priority DESC, then estimatedLength ASC */
+/**
+ * Sort tasks: priority DESC, then — for equal priorities — earliest due date
+ * first (tasks without a due date sort last), then estimatedLength ASC. The
+ * due-date tiebreak keeps a soon-due task from being crowded out of its only
+ * remaining slot by an equal-priority task with a later (or no) deadline.
+ */
 function sortTasks(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => {
     if (b.priority !== a.priority) return b.priority - a.priority;
+    const aDue = a.dueAt ? a.dueAt.getTime() : Number.POSITIVE_INFINITY;
+    const bDue = b.dueAt ? b.dueAt.getTime() : Number.POSITIVE_INFINITY;
+    if (aDue !== bDue) return aDue - bDue;
     return a.estimatedLength - b.estimatedLength;
   });
 }
@@ -285,6 +306,7 @@ export function computeSchedule(
       priority: t.priority,
       estimatedLength: t.estimatedLength,
       activityTypeId: t.activityTypeId,
+      dueAt: t.dueAt,
       isOverdue: !!(
         t.scheduledAt &&
         new Date(t.scheduledAt) < now &&
@@ -337,6 +359,7 @@ export function computeSchedule(
         scheduledEnd: null,
         isScheduled: false,
         isOverdue: task.isOverdue ?? false,
+        unschedulableReason: 'no-activity-type',
       });
       continue;
     }
@@ -349,6 +372,7 @@ export function computeSchedule(
         scheduledEnd: null,
         isScheduled: false,
         isOverdue: task.isOverdue ?? false,
+        unschedulableReason: 'invalid-length',
       });
       continue;
     }
@@ -366,6 +390,7 @@ export function computeSchedule(
         scheduledEnd: null,
         isScheduled: false,
         isOverdue: task.isOverdue ?? false,
+        unschedulableReason: 'no-time-block',
       });
       continue;
     }
@@ -392,6 +417,17 @@ export function computeSchedule(
       );
     };
 
+    // Returns true if a task placed at (slot, startMins) *finishes* on or before
+    // its due date. Tasks without a due date are unconstrained.
+    const dueAt = task.dueAt ?? null;
+    const withinDue = (slot: Slot, startMins: number): boolean => {
+      if (!dueAt) return true;
+      const endMs = new Date(
+        localToUtcIso(slot.dateStr, startMins + task.estimatedLength, timezone),
+      ).getTime();
+      return endMs <= dueAt.getTime();
+    };
+
     let chosenSlot: Slot | null = null;
     let chosenStart: number | null = null;
 
@@ -402,7 +438,8 @@ export function computeSchedule(
         if (
           start !== null &&
           !usedDates.has(slot.dateStr) &&
-          respectsGap(slot, start)
+          respectsGap(slot, start) &&
+          withinDue(slot, start)
         ) {
           chosenSlot = slot;
           chosenStart = start;
@@ -415,7 +452,11 @@ export function computeSchedule(
     if (!chosenSlot && isHabit && minGapMs > 0) {
       for (const slot of slots) {
         const start = effectiveSlotStart(slot, now, task.estimatedLength);
-        if (start !== null && respectsGap(slot, start)) {
+        if (
+          start !== null &&
+          respectsGap(slot, start) &&
+          withinDue(slot, start)
+        ) {
           chosenSlot = slot;
           chosenStart = start;
           break;
@@ -428,7 +469,7 @@ export function computeSchedule(
     if (!chosenSlot && (!isHabit || minGapMs === 0)) {
       for (const slot of slots) {
         const start = effectiveSlotStart(slot, now, task.estimatedLength);
-        if (start !== null) {
+        if (start !== null && withinDue(slot, start)) {
           chosenSlot = slot;
           chosenStart = start;
           break;
@@ -437,6 +478,22 @@ export function computeSchedule(
     }
 
     if (!chosenSlot || chosenStart === null) {
+      // Classify why no slot was chosen: no slot had capacity ('no-capacity'),
+      // some had capacity but all finished after the due date ('past-due'), or
+      // (habits) the gap constraint blocked every otherwise-usable slot.
+      let hadCapacity = false;
+      let hadWithinDue = false;
+      for (const slot of slots) {
+        const start = effectiveSlotStart(slot, now, task.estimatedLength);
+        if (start === null) continue;
+        hadCapacity = true;
+        if (withinDue(slot, start)) hadWithinDue = true;
+      }
+      const unschedulableReason: UnschedulableReason = !hadCapacity
+        ? 'no-capacity'
+        : !hadWithinDue
+          ? 'past-due'
+          : 'gap-constraint';
       results.push({
         ...task,
         activityType,
@@ -444,6 +501,7 @@ export function computeSchedule(
         scheduledEnd: null,
         isScheduled: false,
         isOverdue: task.isOverdue ?? false,
+        unschedulableReason,
       });
       continue;
     }
@@ -477,6 +535,7 @@ export function computeSchedule(
       scheduledEnd: localToUtcIso(chosenSlot.dateStr, taskEndMins, timezone),
       isScheduled: true,
       isOverdue: task.isOverdue ?? false,
+      unschedulableReason: null,
     });
   }
 
@@ -569,6 +628,7 @@ export function computeSchedule(
           scheduledEnd: localToUtcIso(slot.dateStr, unitEnd, timezone),
           isScheduled: true,
           isOverdue: false,
+          unschedulableReason: null,
         });
 
         pomodoroCount++;

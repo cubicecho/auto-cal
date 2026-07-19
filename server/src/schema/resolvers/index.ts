@@ -109,6 +109,9 @@ const extensionSDL = `
     isScheduled: Boolean!
     isOverdue: Boolean!
     completedAt: String
+    manuallyScheduled: Boolean!
+    dueAt: String
+    unschedulableReason: String
   }
 
   input CreateActivityTypeArgs {
@@ -378,6 +381,7 @@ const extensionSDL = `
     myCreateTodo(input: CreateTodoArgs!): Todo!
     myUpdateTodo(input: UpdateTodoArgs!): Todo!
     myCompleteTodo(id: ID!, completedAt: String): Todo!
+    myUnscheduleTodo(id: ID!): Todo!
     myDeleteTodo(id: ID!): Boolean!
     myDeleteTodos(listId: ID!, completed: Boolean): [Todo!]!
     myCreateHabit(input: CreateHabitArgs!): Habit!

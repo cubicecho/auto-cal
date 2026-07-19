@@ -216,12 +216,21 @@ export const scheduleQueries: QueryMap<'mySchedule'> = {
     const todoCompletedAtMap = new Map(
       userCompletedTodos.map((t) => [t.id, t.completedAt]),
     );
+    const todoDueAtMap = new Map(
+      allIncompleteTodos.map((t) => [t.id, t.dueAt]),
+    );
 
     const scheduledItems = items.map((item) => ({
       ...item,
       completedAt:
         item.kind === 'todo'
           ? (todoCompletedAtMap.get(item.id)?.toISOString() ?? null)
+          : null,
+      // Everything from computeSchedule is auto-placed, never manual.
+      manuallyScheduled: false,
+      dueAt:
+        item.kind === 'todo'
+          ? (todoDueAtMap.get(item.id)?.toISOString() ?? null)
           : null,
     }));
 
@@ -243,6 +252,9 @@ export const scheduleQueries: QueryMap<'mySchedule'> = {
         isScheduled: true,
         isOverdue: false,
         completedAt: null,
+        manuallyScheduled: true,
+        dueAt: t.dueAt?.toISOString() ?? null,
+        unschedulableReason: null,
       };
     });
 

@@ -3,15 +3,17 @@ import type {
   TimeBlock_CalendarViewFragment,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
+import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Check, LoaderCircle } from '@/components/ui/icons';
+import { Check, LoaderCircle, Pin } from '@/components/ui/icons';
 import { useToast } from '@/components/ui/toast';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { weekStart } from '@/lib/date';
@@ -68,6 +70,8 @@ graphql(`
     scheduledStart
     scheduledEnd
     completedAt
+    manuallyScheduled
+    dueAt
     activityType {
       id
       name
@@ -94,6 +98,12 @@ const COMPLETE_TODO = graphql(`
   }
 `);
 
+const UNSCHEDULE_TODO = graphql(`
+  mutation UnscheduleTodoFromCalendar($id: ID!) {
+    myUnscheduleTodo(id: $id) { id scheduledAt manuallyScheduled }
+  }
+`);
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const FALLBACK_COLOR = '#64748b';
@@ -111,10 +121,12 @@ interface EventMeta {
   activityName?: string;
   activityColor?: string;
   isOverdue?: boolean;
+  manuallyScheduled?: boolean;
   priority?: number;
   estimatedLength?: number;
   startISO?: string;
   endISO?: string;
+  dueAtISO?: string;
   completedAtISO?: string;
 }
 
@@ -248,9 +260,15 @@ function TaskEventContent({ arg }: { arg: EventDisplayInfo }) {
 
   return (
     <div
-      className="flex h-full w-full items-center justify-between gap-1 overflow-hidden px-0.5"
+      className="relative flex h-full w-full items-center justify-between gap-1 overflow-hidden px-0.5"
       style={{ opacity: completing ? 0.5 : 1, transition: 'opacity 150ms' }}
     >
+      {meta.manuallyScheduled && (
+        <Pin
+          className="pointer-events-none absolute right-0 top-0 h-2.5 w-2.5 rotate-45 fill-current opacity-90"
+          aria-label="Manually scheduled"
+        />
+      )}
       <span
         className="truncate text-xs leading-tight"
         style={{
@@ -319,6 +337,16 @@ export function CalendarView({
     update: (cache) => invalidate(cache, ...DERIVED),
     onError: (err) => toast(err.message || 'Could not move this item'),
   });
+  const [unscheduleTodo] = useMutation(UNSCHEDULE_TODO, {
+    update: (cache) => invalidate(cache, ...DERIVED),
+    onError: (err) => toast(err.message || 'Could not un-pin this item'),
+  });
+
+  function handleUnschedule() {
+    if (!selected?.itemId) return;
+    unscheduleTodo({ variables: { id: selected.itemId } }).catch(console.error);
+    setSelected(null);
+  }
 
   const fcView = FC_VIEW[view];
 
@@ -360,10 +388,12 @@ export function CalendarView({
           itemId: item.id,
           detailTitle: item.title,
           isOverdue: item.isOverdue,
+          manuallyScheduled: item.manuallyScheduled,
           priority: item.priority,
           estimatedLength: item.estimatedLength,
           startISO: item.scheduledStart as string,
           endISO: item.scheduledEnd as string,
+          ...(item.dueAt ? { dueAtISO: item.dueAt } : {}),
           ...(item.activityType
             ? {
                 activityName: item.activityType.name,
@@ -412,11 +442,13 @@ export function CalendarView({
           itemId: item.id,
           detailTitle: item.title,
           isOverdue: false,
+          manuallyScheduled: false,
           priority: item.priority,
           estimatedLength: item.estimatedLength,
           startISO: item.scheduledStart as string,
           endISO: item.scheduledEnd as string,
           completedAtISO: item.completedAt as string,
+          ...(item.dueAt ? { dueAtISO: item.dueAt } : {}),
           ...(item.activityType
             ? {
                 activityName: item.activityType.name,
@@ -481,6 +513,13 @@ export function CalendarView({
   const detailRange = selected
     ? formatDetailRange(selected.startISO, selected.endISO)
     : null;
+  const dueDate = selected?.dueAtISO ? parseISO(selected.dueAtISO) : null;
+  const duePast = dueDate ? dueDate < new Date() : false;
+  const canUnschedule = Boolean(
+    selected?.manuallyScheduled &&
+      selected.kind === 'todo' &&
+      !selected.isCompleted,
+  );
 
   return (
     <div className="fc-calendar-wrapper h-full" style={{ minHeight: '400px' }}>
@@ -538,7 +577,9 @@ export function CalendarView({
                     ? ' · completed'
                     : selected.isOverdue
                       ? ' · overdue'
-                      : ' · scheduled'}
+                      : selected.manuallyScheduled
+                        ? ' · manually scheduled'
+                        : ' · scheduled'}
                 </DialogDescription>
               </DialogHeader>
               <dl className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-2 text-sm">
@@ -546,6 +587,17 @@ export function CalendarView({
                   <>
                     <dt className="text-muted-foreground">When</dt>
                     <dd>{detailRange}</dd>
+                  </>
+                )}
+                {dueDate && (
+                  <>
+                    <dt className="text-muted-foreground">Due</dt>
+                    <dd
+                      className={duePast ? 'font-medium text-destructive' : ''}
+                    >
+                      {format(dueDate, 'EEE, MMM d, h:mm a')}
+                      {duePast ? ' · overdue' : ''}
+                    </dd>
                   </>
                 )}
                 {selected.activityName && (
@@ -583,6 +635,17 @@ export function CalendarView({
                   </>
                 )}
               </dl>
+              {canUnschedule && (
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onPress={handleUnschedule}
+                  >
+                    Remove manual scheduling
+                  </Button>
+                </DialogFooter>
+              )}
             </>
           )}
         </DialogContent>
