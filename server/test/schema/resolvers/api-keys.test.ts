@@ -85,6 +85,46 @@ describe('api-key resolvers', () => {
         /Cannot query field "keyHash"/,
       );
     });
+
+    // Deleting the output field is not enough on its own: drizzle-graphql
+    // derives the filter/order/distinct inputs from the same column list, and
+    // they are reachable through the live User.apiKeys relation. Left in place
+    // they let a caller confirm or binary-search the hash without selecting it.
+    it('does not accept keyHash as a filter on the apiKeys relation', async () => {
+      const { id: userId } = await seedUser(db, 'apikeys-nofilter@example.com');
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos { user { apiKeys(where: { keyHash: { eq: "x" } }) { id } } } }',
+      );
+      expect(result.errors?.[0]?.message).toMatch(
+        /Field "keyHash" is not defined by type "ApiKeyFilters"/,
+      );
+    });
+
+    it('does not accept keyHash as an ordering or distinct key', async () => {
+      const { id: userId } = await seedUser(db, 'apikeys-noorder@example.com');
+      const ordered = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos { user { apiKeys(orderBy: { keyHash: { direction: asc } }) { id } } } }',
+      );
+      expect(ordered.errors?.[0]?.message).toMatch(
+        /Field "keyHash" is not defined by type "ApiKeyOrderBy"/,
+      );
+
+      const distinct = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos { user { apiKeys(distinct: [keyHash]) { id } } } }',
+      );
+      expect(distinct.errors?.[0]?.message).toMatch(
+        /Value "keyHash" does not exist in "ApiKeyDistinctColumn"/,
+      );
+    });
   });
 
   // ─── myCreateApiKey ───────────────────────────────────────────────────────────

@@ -235,6 +235,22 @@ Personal, per-user, revocable Bearer tokens for headless integrations.
 
 **Hash stored, not token:** Only the SHA-256 hex of the full token is persisted in `api_keys.keyHash`. The raw token is returned once to the user on creation and never stored. The `keyHash` field is deleted from the `ApiKey` GraphQL type in `applyCustomResolvers`, so even resolvers that return raw rows cannot leak it.
 
+Deleting the output field is only half of it. drizzle-graphql derives `ApiKeyFilters`, `ApiKeyOrderBy` and `ApiKeyDistinctColumn` from the same column list, and those are reachable through the live `User.apiKeys` relation — `where: { keyHash: { eq: "..." } }` confirms a guessed hash and `orderBy` binary-searches it, neither of which requires selecting the field. `stripKeyHash` in `schema/resolvers/index.ts` removes it from all three with a single `mapSchema` pass:
+
+```typescript
+function stripKeyHash(schema: GraphQLSchema): GraphQLSchema {
+  const isApiKeyInput = (typeName: string) => typeName.startsWith('ApiKey');
+  return mapSchema(schema, {
+    [MapperKind.INPUT_OBJECT_FIELD]: (_field, fieldName, typeName) =>
+      fieldName === 'keyHash' && isApiKeyInput(typeName) ? null : undefined,
+    [MapperKind.ENUM_VALUE]: (_value, typeName, _schema, valueName) =>
+      valueName === 'keyHash' && isApiKeyInput(typeName) ? null : undefined,
+  });
+}
+```
+
+`mapSchema` rebuilds the schema rather than mutating it, so this runs **last** in `applyCustomResolvers` — anything that assigns a `resolve` afterwards would be writing to a discarded copy. Field resolvers, generated relation resolvers included, carry across the rebuild intact. Adding another never-expose column means adding it here, not just deleting the output field.
+
 **Generation and verification live in `server/src/api-keys.ts`:**
 - `generateApiKey()` — creates a token + hash + 8-char display prefix
 - `isApiKey(raw)` — prefix detection

@@ -58,7 +58,11 @@ function formatDate(dateVal: unknown): string {
   });
 }
 
-/** drizzle-graphql serialises text[] columns as a JSON string; normalise to array. */
+/**
+ * drizzle-graphql returns `scopes` as a real `[String!]!` array as of v5, but
+ * older API keys may still be read through a server that predates it. Kept as a
+ * defensive normaliser; the array branch is the live path.
+ */
 function parseScopes(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw as string[];
   if (typeof raw === 'string') {
