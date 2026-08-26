@@ -326,7 +326,7 @@ describe('error codes', () => {
   });
 });
 
-describe('mutation surface', () => {
+describe('root surface', () => {
   let db: Awaited<ReturnType<typeof createTestDb>>;
   let testSchema: ReturnType<typeof buildTestSchema>;
 
@@ -334,6 +334,29 @@ describe('mutation surface', () => {
     db = await createTestDb();
     testSchema = buildTestSchema(db);
   }, 30000);
+
+  // drizzle-graphql generates an unscoped `<table>`/`<table>Single` query per
+  // table. They are removed outright rather than given a throwing resolver, so
+  // they never reach introspection or client codegen — assert both that they
+  // are gone from the type and that asking for one fails validation.
+  it('exposes only user-scoped queries', () => {
+    const unscoped = Object.keys(
+      testSchema.getQueryType()?.getFields() ?? {},
+    ).filter((name) => !name.startsWith('my'));
+    expect(unscoped).toEqual([]);
+  });
+
+  it('rejects a generated unscoped query at validation time', async () => {
+    const result = await exec(
+      testSchema,
+      db,
+      '00000000-0000-0000-0000-000000000000',
+      'query { users { id email } }',
+    );
+    expect(result.errors?.[0]?.message).toMatch(
+      /Cannot query field "users" on type "Query"/,
+    );
+  });
 
   // build-config turns every generated CRUD mutation off, which makes
   // drizzle-graphql omit the Mutation type; resolvers/index.ts declares its own

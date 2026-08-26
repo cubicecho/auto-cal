@@ -1,4 +1,4 @@
-import { MapperKind, mapSchema } from '@graphql-tools/utils';
+import { MapperKind, mapSchema, pruneSchema } from '@graphql-tools/utils';
 import {
   type GraphQLObjectType,
   type GraphQLSchema,
@@ -420,28 +420,57 @@ const extensionSDL = `
 `;
 
 /**
- * Remove `keyHash` from every generated ApiKey *input* surface.
+ * Root fields that may be reached without the `my` prefix. Everything else on
+ * `Query`/`Mutation` is generated, unscoped, and removed by `finalizeSchema`.
+ */
+export const PUBLIC_MUTATIONS = new Set([
+  'requestMagicLink',
+  'verifyMagicLink',
+]);
+
+/**
+ * Last pass over the schema: drop unscoped root fields and the `keyHash`
+ * input surfaces, then garbage-collect whatever that leaves unreferenced.
  *
- * Deleting the output field (see below) stops the hash being selected, but
- * drizzle-graphql derives `ApiKeyFilters`, `ApiKeyOrderBy` and — since v7 —
- * `ApiKeyDistinctColumn` from the same column list, and those are reachable
- * through the live `User.apiKeys` relation. Left in place they are an oracle:
- * `where: { keyHash: { eq: "..." } }` confirms a guess and `orderBy` binary-
- * searches it. Today that only leaks the caller's own hash, because every
- * reachable `User` is the authenticated one — this closes it before some
- * future resolver makes an arbitrary `User` reachable.
+ * **Unscoped root fields.** drizzle-graphql generates a `<table>`/`<table>Single`
+ * query per table, none of which filter by the caller. They used to be blocked
+ * at runtime with a throwing resolver, but that left them in the SDL — shipped
+ * to introspection and to client codegen as autocompletable operations that
+ * always fail. Removing the field makes the same query fail validation instead,
+ * one layer earlier and without advertising it.
+ *
+ * **`keyHash`.** Deleting the output field (see `applyCustomResolvers`) stops
+ * the hash being selected, but drizzle-graphql derives `ApiKeyFilters`,
+ * `ApiKeyOrderBy` and — since v7 — `ApiKeyDistinctColumn` from the same column
+ * list, and those are reachable through the live `User.apiKeys` relation. Left
+ * in place they are an oracle: `where: { keyHash: { eq: "..." } }` confirms a
+ * guess and `orderBy` binary-searches it. Today that only leaks the caller's
+ * own hash, because every reachable `User` is the authenticated one — this
+ * closes it before some future resolver makes an arbitrary `User` reachable.
  *
  * `mapSchema` rebuilds the schema, so this must run last; field resolvers
  * (generated relation resolvers included) are carried across intact.
  */
-function stripKeyHash(schema: GraphQLSchema): GraphQLSchema {
+function finalizeSchema(schema: GraphQLSchema): GraphQLSchema {
+  const isScoped = (fieldName: string) =>
+    fieldName.startsWith('my') || PUBLIC_MUTATIONS.has(fieldName);
   const isApiKeyInput = (typeName: string) => typeName.startsWith('ApiKey');
-  return mapSchema(schema, {
+
+  const mapped = mapSchema(schema, {
+    [MapperKind.QUERY_ROOT_FIELD]: (_field, fieldName) =>
+      isScoped(fieldName) ? undefined : null,
+    [MapperKind.MUTATION_ROOT_FIELD]: (_field, fieldName) =>
+      isScoped(fieldName) ? undefined : null,
     [MapperKind.INPUT_OBJECT_FIELD]: (_field, fieldName, typeName) =>
       fieldName === 'keyHash' && isApiKeyInput(typeName) ? null : undefined,
     [MapperKind.ENUM_VALUE]: (_value, typeName, _schema, valueName) =>
       valueName === 'keyHash' && isApiKeyInput(typeName) ? null : undefined,
   });
+
+  // The removed root fields were the only reference to a chunk of the
+  // generated input types; prune drops those. It does not empty the SDL —
+  // the generated relation fields still carry `*Filters`/`*OrderBy` args.
+  return pruneSchema(mapped);
 }
 
 export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
@@ -542,5 +571,5 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     return context.loaders.activityType.load(list.activityTypeId);
   };
 
-  return stripKeyHash(extended);
+  return finalizeSchema(extended);
 }

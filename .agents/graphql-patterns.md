@@ -3,8 +3,7 @@
 ## Schema Generation Pipeline
 
 1. `buildSchema(db)` auto-generates base schema from Drizzle tables via `@vantreeseba/drizzle-graphql`
-2. `applyCustomResolvers()` extends with `my*` scoped queries/mutations via `extendSchema`
-3. `blockUnscopedResolvers()` locks down any unscoped fields (not prefixed `my`, not in `PUBLIC_MUTATIONS`)
+2. `applyCustomResolvers()` extends with `my*` scoped queries/mutations via `extendSchema`, then ends with `finalizeSchema()`, which **removes** every root field that is neither prefixed `my` nor in `PUBLIC_MUTATIONS` (plus the `keyHash` input surfaces) and prunes the types that leaves unreferenced
 
 Generated schema written to `server/src/__generated__/schema.graphql` via:
 ```bash

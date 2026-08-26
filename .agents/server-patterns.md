@@ -90,7 +90,7 @@ Only two mutations bypass the `my*` scoping requirement and are accessible witho
 const PUBLIC_MUTATIONS = new Set(['requestMagicLink', 'verifyMagicLink']);
 ```
 
-Any new public endpoint (e.g. a webhook or health check) must be added to this set in `server/src/schema/index.ts`.
+Any new public endpoint (e.g. a webhook or health check) must be added to this set in `server/src/schema/resolvers/index.ts` — `finalizeSchema` removes root fields it does not recognise.
 
 ## Schema Pipeline
 
@@ -100,13 +100,24 @@ import { buildSchemaConfig } from './build-config.ts';
 
 const { schema: drizzleSchema } = buildSchema(db, buildSchemaConfig);
 
+// applyCustomResolvers ends with finalizeSchema, which removes every root
+// field not prefixed "my" or listed in PUBLIC_MUTATIONS.
 export const schema = applyCustomResolvers(drizzleSchema);
-blockUnscopedResolvers(schema); // blocks anything not prefixed "my" or in PUBLIC_MUTATIONS
 ```
 
 `buildSchemaConfig` lives in `server/src/schema/build-config.ts` and is shared by the runtime schema, `generate_schema.ts`, and the tests so the SDL is identical everywhere. It maps type names (`typeNameMapper`, which replaced v3's `prefixes`/`suffixes`/`singularTypes`) and turns off both aggregate features plus **all four generated CRUD mutations** — `insert`, `update`, `updateMany`, `delete`.
 
-Disabling all four means drizzle-graphql emits no `Mutation` type at all. That is deliberate: every write goes through a hand-written `my*` resolver, so the ~50 generated mutation fields existed only to be replaced with throwing resolvers by `blockUnscopedResolvers`, while still reaching client codegen (~400 lines of dead SDL). The consequence is that `extensionSDL` must **declare** `type Mutation` instead of extending it, and wire it as a root operation explicitly.
+Disabling all four means drizzle-graphql emits no `Mutation` type at all. That is deliberate: every write goes through a hand-written `my*` resolver, so the ~50 generated mutation fields existed only to be stripped again, while still reaching client codegen (~400 lines of dead SDL). The consequence is that `extensionSDL` must **declare** `type Mutation` instead of extending it, and wire it as a root operation explicitly.
+
+### `finalizeSchema`
+
+`applyCustomResolvers` returns `finalizeSchema(extended)` — a single `mapSchema` pass followed by `pruneSchema`. It does three things, and must run **last**, because `mapSchema` rebuilds the schema and any `field.resolve = ...` assignment made afterwards would land on a discarded copy.
+
+1. **Removes unscoped root fields.** drizzle-graphql generates a `<table>`/`<table>Single` query per table, none of them caller-scoped. There is no feature flag to suppress them (unlike the CRUD mutations), so they are dropped here — 80 of 94 root Query fields. They previously survived with a throwing resolver attached, which left them in the SDL, in introspection, and in client codegen as autocompletable operations that always failed at runtime. Removing the field moves the failure to validation.
+2. **Strips `keyHash` input surfaces** — `ApiKeyFilters`, `ApiKeyOrderBy`, `ApiKeyDistinctColumn`. See the ApiKey section below.
+3. **Prunes.** The removed root fields were the only reference to a chunk of generated input types. `pruneSchema` collects them. It does not gut the SDL — generated relation fields still carry `*Filters`/`*OrderBy` args, so the bulk of the input types stay.
+
+Adding a public (non-`my`) root field means adding its name to `PUBLIC_MUTATIONS` in `resolvers/index.ts`, or it will be removed. `server/test/schema/resolvers/index.test.ts` asserts both root types hold nothing else.
 
 ## Custom Resolver Pattern (extendSchema)
 
