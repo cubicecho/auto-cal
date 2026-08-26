@@ -1,9 +1,6 @@
 import {
-  GraphQLList,
-  GraphQLNonNull,
   type GraphQLObjectType,
   type GraphQLSchema,
-  GraphQLString,
   extendSchema,
   parse,
 } from 'graphql';
@@ -490,14 +487,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     return lists[0] ?? null;
   };
 
-  // drizzle-graphql generates ApiKey.scopes as String! but the DB stores a
-  // text[] array; patch the field type so GraphQL serializes it as [String!]!.
-  const apiKeyType = extended.getType('ApiKey') as GraphQLObjectType;
-  const apiKeyFields = apiKeyType.getFields();
-  (apiKeyFields.scopes as unknown as { type: unknown }).type =
-    new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(GraphQLString)));
   // The token hash must never leave the server. myApiKeys/myCreateApiKey
   // return raw DB rows, so the field itself has to go, not just its value.
+  const apiKeyType = extended.getType('ApiKey') as GraphQLObjectType;
+  const apiKeyFields = apiKeyType.getFields();
   // biome-ignore lint/performance/noDelete: assigning undefined would leave a dangling key that breaks printSchema; the key must be removed
   delete apiKeyFields.keyHash;
 
