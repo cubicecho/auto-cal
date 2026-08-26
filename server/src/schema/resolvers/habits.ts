@@ -6,7 +6,6 @@ import {
   habits,
 } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
-import { z } from 'zod';
 import {
   forbidden,
   notFound,
@@ -15,45 +14,13 @@ import {
 } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { startOfISOWeek } from '../../services/scheduler.ts';
-import { CompleteHabitInput, CreateHabitInput } from '../validators.ts';
+import {
+  CompleteHabitInput,
+  CreateHabitInput,
+  UpdateHabitInput,
+} from '../validators.ts';
 import { publishDataChanged } from './subscriptions.ts';
 import type { MutationMap, QueryMap } from './types.ts';
-
-const UpdateHabitInput = z.object({
-  id: z.string().uuid(),
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).optional(),
-  priority: z.number().int().min(0).max(100).optional(),
-  estimatedLength: z.number().int().min(1).max(1440).optional(),
-  activityTypeId: z.string().uuid().optional(),
-  frequencyCount: z.number().int().positive().min(1).max(30).optional(),
-  frequencyUnit: z.enum(['week', 'month'] as const).optional(),
-  minTimeBetweenInstances: z.number().int().min(0).nullable().optional(),
-  pomodoroEnabled: z.boolean().optional(),
-  pomodoroUnitLength: z.number().int().min(1).max(120).nullable().optional(),
-  pomodoroShortBreakLength: z
-    .number()
-    .int()
-    .min(1)
-    .max(60)
-    .nullable()
-    .optional(),
-  pomodoroUnitsBeforeLongBreak: z
-    .number()
-    .int()
-    .min(1)
-    .max(20)
-    .nullable()
-    .optional(),
-  pomodoroLongBreakLength: z
-    .number()
-    .int()
-    .min(1)
-    .max(120)
-    .nullable()
-    .optional(),
-  pomodoroMaxPerDay: z.number().int().min(1).max(100).nullable().optional(),
-});
 
 export const habitQueries: QueryMap<
   'myHabits' | 'myHabitStats' | 'myHabitDetail'

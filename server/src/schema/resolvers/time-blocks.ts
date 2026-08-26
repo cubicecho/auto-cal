@@ -1,41 +1,10 @@
 import { timeBlocks } from '@auto-cal/db/schema';
 import { eq, sql } from 'drizzle-orm';
-import { z } from 'zod';
 import { requireOwner, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
-import { CreateTimeBlockInput } from '../validators.ts';
+import { CreateTimeBlockInput, UpdateTimeBlockInput } from '../validators.ts';
 import { publishDataChanged } from './subscriptions.ts';
 import type { MutationMap, QueryMap } from './types.ts';
-
-const UpdateTimeBlockInput = z
-  .object({
-    id: z.string().uuid(),
-    activityTypeId: z.string().uuid().optional(),
-    daysOfWeek: z
-      .array(z.number().int().min(0).max(6))
-      .min(1)
-      .max(7)
-      .refine((days) => new Set(days).size === days.length, {
-        message: 'Days of week must be unique',
-      })
-      .optional(),
-    startTime: z
-      .string()
-      .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-      .optional(),
-    endTime: z
-      .string()
-      .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-      .optional(),
-    priority: z.number().int().min(0).max(100).optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.startTime && data.endTime) return data.endTime > data.startTime;
-      return true;
-    },
-    { message: 'End time must be after start time', path: ['endTime'] },
-  );
 
 export const timeBlockQueries: QueryMap<'myTimeBlocks'> = {
   myTimeBlocks: async (_parent, args, context) => {

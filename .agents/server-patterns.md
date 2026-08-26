@@ -255,6 +255,20 @@ All validators live in `server/src/schema/validators.ts`, with coverage in `serv
 const input = CreateTodoInput.parse(args.input);
 ```
 
+**Every** validator belongs in `validators.ts` — never declare one next to the
+resolver that uses it. `UpdateHabitInput` and `UpdateTimeBlockInput` were both
+declared twice, and the copy in `validators.ts` fell a schema change behind
+without anyone noticing, because the resolver was importing the other one and
+the tests were exercising the dead one.
+
+`server/test/schema/validator-drift.test.ts` walks every input type reachable
+from a `Mutation` argument and asserts it has a validator whose fields match
+the SDL exactly. A field added to the SDL but not to Zod is the failure worth
+catching: Zod strips unknown keys, so the resolver's `input.newField` is
+`undefined` forever and the setting silently does nothing. Adding a field means
+touching `extensionSDL`, the validator, and the resolver together; this test is
+what says so.
+
 ## Auth (JWT + Magic Links)
 
 ```typescript

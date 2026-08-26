@@ -136,6 +136,33 @@ export const UpdateHabitInput = z.object({
   priority: z.number().int().min(0).max(100).optional(),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
   activityTypeId: z.string().uuid().optional(),
+  frequencyCount: z.number().int().positive().min(1).max(30).optional(),
+  frequencyUnit: z.enum(['week', 'month'] as const).optional(),
+  minTimeBetweenInstances: z.number().int().min(0).nullable().optional(),
+  pomodoroEnabled: z.boolean().optional(),
+  pomodoroUnitLength: z.number().int().min(1).max(120).nullable().optional(),
+  pomodoroShortBreakLength: z
+    .number()
+    .int()
+    .min(1)
+    .max(60)
+    .nullable()
+    .optional(),
+  pomodoroUnitsBeforeLongBreak: z
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .nullable()
+    .optional(),
+  pomodoroLongBreakLength: z
+    .number()
+    .int()
+    .min(1)
+    .max(120)
+    .nullable()
+    .optional(),
+  pomodoroMaxPerDay: z.number().int().min(1).max(100).nullable().optional(),
 });
 
 export const CreateTimeBlockInput = z
@@ -157,26 +184,35 @@ export const CreateTimeBlockInput = z
     path: ['endTime'],
   });
 
-export const UpdateTimeBlockInput = z.object({
-  id: z.string().uuid(),
-  activityTypeId: z.string().uuid().optional(),
-  daysOfWeek: z
-    .array(z.number().int().min(0).max(6))
-    .min(1)
-    .max(7)
-    .refine((days) => new Set(days).size === days.length, {
-      message: 'Days of week must be unique',
-    })
-    .optional(),
-  startTime: z
-    .string()
-    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .optional(),
-  endTime: z
-    .string()
-    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .optional(),
-});
+export const UpdateTimeBlockInput = z
+  .object({
+    id: z.string().uuid(),
+    activityTypeId: z.string().uuid().optional(),
+    daysOfWeek: z
+      .array(z.number().int().min(0).max(6))
+      .min(1)
+      .max(7)
+      .refine((days) => new Set(days).size === days.length, {
+        message: 'Days of week must be unique',
+      })
+      .optional(),
+    startTime: z
+      .string()
+      .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .optional(),
+    endTime: z
+      .string()
+      .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .optional(),
+    priority: z.number().int().min(0).max(100).optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.startTime && data.endTime) return data.endTime > data.startTime;
+      return true;
+    },
+    { message: 'End time must be after start time', path: ['endTime'] },
+  );
 
 export const CompleteHabitInput = z.object({
   habitId: z.string().uuid(),
@@ -193,14 +229,14 @@ export const MyCreateApiKeyInput = z.object({
 // Bulk import (e.g. Google Tasks). Dates arrive as arbitrary ISO strings from
 // the export file, so they are validated loosely and parsed in the resolver;
 // an unparseable value becomes null rather than rejecting the whole import.
-const ImportTodoInput = z.object({
+export const ImportTodoInput = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).nullish(),
   dueAt: z.string().nullish(),
   completedAt: z.string().nullish(),
 });
 
-const ImportTodoListInput = z.object({
+export const ImportTodoListInput = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(2000).nullish(),
   activityTypeId: z.string().uuid(),
