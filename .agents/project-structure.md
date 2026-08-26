@@ -12,7 +12,7 @@ The repo is a **npm workspace** monorepo (`workspaces: ["client", "db", "server"
 |---------|------|
 | `db/` | Drizzle ORM schema, PGLite/Postgres connection, seed + migration runners |
 | `server/` | Node 22 GraphQL API (Express + Apollo) — runs `.ts` directly via `--experimental-strip-types` |
-| `client/` | React + Vite + Apollo Client + TanStack Router + ShadCN/Tailwind |
+| `client/` | Expo + expo-router + React Native Web + Apollo Client + ShadCN/NativeWind |
 
 Key tech choices: **Biome** (lint+format), `@vantreeseba/drizzle-graphql` (auto-generates GraphQL schema from Drizzle tables — feature-fork of upstream), **PGLite** (embedded Postgres default; swap to real Postgres via `DATABASE_URL`), **vitest** for tests.
 
@@ -86,43 +86,65 @@ Imports **must** include `.ts` extension (Node 22 `--experimental-strip-types`).
 
 ### `client/`
 
+Routes live in `client/app/` (expo-router owns that directory); everything else
+lives in `client/src/` and is reached through the `@/` alias.
+
 ```
+client/app/                  # File-based routes (expo-router)
+├── _layout.tsx              # Entry — ApolloProvider, dark mode, auth guard
+├── auth/
+│   ├── login.tsx            # /auth/login
+│   └── verify.tsx           # /auth/verify
+└── (app)/                   # Route group — authenticated screens, no URL segment
+    ├── _layout.tsx          # Nav (web) / tabs (native) + onboarding guard
+    ├── index.tsx            # /
+    ├── onboarding.tsx
+    ├── today.tsx
+    ├── calendar.tsx
+    ├── stats.tsx
+    ├── import-todos.tsx     # Google Tasks JSON import
+    ├── todo-lists.tsx       + todo-lists.native.tsx
+    ├── time-blocks.tsx      + time-blocks.native.tsx
+    ├── activity-types.tsx   + activity-types.native.tsx
+    ├── settings.tsx         + settings.native.tsx
+    ├── habits/              + habits.native.tsx
+    │   ├── _layout.tsx
+    │   ├── index.tsx        # /habits
+    │   └── [habitId].tsx    # /habits/:habitId
+    └── projects/            + projects.native.tsx
+        ├── _layout.tsx
+        ├── index.tsx        # /projects
+        └── [projectId].tsx  # /projects/:projectId
+
 client/src/
-├── main.tsx              # App entry — Apollo + Router providers
+├── apollo-client.ts      # The single ApolloClient — link split, typePolicies
+├── storage.ts            # Key-value store; no-ops off web (never touch localStorage)
+├── lib/cache.ts          # Cache invalidation helpers (replaces refetchQueries)
 ├── lib/utils.ts          # cn(), priorityLabel()
 ├── lib/google-tasks.ts   # parseGoogleTasks() — Takeout Tasks.json parser
-├── hooks/                # form-hook, etc.
+├── hooks/                # form-hook, useDataChanged, useListSection, …
 ├── components/
-│   ├── ui/               # ShadCN primitives + custom (route-error, inline-length-edit)
+│   ├── ui/               # ShadCN primitives + custom (route-error, page, …)
 │   └── domain/
 │       ├── activity-type/
 │       ├── todo/
 │       ├── todo-list/
 │       ├── habit/
-│       └── time-block/
-├── routes/               # File-based TanStack Router
-│   ├── __root.tsx
-│   ├── index.tsx
-│   ├── login.tsx
-│   ├── auth.verify.tsx
-│   ├── onboarding.tsx
-│   ├── dashboard.tsx
-│   ├── todos.tsx
-│   ├── todo-lists.tsx
-│   ├── habits.tsx
-│   ├── habits.index.tsx
-│   ├── habits.$habitId.tsx
-│   ├── time-blocks.tsx
-│   ├── activity-types.tsx
-│   ├── stats.tsx
-│   ├── import-todos.tsx      # Google Tasks JSON import (linked from Todos + Settings)
-│   └── settings.tsx
+│       ├── project/
+│       ├── time-block/
+│       ├── dashboard/
+│       ├── settings/
+│       └── onboarding/
 └── __generated__/        # GraphQL Codegen output (gitignored)
     ├── gql.ts
     └── graphql.ts
 ```
 
-There is no centralized `App.tsx` — routing and providers live in `main.tsx`.
+There is no `App.tsx` and no `main.tsx` — `app/_layout.tsx` is the entry point.
+
+A screen with a `.native.tsx` sibling exists twice: Metro resolves `.native`
+first on iOS/Android and ignores it on web. Changing one usually means changing
+both.
 
 ---
 
@@ -283,7 +305,7 @@ The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`
 `requestMagicLink(email)` → `RequestMagicLinkResult { ok, magicLink }`
 `verifyMagicLink(token)` → `VerifyMagicLinkResult { token, userId }`
 
-`PUBLIC_MUTATIONS` is a hard-coded set in `server/src/schema/index.ts`; new public endpoints must be added there.
+`PUBLIC_MUTATIONS` is a hard-coded set in `server/src/schema/resolvers/index.ts`; new public endpoints must be added there.
 
 ### Custom types
 
@@ -299,23 +321,29 @@ The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`
 
 ## 5. Client Routes
 
-| Path | File | Purpose |
-|------|------|---------|
-| `/` | `index.tsx` | Landing/redirect |
-| `/login` | `login.tsx` | Magic-link request form |
-| `/auth/verify` | `auth.verify.tsx` | Consumes magic-link token, stores JWT |
-| `/onboarding` | `onboarding.tsx` | 4-step wizard (activity types → time blocks → habits → todos) |
-| `/dashboard` | `dashboard.tsx` | Calendar + schedule sidebar |
-| `/todos` | `todos.tsx` | Todo list |
-| `/todo-lists` | `todo-lists.tsx` | Todo list CRUD (lists, not todos) |
-| `/habits` | `habits.tsx` + `habits.index.tsx` | Habit list |
-| `/habits/$habitId` | `habits.$habitId.tsx` | Habit detail (rates, periods) |
-| `/time-blocks` | `time-blocks.tsx` | Time block CRUD |
-| `/activity-types` | `activity-types.tsx` | Activity type CRUD |
-| `/stats` | `stats.tsx` | Analytics surface (todo.md #9) |
-| `/settings` | `settings.tsx` | iCal feed URL, re-run onboarding |
+All paths are relative to `client/app/`. `✕` marks a screen with a
+`.native.tsx` sibling that has to be kept in step.
 
-The auth guard lives in `__root.tsx` — redirects to `/login` without a token, `/onboarding` if `localStorage.onboarding_done` is unset.
+| Path | File | Native | Purpose |
+|------|------|--------|---------|
+| `/auth/login` | `auth/login.tsx` | | Magic-link request form |
+| `/auth/verify` | `auth/verify.tsx` | | Consumes magic-link token, stores JWT |
+| `/` | `(app)/index.tsx` | | Landing/redirect |
+| `/onboarding` | `(app)/onboarding.tsx` | | 4-step wizard (activity types → time blocks → habits → todos) |
+| `/today` | `(app)/today.tsx` | | Today's schedule + quick complete |
+| `/calendar` | `(app)/calendar.tsx` | | Week calendar + schedule sidebar |
+| `/todo-lists` | `(app)/todo-lists.tsx` | ✕ | Lists and their todos |
+| `/projects` | `(app)/projects/index.tsx` | ✕ | Project list |
+| `/projects/:projectId` | `(app)/projects/[projectId].tsx` | ✕ | Project detail + notes |
+| `/habits` | `(app)/habits/index.tsx` | ✕ | Habit list |
+| `/habits/:habitId` | `(app)/habits/[habitId].tsx` | ✕ | Habit detail (rates, periods) |
+| `/time-blocks` | `(app)/time-blocks.tsx` | ✕ | Time block CRUD |
+| `/activity-types` | `(app)/activity-types.tsx` | ✕ | Activity type CRUD |
+| `/stats` | `(app)/stats.tsx` | | Analytics surface |
+| `/import-todos` | `(app)/import-todos.tsx` | | Google Tasks JSON import |
+| `/settings` | `(app)/settings.tsx` | ✕ | iCal feed URL, API keys, re-run onboarding |
+
+The auth guard lives in `app/_layout.tsx` — redirects to `/auth/login` without a token. The onboarding guard lives in `app/(app)/_layout.tsx` — redirects to `/onboarding` if `onboarding_done` is unset.
 
 ---
 
@@ -367,7 +395,7 @@ All `__generated__/` directories are gitignored.
 |---------|---------|
 | `npm run dev` | Frontend + backend (concurrently) |
 | `npm run dev:server` | API only on :3001 |
-| `npm run dev:client` | Vite on :3000 |
+| `npm run dev:client` | Expo dev server on :3000 |
 | `npm run typecheck` | `tsc --noEmit` across packages |
 | `npm run lint` / `lint:fix` | Biome |
 | `npm test` | vitest |
@@ -376,5 +404,5 @@ All `__generated__/` directories are gitignored.
 | `npm run db:studio` | Drizzle Studio GUI |
 | `npm run codegen` | Client GraphQL codegen (server must be up) |
 | `npm run codegen:server` | Emit server SDL + resolver types |
-| `npm run build` | codegen + Vite + tsc |
+| `npm run build` | codegen + `expo export --platform web` + server tsc |
 | `npm run build:docker` | `docker build -t auto-cal .` |

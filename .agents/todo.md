@@ -15,7 +15,7 @@
 - `requestMagicLink` / `verifyMagicLink` mutations exist (`server/src/schema/resolvers/auth.ts`)
 - JWT sign/verify via `jose` in `server/src/auth.ts`
 - Login flow (`/login`) and verify route (`/auth/verify`) live in the client
-- Apollo client attaches `Bearer <token>` from `localStorage.auth_token`; expired-auth errors redirect to `/login`
+- Apollo client attaches `Bearer <token>` from `storage`'s `auth_token`; `UNAUTHENTICATED`/`FORBIDDEN` errors redirect to `/auth/login`
 - Server context extracts JWT first, falls back to raw UUID for dev/seed (dev-only, guarded by `NODE_ENV !== 'production'`)
 
 **What's left:** The magic link is logged to the server console but no email is actually sent. In dev the `requestMagicLink` mutation also returns the link in the response; in prod the response has `magicLink: null`.
@@ -70,12 +70,12 @@
 
 ## P2 — Quality of life
 
-### #10 — URL-driven filters (TanStack Router search params)
+### #10 — URL-driven filters (expo-router search params)
 **Problem:** Filters (activity type, completion status) are local React state — they reset on navigation and aren't shareable.  
 **Work:**
-- Migrate filter state to TanStack Router search params for `/todos`, `/habits`, `/time-blocks`
-- Use `validateSearch` with Zod schemas
-- Preserve filter on back/forward navigation
+- Migrate filter state to `useLocalSearchParams()` for `/todo-lists`, `/habits`, `/time-blocks`
+- Parse and validate the raw params with Zod — expo-router hands back `string | string[]` with no schema layer of its own
+- Preserve filter on back/forward navigation (web only; native has no URL bar)
 
 **Acceptance:** Filtering todos by activity type updates the URL; refreshing the page preserves the filter.
 

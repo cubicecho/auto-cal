@@ -5,7 +5,7 @@
 Single-stage image — build must run **outside** Docker before `docker build`:
 
 ```bash
-npm run build       # codegen + vite + tsc
+npm run build       # codegen + expo export --platform web + server tsc
 docker build -t auto-cal .
 ```
 

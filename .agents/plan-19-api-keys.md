@@ -145,7 +145,7 @@ input CreateApiKeyInput {
 }
 ```
 
-New resolver file `server/src/schema/resolvers/api-keys.ts` following the existing `apply*Resolvers` pattern. Validators in `validators.ts`: `name` min 1 / max 60; `scopes` non-empty, subset of `API_KEY_SCOPES`; `expiresAt` must be in the future.
+New resolver file `server/src/schema/resolvers/api-keys.ts` following the existing typed-resolver-map pattern. Validators in `validators.ts`: `name` min 1 / max 60; `scopes` non-empty, subset of `API_KEY_SCOPES`; `expiresAt` must be in the future.
 
 **Important guard:** API-key-bound requests must not be able to mint or revoke keys. In `myCreateApiKey` and `myRevokeApiKey`: `if (context.apiKey) throw new Error('API keys cannot manage other keys')`. Forces management through the web session.
 

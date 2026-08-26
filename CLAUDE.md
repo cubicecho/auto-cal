@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Dev
 npm run dev              # frontend + backend concurrently
 npm run dev:server       # GraphQL API only (localhost:3001)
-npm run dev:client       # Vite client only (localhost:3000)
+npm run dev:client       # Expo dev server only (localhost:3000)
 
 # Quality — run both before every commit; CI fails if either does not pass
 npm test                 # vitest (all suites)
@@ -29,7 +29,7 @@ npm run codegen:server   # regenerate server resolver types from schema.graphql
 npm run codegen          # generate:schema → codegen:server → client typed operations
 
 # Build / Docker
-npm run build            # codegen + vite + tsc
+npm run build            # codegen + expo export --platform web + server tsc
 npm run build:docker     # docker build -t auto-cal .
 ```
 
@@ -98,12 +98,14 @@ exporting typed maps, and spread them into the `attach()` calls in
 
 Since `todos.activityTypeId` does not exist on the DB row, callers of `computeSchedule` fetch `todoLists` alongside `todos`, build a `Map<listId, activityTypeId>`, and enrich each todo before passing it in.
 
-**Auth chain** (in `server/src/index.ts`): Bearer JWT → API key (if `isApiKey(raw)` prefix check) → raw-UUID fallback. The UUID fallback is currently active in **all** environments (not prod-guarded) — tracked as a known issue in `.agents/todo.md` #25.
+**Auth chain** (in `server/src/index.ts`): Bearer JWT → API key (if `isApiKey(raw)` prefix check) → `BYPASS_AUTH_UUID` → raw-UUID fallback. The raw-UUID fallback is guarded by `NODE_ENV !== 'production'`. `BYPASS_AUTH_UUID` is **not** — setting it to a user id grants passwordless access to that account in any environment, production included. It logs a warning on boot; never set it on a deployed instance.
 
 **API keys:** format `acal_<base64url>`. Only the SHA-256 hash is stored (`api_keys.keyHash`). Token is returned once on creation. `context.apiKey` is set when an API key is used; `myCreateApiKey` / `myRevokeApiKey` throw if `context.apiKey` is set (keys can't manage keys).
 
 ### `client`
-React + Vite + Apollo Client + TanStack Router (file-based). Auth guard in `__root.tsx` redirects to `/login` (no token) or `/onboarding` (no `localStorage.onboarding_done`). There is no `App.tsx` — providers live in `main.tsx`.
+Expo + expo-router (file-based) + React Native Web + Apollo Client. Routes live in `client/app/`, not `client/src/`; there is no `App.tsx` or `main.tsx` — `app/_layout.tsx` is the entry point and holds the `ApolloProvider`, the dark-mode effect, and the auth guard (redirects to `/auth/login` without a token). `app/(app)/_layout.tsx` holds the nav and the onboarding guard (redirects to `/onboarding` unless `onboarding_done` is set).
+
+Web and native diverge by file extension: `todo-lists.tsx` is the web screen, `todo-lists.native.tsx` the native one. Metro picks the `.native` variant on iOS/Android and the plain one on web — a change to a screen usually needs to land in both. Never touch `window` or `localStorage` directly; use `client/src/storage.ts`, which is a no-op off web.
 
 GraphQL operations are colocated with the component that uses them. Fragments are defined in the leaf component and spread in the route-level query.
 
@@ -155,7 +157,7 @@ Detailed patterns and decisions live in `.agents/`:
 - [`.agents/db-patterns.md`](.agents/db-patterns.md) — Drizzle table definitions, dual-backend connection, query patterns, migrations
 - [`.agents/server-patterns.md`](.agents/server-patterns.md) — Full resolver authoring guide, Zod constraint table, auth details, DataLoader usage, iCal endpoint
 - [`.agents/graphql-patterns.md`](.agents/graphql-patterns.md) — Full SDL, naming conventions, cache invalidation
-- [`.agents/client-patterns.md`](.agents/client-patterns.md) — Apollo Client setup, TanStack Router/Form, fragment colocation, ShadCN/Tailwind patterns
+- [`.agents/client-patterns.md`](.agents/client-patterns.md) — Apollo Client setup, expo-router, cache invalidation, fragment colocation, ShadCN/Tailwind patterns
 - [`.agents/scheduling.md`](.agents/scheduling.md) — Scheduling algorithm, writeback service, habit instance generation, pre-placement lock
 - [`.agents/deployment.md`](.agents/deployment.md) — Docker, environment variables, PGLite vs Postgres
 - [`.agents/todo.md`](.agents/todo.md) — Open issues and deferred work (read before starting new features)

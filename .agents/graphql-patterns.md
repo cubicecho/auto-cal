@@ -21,21 +21,24 @@ npm run codegen
 |---------|---------------|---------|
 | User-scoped queries | `my<Resource>` | `myTodos`, `myProfile` |
 | User-scoped mutations | `my<Action><Resource>` | `myCreateTodo`, `myUpdateHabit` |
-| Public mutations | Literal name (no `my` prefix); must also be added to `PUBLIC_MUTATIONS` set in `schema/index.ts` | `requestMagicLink`, `verifyMagicLink` |
+| Public mutations | Literal name (no `my` prefix); must also be added to `PUBLIC_MUTATIONS` set in `schema/resolvers/index.ts` | `requestMagicLink`, `verifyMagicLink` |
 | Input types | `<Action><Resource>Args` | `CreateTodoArgs`, `UpdateHabitArgs` |
 
 The full SDL (drizzle-generated + extensions) is emitted to `server/src/__generated__/schema.graphql` by `npm run codegen:server`.
 
 ## Extending the Schema
 
-Add new fields by extending `extensionSDL` in `server/src/schema/resolvers.ts`:
+Add new fields by extending `extensionSDL` in `server/src/schema/resolvers/index.ts`:
 
 ```typescript
 const extensionSDL = `
   extend type Query {
     myNewThing(id: ID!): NewThing
   }
-  extend type Mutation {
+  # Mutation is declared, not extended — build-config disables every generated
+  # mutation, so there is no generated Mutation type to extend. Add the field
+  # to the existing declared block.
+  type Mutation {
     myCreateNewThing(input: CreateNewThingArgs!): NewThing!
   }
   input CreateNewThingArgs {
@@ -317,7 +320,7 @@ mutation RequestMagicLink($email: String!) {
 
 mutation VerifyMagicLink($token: String!) {
   verifyMagicLink(token: $token) {
-    token    # JWT session token — store as auth_token in localStorage
+    token    # JWT session token — store as auth_token via client/src/storage.ts
     userId
   }
 }

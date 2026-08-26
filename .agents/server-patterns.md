@@ -15,21 +15,29 @@ This gives the dev-style passwordless login on local/secure-network deployments
 that have no email provider. In production without the flag, the link is only
 logged server-side and the response returns `magicLink: null`.
 
-## Auth — UUID Bearer Fallback (Dev Only, currently active in prod too — see todo.md #25)
+## Auth — UUID Bearer Fallback (Dev Only)
 
-The server context accepts a raw UUID as a Bearer token (dev convenience). The fallback runs in **all environments today** — there is no `NODE_ENV` guard. The check lives in `server/src/index.ts` after JWT verification fails:
+The server context accepts a raw UUID as a Bearer token (dev convenience). The check lives in `server/src/index.ts` after JWT and API-key verification both fail:
 
 ```typescript
-// Try JWT first
-const payload = await verifyToken(rawToken);
-if (payload?.sub) return { db, userId: payload.sub, loaders };
+// Env-var bypass: accept one specific UUID in ANY environment, production
+// included. Logs a warning on boot.
+const bypassUuid = process.env.BYPASS_AUTH_UUID;
+if (bypassUuid && rawToken === bypassUuid)
+  return { db, userId: rawToken, loaders, appBaseUrl: baseUrl };
 
-// Fall back to raw UUID for backwards-compat with dev/seed
-if (/^[0-9a-f-]{36}$/i.test(rawToken))
-  return { db, userId: rawToken, loaders };
+// General fallback: any UUID is a user id — dev and test only.
+if (process.env.NODE_ENV !== 'production' && /^[0-9a-f-]{36}$/i.test(rawToken))
+  return { db, userId: rawToken, loaders, appBaseUrl: baseUrl };
 ```
 
-This must be guarded with `NODE_ENV !== 'production'` (or removed) before any real public deployment. Tracked in `todo.md` #25.
+The general fallback is production-guarded. `BYPASS_AUTH_UUID` deliberately is
+not — it exists for local/secure-network deployments with no email provider,
+the same niche `EXPOSE_MAGIC_LINK` serves. It is a single-account password
+sitting in an env var: anyone who learns the value is logged in as that user
+with no second factor and no expiry. Never set it on an internet-facing
+instance, and do not "fix" the missing guard by adding one — the flag has no
+purpose in an environment where it would be guarded off.
 
 ## mySchedule vs DB scheduledAt
 
@@ -332,7 +340,7 @@ function stripKeyHash(schema: GraphQLSchema): GraphQLSchema {
 - `hashApiKey(raw)` — SHA-256 hex
 - `constantTimeEqual(a, b)` — timing-safe comparison
 
-**Auth chain (in `index.ts`):** JWT → API key (if `isApiKey(raw)`) → UUID fallback. On a valid key hit, `lastUsedAt` is updated fire-and-forget and the context gains `apiKey: { id, scopes }`.
+**Auth chain (in `index.ts`):** JWT → API key (if `isApiKey(raw)`) → `BYPASS_AUTH_UUID` → UUID fallback (dev only). On a valid key hit, `lastUsedAt` is updated fire-and-forget and the context gains `apiKey: { id, scopes }`.
 
 **No-self-management guard:** `myCreateApiKey` and `myRevokeApiKey` both throw `'API keys cannot manage other keys'` when `context.apiKey` is set. API key holders cannot create or revoke keys — only interactive (JWT) sessions can.
 

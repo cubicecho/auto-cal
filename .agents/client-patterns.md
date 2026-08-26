@@ -1,16 +1,33 @@
 # Client Patterns
 
-React + Vite + Apollo Client + TanStack Router + TanStack Form + ShadCN/Radix + Tailwind.
+Expo + expo-router + React Native Web + Apollo Client + TanStack Form +
+ShadCN/Radix + NativeWind/Tailwind.
+
+Routes live in `client/app/`; everything else (components, hooks, lib, the
+Apollo client) lives in `client/src/` and is imported via the `@/` alias.
+
+**Web and native are separate files.** `todo-lists.tsx` is the web screen and
+`todo-lists.native.tsx` the native one; Metro resolves `.native` first on
+iOS/Android and ignores it on web. A change to a screen that exists in both
+usually has to land in both — grep for the `.native` sibling before assuming
+you are done.
+
+**Never touch `window`, `document`, or `localStorage` directly.** They do not
+exist on native. `client/src/storage.ts` is the sanctioned key-value store and
+no-ops off web.
 
 ## Installed ShadCN Components
 
 Only use components that are already installed — do not add new ones without checking first. Files live in `client/src/components/ui/`.
 
-ShadCN primitives (11): `button` `card` `dialog` `field` `form` `input` `label` `select` `tabs` `textarea` `tooltip`
+ShadCN primitives (13): `button` `calendar` `card` `dialog` `field` `form` `input` `label` `popover` `select` `switch` `tabs` `textarea` `tooltip`
 
-Custom (2, not from ShadCN — keep tagged as such):
+Custom (the rest — keep tagged as such): `color-bar` `color-dot`
+`confirm-dialog` `date-time-input` `detail-header` `detail-page`
+`form-dialog` `page` `query-state` `section-heading` `segmented`
+`status-chip`, plus:
 - `inline-length-edit` — quick-edit duration chip used on list items
-- `route-error` — error boundary used in `__root.tsx` and route components
+- `route-error` — error boundary used by route components
 
 ## Error Handling Conventions
 
@@ -20,99 +37,122 @@ Custom (2, not from ShadCN — keep tagged as such):
 
 ## Apollo Client Setup
 
+`client/src/apollo-client.ts` exports a single `apolloClient`; `app/_layout.tsx`
+wraps the tree in `<ApolloProvider>`. Four things there are worth knowing:
+
+- **The link is split.** Subscriptions go over `GraphQLWsLink`, everything else
+  over HTTP. The WS URL is derived from `EXPO_PUBLIC_API_URL`, or from
+  `window.location` when that is unset (production serves the bundle and the
+  API from the same Express process).
+- **`ErrorLink` matches `extensions.code`**, not the message —
+  `UNAUTHENTICATED` or `FORBIDDEN` clears the token and bounces to
+  `/auth/login`. It used to string-match `'Not authenticated'`, so rewording a
+  server error silently disabled session expiry.
+- **`ScheduledItem` is not normalized** (`typePolicies: { ScheduledItem:
+  { keyFields: false } }`). Its `id` is the id of the todo or habit behind it,
+  so the same id recurs across weeks; normalizing it made one week's schedule
+  overwrite another's.
+- **Default `fetchPolicy` is `cache-and-network`**, which is why an evicted
+  root field re-fetches on its own.
+
+## Cache Invalidation
+
+`refetchQueries: ['SomeOperationName']` is banned — see `client/src/lib/cache.ts`
+for why and what replaced it. In short: mutations return the entity they
+changed and Apollo's normalized cache patches every view holding it, so most
+mutations need nothing at all. The exceptions:
+
 ```typescript
-// client/src/main.tsx
-const httpLink = new HttpLink({
-  uri: '/graphql',
-  fetch: (uri, options) => {
-    const token = localStorage.getItem('auth_token');
-    const headers = new Headers(options?.headers as HeadersInit | undefined);
-    if (token) headers.set('authorization', `Bearer ${token}`);
-    return fetch(uri as RequestInfo, { ...(options as RequestInit), headers });
+import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
+
+// Membership changed — evict the root field, not the pages reading it.
+useMutation(CREATE_TODO, {
+  update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
+});
+
+// Deleted — drop the entity; Apollo filters dangling refs out of every list.
+useMutation(DELETE_TODO, {
+  update: (cache, _result, { variables }) => {
+    if (variables) evictEntity(cache, 'Todo', variables.id);
+    invalidate(cache, ...DERIVED);
   },
 });
-
-const errorLink = onError(({ graphQLErrors }) => {
-  if (graphQLErrors?.some((e) => e.message.includes('Not authenticated'))) {
-    localStorage.removeItem('auth_token');
-    window.location.replace('/login');
-  }
-});
-
-const client = new ApolloClient({
-  link: from([errorLink, httpLink]),
-  cache: new InMemoryCache(),
-  defaultOptions: { watchQuery: { fetchPolicy: 'cache-and-network' } },
-});
 ```
+
+`DERIVED` is the set of server-computed fields (`mySchedule` and the stats
+queries) that no mutation result can patch. Spread it into any write that could
+move the schedule. `RootField` is a checked union and `cache.test.ts` asserts it
+against the SDL.
 
 ## Nav Structure
 
 Top nav (hidden during onboarding): **Dashboard · Todos · Todo Lists · Habits · Time Blocks · Activity Types · Stats** + Settings icon + Sign out + dark mode toggle.
 
-Dark mode is fully supported — toggle stored in `localStorage.theme`, falls back to `prefers-color-scheme`. All new UI **must** include `dark:` Tailwind variants. The `dark` class is toggled on `document.documentElement`.
+Dark mode is fully supported — the choice is stored under `theme` via `storage`, falling back to `prefers-color-scheme`. All new UI **must** include `dark:` Tailwind variants. On web the `dark` class is toggled on `document.documentElement` by `useDarkMode` in `app/_layout.tsx`; the effect is a no-op on native.
 
 ## Onboarding Flow
 
-New users are redirected to `/onboarding` automatically (before dashboard) if `localStorage.onboarding_done` is not set. The wizard has 4 steps:
+New users are redirected to `/onboarding` automatically if `onboarding_done` is not set. The wizard has 4 steps:
 
 1. Activity Types (required)
 2. Time Blocks (required)
 3. Habits (optional — skippable)
 4. Todos (optional — skippable; requires at least one todo list to exist before adding a todo — link out to `/todo-lists` if empty)
 
-Completion sets `localStorage.onboarding_done = '1'`. Re-runnable from Settings with `?force=true`. The auth guard in `__root.tsx` handles the redirect — do not replicate this logic elsewhere.
+Completion sets `onboarding_done = '1'` via `storage`. Re-runnable from Settings
+with `?force=true`. The guard in `app/(app)/_layout.tsx` handles the redirect —
+do not replicate this logic elsewhere.
 
 ## Routes
 
-File-based routes under `client/src/routes/`:
+File-based routes under `client/app/`. `(app)` is a route group — it does not
+appear in the URL, it exists so every authenticated screen shares one layout.
+Screens marked ✕ have a `.native.tsx` sibling that must be kept in step.
 
-| File | Path | Notes |
-|------|------|-------|
-| `__root.tsx` | `/` | Layout + auth guard — redirects to `/login` if no token, `/onboarding` if not set up |
-| `index.tsx` | `/` | Landing/redirect |
-| `login.tsx` | `/login` | Magic-link request form |
-| `auth.verify.tsx` | `/auth/verify` | Consumes magic-link token, stores JWT, redirects |
-| `onboarding.tsx` | `/onboarding?step=1` | 4-step setup wizard |
-| `dashboard.tsx` | `/dashboard` | Main schedule view |
-| `todos.tsx` | `/todos` | Todo list |
-| `todo-lists.tsx` | `/todo-lists` | Todo list (lists, not todos) CRUD |
-| `habits.tsx` + `habits.index.tsx` | `/habits` | Habit list (parent + index) |
-| `habits.$habitId.tsx` | `/habits/$habitId` | Habit detail (rates, periods) |
-| `time-blocks.tsx` | `/time-blocks` | Time block management |
-| `activity-types.tsx` | `/activity-types` | Activity type management |
-| `stats.tsx` | `/stats` | Analytics surface (composite score, charts — see todo.md #9 for build-out) |
-| `settings.tsx` | `/settings` | iCal feed URL + re-run onboarding wizard |
+| File | Path | Native | Notes |
+|------|------|--------|-------|
+| `_layout.tsx` | — | | ApolloProvider + dark mode + auth guard (→ `/auth/login`) |
+| `auth/login.tsx` | `/auth/login` | | Magic-link request form |
+| `auth/verify.tsx` | `/auth/verify` | | Consumes the token, stores the JWT, redirects |
+| `(app)/_layout.tsx` | — | | Nav (web) / tabs (native) + onboarding guard |
+| `(app)/index.tsx` | `/` | | Landing/redirect |
+| `(app)/onboarding.tsx` | `/onboarding?step=1` | | 4-step setup wizard |
+| `(app)/today.tsx` | `/today` | | Today's schedule |
+| `(app)/calendar.tsx` | `/calendar` | | Week calendar |
+| `(app)/todo-lists.tsx` | `/todo-lists` | ✕ | Lists + their todos |
+| `(app)/projects/` | `/projects`, `/projects/[projectId]` | ✕ | Project list + detail with notes |
+| `(app)/habits/` | `/habits`, `/habits/[habitId]` | ✕ | Habit list + detail (rates, periods) |
+| `(app)/time-blocks.tsx` | `/time-blocks` | ✕ | Time block management |
+| `(app)/activity-types.tsx` | `/activity-types` | ✕ | Activity type management |
+| `(app)/stats.tsx` | `/stats` | | Analytics (composite score, charts) |
+| `(app)/import-todos.tsx` | `/import-todos` | | Bulk import (Google Tasks export) |
+| `(app)/settings.tsx` | `/settings` | ✕ | iCal feed URL, API keys, re-run onboarding |
 
-Auth flow: `requestMagicLink` → magic link logged to server console (and returned in dev) → user visits `/auth/verify?token=…` → `verifyMagicLink` returns `{ token, userId }` → store `token` as `auth_token` in `localStorage` → redirect to `/dashboard`.
+Auth flow: `requestMagicLink` → link logged to the server console (and returned
+when `magicLinkExposed()`) → user visits `/auth/verify?token=…` →
+`verifyMagicLink` returns `{ token, userId }` → stored as `auth_token` via
+`storage` → redirect.
 
-## TanStack Router
+## expo-router
 
-
+Navigation is `<Link href="…">` and `useRouter()` from `expo-router`; params
+come from `useLocalSearchParams()`. Directory names in brackets are dynamic
+segments — `habits/[habitId].tsx` serves `/habits/:habitId`.
 
 ```typescript
-// client/src/routes/__root.tsx
-export const Route = createRootRouteWithContext<MyRouterContext>()({
-  component: RootLayout,
-  beforeLoad: async ({ location }) => {
-    if (!localStorage.getItem('auth_token') && !location.pathname.startsWith('/login')) {
-      throw redirect({ to: '/login' });
-    }
-  },
-});
+// client/app/_layout.tsx — the auth guard, in full
+function AuthGuard({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const token = storage.getItem('auth_token');
+  if (!token && !pathname.startsWith('/auth')) {
+    return <Redirect href="/auth/login" />;
+  }
+  return <>{children}</>;
+}
 ```
 
-Router context carries `apolloClient` and `preloadQuery`:
-```typescript
-// client/src/main.tsx
-const router = createRouter({
-  routeTree,
-  context: {
-    apolloClient: client,
-    preloadQuery: createQueryPreloader(client),
-  },
-});
-```
+There is no router context and no route loaders — screens fetch with `useQuery`
+directly.
 
 ## GraphQL Operations (Colocated)
 
@@ -152,7 +192,9 @@ const CREATE_TODO = graphql(`
 
 // Usage
 const { data, loading } = useQuery(MY_TODOS, { variables: { completed: false } });
-const [createTodo] = useMutation(CREATE_TODO, { refetchQueries: ['GetMyTodos'] });
+const [createTodo] = useMutation(CREATE_TODO, {
+  update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
+});
 ```
 
 ## Fragment Colocation
@@ -244,8 +286,18 @@ client/src/components/
     todo/         — TodoItem, TodoForm, TodoList
     habit/        — HabitItem, HabitForm
     time-block/   — TimeBlockItem, TimeBlockForm
+    project/      — ProjectForm, ProjectDetail, ProjectNotesEditor
+    settings/     — ApiKeyManager
     dashboard/    — CalendarView, ScheduleView
     onboarding/   — Step*.tsx wizard panels
+    CompletionDialog.tsx — shared complete-with-actual-length prompt
+
+client/src/
+  apollo-client.ts — the single ApolloClient (link split, typePolicies)
+  storage.ts       — key-value store; no-ops off web
+  lib/cache.ts     — cache invalidation helpers (see above)
+  hooks/           — form-hook (useAppForm), useDataChanged,
+                     useListSection, useTodosUpdated, useTodoListsUpdated
 ```
 
 ## Shared UI Primitives
