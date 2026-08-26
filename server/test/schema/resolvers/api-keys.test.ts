@@ -72,6 +72,19 @@ describe('api-key resolvers', () => {
       expect(result.errors).toBeUndefined();
       expect((result.data?.myApiKeys as unknown[]).length).toBe(1);
     });
+
+    it('does not expose keyHash on the ApiKey type', async () => {
+      const { id: userId } = await seedUser(db, 'apikeys-nohash@example.com');
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myApiKeys { id keyHash } }',
+      );
+      expect(result.errors?.[0]?.message).toMatch(
+        /Cannot query field "keyHash"/,
+      );
+    });
   });
 
   // ─── myCreateApiKey ───────────────────────────────────────────────────────────

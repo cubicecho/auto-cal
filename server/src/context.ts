@@ -2,7 +2,6 @@ import type {
   ActivityType,
   ApiKeyScope,
   DB,
-  Project,
   ProjectNote,
   TodoList,
 } from '@auto-cal/db';
@@ -29,13 +28,6 @@ export function createLoaders(db: DB) {
       const rows = (await db.query.todoLists.findMany({
         where: { id: { in: [...ids] } },
       })) as TodoList[];
-      const byId = new Map(rows.map((r) => [r.id, r]));
-      return ids.map((id) => byId.get(id) ?? null);
-    }),
-    project: new DataLoader<string, Project | null>(async (ids) => {
-      const rows = (await db.query.projects.findMany({
-        where: { id: { in: [...ids] } },
-      })) as Project[];
       const byId = new Map(rows.map((r) => [r.id, r]));
       return ids.map((id) => byId.get(id) ?? null);
     }),

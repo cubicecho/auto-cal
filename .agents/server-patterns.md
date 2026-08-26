@@ -223,7 +223,7 @@ Personal, per-user, revocable Bearer tokens for headless integrations.
 
 **Token format:** `acal_<base64url(32 random bytes)>` — the `acal_` prefix lets `isApiKey()` distinguish these from JWTs and UUIDs.
 
-**Hash stored, not token:** Only the SHA-256 hex of the full token is persisted in `api_keys.keyHash`. The raw token is returned once to the user on creation and never stored.
+**Hash stored, not token:** Only the SHA-256 hex of the full token is persisted in `api_keys.keyHash`. The raw token is returned once to the user on creation and never stored. The `keyHash` field is deleted from the `ApiKey` GraphQL type in `applyCustomResolvers`, so even resolvers that return raw rows cannot leak it.
 
 **Generation and verification live in `server/src/api-keys.ts`:**
 - `generateApiKey()` — creates a token + hash + 8-char display prefix
@@ -235,24 +235,22 @@ Personal, per-user, revocable Bearer tokens for headless integrations.
 
 **No-self-management guard:** `myCreateApiKey` and `myRevokeApiKey` both throw `'API keys cannot manage other keys'` when `context.apiKey` is set. API key holders cannot create or revoke keys — only interactive (JWT) sessions can.
 
-## DataLoader (N+1 Prevention)
+## Relation Fields & DataLoaders (N+1 Prevention)
 
-Loaders are created per-request in context. Use them in type resolvers:
+drizzle-graphql v4 attaches a resolver to every Drizzle-relation field: it returns eager data when the parent query pre-fetched it, and otherwise batches sibling loads in the same execution tick into one IN-clause query. Plain rows returned by custom resolvers therefore resolve their relation fields with no extra wiring.
+
+Per-request DataLoaders (in `context.ts`) are only for fields the generated machinery can't handle — derived hops and custom SDL fields:
 
 ```typescript
-// Habit and TimeBlock: direct activityTypeId
-activityType: async (parent, _args, context: Context) => {
-  if (!parent.activityTypeId) return null;
-  return context.loaders.activityType.load(parent.activityTypeId);
-},
-
-// Todo: derived via the list. Two batched loader calls, both DataLoader-deduped.
+// Todo.activityType: derived via the list. Two batched loader calls, both DataLoader-deduped.
 const todoActivityType = async (parent, _args, context: Context) => {
   const list = await context.loaders.todoList.load(parent.listId);
   if (!list) return null;
   return context.loaders.activityType.load(list.activityTypeId);
 };
 ```
+
+`Project.notes` is the one Drizzle relation whose generated resolver is overridden: the notes must come back in `position` order (see `myReorderProjectNotes`), which the generated lazy loader does not apply.
 
 ## iCal Endpoint
 

@@ -49,6 +49,30 @@ describe('todo resolvers', () => {
       expect(items.every((i) => i.title !== 'Theirs')).toBe(true);
     });
 
+    it('resolves the list relation and derived activityType on plain rows', async () => {
+      const { id: userId } = await seedUser(db, 'todos-relations@example.com');
+      const at = await seedActivityType(db, userId, 'Deep Work');
+      const list = await seedTodoList(db, userId, at.id);
+      await seedTodo(db, userId, list.id, { title: 'With relations' });
+
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos { title list { id name } activityType { id name } } }',
+      );
+      expect(result.errors).toBeUndefined();
+      const items = result.data?.myTodos as Array<{
+        title: string;
+        list: { id: string; name: string } | null;
+        activityType: { id: string; name: string } | null;
+      }>;
+      const todo = items.find((i) => i.title === 'With relations');
+      expect(todo?.list?.id).toBe(list.id);
+      expect(todo?.activityType?.id).toBe(at.id);
+      expect(todo?.activityType?.name).toBe('Deep Work');
+    });
+
     it('filters by listId', async () => {
       const { id: userId } = await seedUser(db, 'todos-listfilter@example.com');
       const at = await seedActivityType(db, userId);

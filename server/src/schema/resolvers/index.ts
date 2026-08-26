@@ -442,37 +442,12 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   applyImportResolvers(mutationFields);
   applySubscriptionResolvers(subscriptionFields);
 
-  // Field resolvers: activityType on Habit and TimeBlock load directly from
-  // their activityTypeId. Todo.activityType derives from its list.
-  type RowWithActivityTypeId = { activityTypeId: string };
-
-  function resolveActivityType(
-    parent: RowWithActivityTypeId,
-    _args: unknown,
-    context: Context,
-  ) {
-    return context.loaders.activityType.load(parent.activityTypeId);
-  }
-
-  const habitType = extended.getType('Habit') as GraphQLObjectType;
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  habitType.getFields().activityType!.resolve = resolveActivityType;
-
-  const timeBlockType = extended.getType('TimeBlock') as GraphQLObjectType;
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  timeBlockType.getFields().activityType!.resolve = resolveActivityType;
-
-  const todoListType = extended.getType('TodoList') as GraphQLObjectType;
-  const todoListFields = todoListType.getFields();
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  todoListFields.activityType!.resolve = resolveActivityType;
-  // biome-ignore lint/style/noNonNullAssertion: auto-generated from todoLists.project relation
-  todoListFields.project!.resolve = (
-    parent: { projectId: string | null },
-    _args: unknown,
-    context: Context,
-  ) =>
-    parent.projectId ? context.loaders.project.load(parent.projectId) : null;
+  // drizzle-graphql v4 attaches resolvers to every Drizzle-relation field
+  // (eager when the parent query pre-fetched it, request-batched lazy loads
+  // otherwise), so plain DB rows returned by custom resolvers resolve their
+  // relation fields without help. The explicit field resolvers below cover
+  // only what that machinery can't: custom SDL fields, derived hops, and one
+  // to-many relation that needs a specific ordering.
 
   // Activity-type tree links.
   const activityTypeType = extended.getType(
@@ -496,8 +471,9 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   // Project relation fields.
   const projectType = extended.getType('Project') as GraphQLObjectType;
   const projectFields = projectType.getFields();
-  // biome-ignore lint/style/noNonNullAssertion: auto-generated from projects.activityType relation
-  projectFields.activityType!.resolve = resolveActivityType;
+  // Overrides the generated relation resolver: notes must come back in
+  // position order (myReorderProjectNotes), which the generated lazy batch
+  // loader does not apply.
   // biome-ignore lint/style/noNonNullAssertion: auto-generated from projects.notes relation
   projectFields.notes!.resolve = (
     parent: { id: string },
@@ -514,31 +490,21 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     return lists[0] ?? null;
   };
 
-  // ProjectNote.project is auto-generated from the projectNotes.project relation.
-  const projectNoteType = extended.getType('ProjectNote') as GraphQLObjectType;
-  // biome-ignore lint/style/noNonNullAssertion: auto-generated from projectNotes.project relation
-  projectNoteType.getFields().project!.resolve = (
-    parent: { projectId: string },
-    _args: unknown,
-    context: Context,
-  ) => context.loaders.project.load(parent.projectId);
-
   // drizzle-graphql generates ApiKey.scopes as String! but the DB stores a
   // text[] array; patch the field type so GraphQL serializes it as [String!]!.
   const apiKeyType = extended.getType('ApiKey') as GraphQLObjectType;
-  (apiKeyType.getFields().scopes as unknown as { type: unknown }).type =
+  const apiKeyFields = apiKeyType.getFields();
+  (apiKeyFields.scopes as unknown as { type: unknown }).type =
     new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(GraphQLString)));
+  // The token hash must never leave the server. myApiKeys/myCreateApiKey
+  // return raw DB rows, so the field itself has to go, not just its value.
+  // biome-ignore lint/performance/noDelete: assigning undefined would leave a dangling key that breaks printSchema; the key must be removed
+  delete apiKeyFields.keyHash;
 
   const todoType = extended.getType('Todo') as GraphQLObjectType;
   const todoFields = todoType.getFields();
 
-  // biome-ignore lint/style/noNonNullAssertion: field exists on Todo type
-  todoFields.list!.resolve = (
-    parent: { listId: string },
-    _args: unknown,
-    context: Context,
-  ) => context.loaders.todoList.load(parent.listId);
-
+  // Derived hop (todo → list → activityType) — not a Drizzle relation.
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   todoFields.activityType!.resolve = async (
     parent: { listId: string },
