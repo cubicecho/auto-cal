@@ -3,6 +3,7 @@ import type {
   TimeBlock_CalendarViewFragment,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
+import { DERIVED, invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
 import {
   addDays,
@@ -206,7 +207,7 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
   const [completeHabit, { loading: completingHabit }] = useMutation(
     COMPLETE_HABIT,
     {
-      refetchQueries: ['MySchedule'],
+      update: (cache) => invalidate(cache, ...DERIVED),
       onError: (err) => console.error('[completeHabit]', err.message),
     },
   );
@@ -214,7 +215,7 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
   const [completeTodo, { loading: completingTodo }] = useMutation(
     COMPLETE_TODO,
     {
-      refetchQueries: ['MySchedule'],
+      update: (cache) => invalidate(cache, ...DERIVED),
       onError: (err) => console.error('[completeTodo]', err.message),
     },
   );
@@ -298,7 +299,7 @@ export function CalendarView({
   view,
 }: CalendarViewProps) {
   const [pinTodo] = useMutation(PIN_TODO, {
-    refetchQueries: ['MySchedule'],
+    update: (cache) => invalidate(cache, ...DERIVED),
   });
 
   const backgroundEvents = useMemo<CalendarEvent[]>(() => {

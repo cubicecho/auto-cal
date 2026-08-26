@@ -17,6 +17,7 @@ import { ColorDot } from '@/components/ui/color-dot';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
+import { DERIVED, invalidate } from '@/lib/cache';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { ArrowRight, Plus } from 'lucide-react';
 import { z } from 'zod';
@@ -62,11 +63,9 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
     CreateActivityTypeMutation,
     CreateActivityTypeMutationVariables
   >(CREATE_ACTIVITY_TYPE, {
-    refetchQueries: [
-      'GetActivityTypesForOnboarding',
-      'GetMyActivityTypes',
-      'GetActivityTypesForSelect',
-    ],
+    // One field name in place of three query names — and it also covers the
+    // several other `myActivityTypes` pickers that were never listed here.
+    update: (cache) => invalidate(cache, 'myActivityTypes', ...DERIVED),
   });
 
   const form = useAppForm({

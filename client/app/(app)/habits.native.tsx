@@ -2,6 +2,7 @@ import type { Habit_HabitListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { HABIT_LIST_FRAGMENT } from '@/components/domain/habit/HabitList';
 import { useDataChanged } from '@/hooks/useDataChanged';
+import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useRouter } from 'expo-router';
@@ -84,11 +85,11 @@ function HabitModal({
   );
 
   const [createHabit, { loading: creating }] = useMutation(CREATE_HABIT, {
-    refetchQueries: ['GetMyHabitsNative'],
+    update: (cache) => invalidate(cache, 'myHabits', ...DERIVED),
     onCompleted: onClose,
   });
   const [updateHabit, { loading: updating }] = useMutation(UPDATE_HABIT, {
-    refetchQueries: ['GetMyHabitsNative'],
+    update: (cache) => invalidate(cache, ...DERIVED),
     onCompleted: onClose,
   });
 
@@ -230,7 +231,10 @@ function HabitRow({
   onSelect: (h: Habit) => void;
 }) {
   const [deleteHabit] = useMutation(DELETE_HABIT, {
-    refetchQueries: ['GetMyHabitsNative'],
+    update: (cache, _result, { variables }) => {
+      if (variables) evictEntity(cache, 'Habit', variables.id);
+      invalidate(cache, 'myHabits', ...DERIVED);
+    },
   });
 
   function handleDelete() {

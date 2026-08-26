@@ -15,6 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { DERIVED, invalidate } from '@/lib/cache';
+import type { ApolloCache } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { useEffect, useState } from 'react';
 
@@ -45,8 +47,6 @@ export type CompletionDialogTarget =
 interface CompletionDialogProps {
   target: CompletionDialogTarget | null;
   onOpenChange: (open: boolean) => void;
-  /** Apollo refetchQueries to run after the mutation succeeds. */
-  refetchQueries?: string[];
 }
 
 /** Format a Date to a naive local datetime string ('YYYY-MM-DDTHH:mm:ss'). */
@@ -61,7 +61,6 @@ function toNaiveLocal(d: Date): string {
 export function CompletionDialog({
   target,
   onOpenChange,
-  refetchQueries,
 }: CompletionDialogProps) {
   const [completedAt, setCompletedAt] = useState<Date>(() => new Date());
 
@@ -70,14 +69,22 @@ export function CompletionDialog({
     if (target) setCompletedAt(new Date());
   }, [target]);
 
+  // Completing patches the todo (and, for a habit, writes a completion the
+  // lists don't render) but moves the schedule and every stats aggregate.
+  // Callers used to pass the queries to refetch; the dialog now knows what a
+  // completion invalidates, which is the same everywhere it is used.
+  const completed = {
+    update: (cache: ApolloCache) => invalidate(cache, ...DERIVED),
+  };
+
   const [completeTodo, { loading: todoLoading }] = useMutation<
     CompleteTodoFromDialogMutation,
     CompleteTodoFromDialogMutationVariables
-  >(COMPLETE_TODO, refetchQueries ? { refetchQueries } : {});
+  >(COMPLETE_TODO, completed);
   const [completeHabit, { loading: habitLoading }] = useMutation<
     CompleteHabitFromDialogMutation,
     CompleteHabitFromDialogMutationVariables
-  >(COMPLETE_HABIT, refetchQueries ? { refetchQueries } : {});
+  >(COMPLETE_HABIT, completed);
   const loading = todoLoading || habitLoading;
 
   async function handleConfirm() {

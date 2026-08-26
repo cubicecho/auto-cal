@@ -1,5 +1,6 @@
 import { graphql } from '@/__generated__/index.js';
 import { useDataChanged } from '@/hooks/useDataChanged';
+import { invalidate } from '@/lib/cache';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useState } from 'react';
@@ -59,7 +60,7 @@ function ProjectModal({ onClose }: { onClose: () => void }) {
   const [parentActivityTypeId, setParentActivityTypeId] = useState('');
 
   const [createProject, { loading }] = useMutation(CREATE_PROJECT, {
-    refetchQueries: ['GetProjectsNative'],
+    update: (cache) => invalidate(cache, 'myProjects'),
     onCompleted: onClose,
   });
 
@@ -143,7 +144,7 @@ type Project = {
 
 function ProjectRow({ project }: { project: Project }) {
   const [archiveProject] = useMutation(ARCHIVE_PROJECT, {
-    refetchQueries: ['GetProjectsNative'],
+    update: (cache) => invalidate(cache, 'myProjects'),
   });
 
   function handleArchive() {

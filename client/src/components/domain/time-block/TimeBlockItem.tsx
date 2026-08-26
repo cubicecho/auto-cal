@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -39,7 +40,12 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
 
   const [deleteTimeBlock, { loading: deleting }] = useMutation(
     DELETE_TIME_BLOCK,
-    { refetchQueries: ['GetMyTimeBlocks'] },
+    {
+      update: (cache) => {
+        evictEntity(cache, 'TimeBlock', timeBlock.id);
+        invalidate(cache, ...DERIVED);
+      },
+    },
   );
 
   async function handleDelete() {

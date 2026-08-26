@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
+import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { formatDuration } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { FolderKanban, ListX, Pencil, Plus } from 'lucide-react';
@@ -54,11 +55,17 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
   const [clearCompletedOpen, setClearCompletedOpen] = useState(false);
 
   const [createTodo, { loading: creating }] = useMutation(QUICK_CREATE_TODO, {
-    refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'],
+    update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
   });
 
   const [deleteTodos, { loading: clearing }] = useMutation(DELETE_TODOS, {
-    refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'],
+    // Returns the rows it deleted, so each one can be evicted by id rather
+    // than re-fetching every list that might have held them.
+    update: (cache, { data }) => {
+      for (const todo of data?.myDeleteTodos ?? [])
+        evictEntity(cache, 'Todo', todo.id);
+      invalidate(cache, 'myTodos', ...DERIVED);
+    },
   });
 
   const visibleTodos = showCompleted

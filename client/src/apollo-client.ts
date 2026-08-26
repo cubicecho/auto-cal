@@ -81,7 +81,18 @@ const errorLink = new ErrorLink(({ error }) => {
 
 export const apolloClient = new ApolloClient({
   link: ApolloLink.from([errorLink, splitLink]),
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache({
+    typePolicies: {
+      // `ScheduledItem.id` is the id of the todo or habit the item was
+      // computed from, not an id of its own — the same todo appears in every
+      // week it is scheduled or overdue in. Normalizing on it made one week's
+      // schedule overwrite another's, so paging back and forth between weeks
+      // showed the wrong times until a refetch landed. Keeping these
+      // unnormalized stores each `mySchedule(weekStart:)` result whole, which
+      // is what it is: a computed view, not an entity.
+      ScheduledItem: { keyFields: false },
+    },
+  }),
   defaultOptions: {
     watchQuery: { fetchPolicy: 'cache-and-network' },
   },

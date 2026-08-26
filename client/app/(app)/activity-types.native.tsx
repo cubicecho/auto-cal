@@ -2,6 +2,7 @@ import type { ActivityType_ActivityTypeListFragment } from '@/__generated__/grap
 import { graphql } from '@/__generated__/index.js';
 import { ACTIVITY_TYPE_LIST_FRAGMENT } from '@/components/domain/activity-type/ActivityTypeList';
 import { useDataChanged } from '@/hooks/useDataChanged';
+import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useState } from 'react';
@@ -75,11 +76,11 @@ function ActivityTypeModal({
   const [color, setColor] = useState(activityType?.color ?? '#6366f1');
 
   const [create, { loading: creating }] = useMutation(CREATE_ACTIVITY_TYPE, {
-    refetchQueries: ['GetMyActivityTypesNative'],
+    update: (cache) => invalidate(cache, 'myActivityTypes'),
     onCompleted: onClose,
   });
   const [update, { loading: updating }] = useMutation(UPDATE_ACTIVITY_TYPE, {
-    refetchQueries: ['GetMyActivityTypesNative'],
+    update: (cache) => invalidate(cache, ...DERIVED),
     onCompleted: onClose,
   });
 
@@ -178,7 +179,10 @@ function ActivityTypeRow({
   onEdit: (at: ActivityType) => void;
 }) {
   const [deleteAt] = useMutation(DELETE_ACTIVITY_TYPE, {
-    refetchQueries: ['GetMyActivityTypesNative'],
+    update: (cache, _result, { variables }) => {
+      if (variables) evictEntity(cache, 'ActivityType', variables.id);
+      invalidate(cache, 'myActivityTypes', ...DERIVED);
+    },
   });
 
   function handleDelete() {

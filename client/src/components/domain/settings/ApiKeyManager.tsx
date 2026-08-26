@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { invalidate } from '@/lib/cache';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Key, Plus } from 'lucide-react';
 import { useState } from 'react';
@@ -89,7 +90,9 @@ export function ApiKeyManager() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { data, refetch } = useQuery(MY_API_KEYS);
   const [revokeApiKey, { loading: revoking }] = useMutation(MY_REVOKE_API_KEY, {
-    refetchQueries: ['MyApiKeys'],
+    // `myApiKeys` hides revoked keys, so this is a membership change and the
+    // revoked key's own fields say nothing about it.
+    update: (cache) => invalidate(cache, 'myApiKeys'),
   });
 
   const keys = data?.myApiKeys ?? [];

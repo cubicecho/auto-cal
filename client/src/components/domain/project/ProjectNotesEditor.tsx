@@ -5,6 +5,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { appendToField, evictEntity } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
 import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -102,20 +103,32 @@ export function ProjectNotesEditor({
     });
   }, [selected]);
 
+  // Splicing the new note into `Project.notes` puts it in the cache before
+  // the mutation promise resolves, so handleAdd can select and focus it
+  // straight away. The old `awaitRefetchQueries` was there for the same
+  // reason and cost a full round trip.
   const [createNote, { loading: creating }] = useMutation(CREATE_NOTE, {
-    refetchQueries: ['GetProjectDetail'],
-    // Wait for the refetch so the new note is in the list before we select and
-    // focus it — avoids a flash of the empty-state placeholder.
-    awaitRefetchQueries: true,
+    update: (cache, { data }) => {
+      const note = data?.myCreateProjectNote;
+      if (note) {
+        appendToField(
+          cache,
+          { __typename: 'Project', id: projectId },
+          'notes',
+          note,
+        );
+      }
+    },
   });
-  const [updateNote, { loading: saving }] = useMutation(UPDATE_NOTE, {
-    refetchQueries: ['GetProjectDetail'],
-  });
+  // Both return the notes they touched, and the list is sorted by `position`
+  // in this component, so the normalized patch is all it takes — a reorder no
+  // longer costs a round trip per arrow click.
+  const [updateNote, { loading: saving }] = useMutation(UPDATE_NOTE);
+  const [reorderNotes] = useMutation(REORDER_NOTES);
   const [deleteNote] = useMutation(DELETE_NOTE, {
-    refetchQueries: ['GetProjectDetail'],
-  });
-  const [reorderNotes] = useMutation(REORDER_NOTES, {
-    refetchQueries: ['GetProjectDetail'],
+    update: (cache, _result, { variables }) => {
+      if (variables) evictEntity(cache, 'ProjectNote', variables.id);
+    },
   });
 
   async function handleAdd() {

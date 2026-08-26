@@ -7,6 +7,7 @@ import { TODO_LIST_LIST_FRAGMENT } from '@/components/domain/todo-list/TodoListL
 import { TODO_LIST_FRAGMENT } from '@/components/domain/todo/TodoItem';
 import { useTodoListsUpdated } from '@/hooks/useTodoListsUpdated';
 import { useTodosUpdated } from '@/hooks/useTodosUpdated';
+import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
@@ -88,7 +89,7 @@ function CreateListModal({
   const [description, setDescription] = useState('');
 
   const [createList, { loading }] = useMutation(CREATE_TODO_LIST, {
-    refetchQueries: ['GetTodoListsPageNative'],
+    update: (cache) => invalidate(cache, 'myTodoLists'),
     onCompleted: () => {
       setName('');
       setDescription('');
@@ -175,7 +176,7 @@ function AddTodoModal({
   const [title, setTitle] = useState('');
 
   const [createTodo, { loading }] = useMutation(CREATE_TODO, {
-    refetchQueries: ['GetTodoListsPageNative'],
+    update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
     onCompleted: () => {
       setTitle('');
       onClose();
@@ -245,10 +246,13 @@ function TodoRow({ todo }: { todo: Todo }) {
   const done = !!todo.completedAt;
 
   const [completeTodo] = useMutation(COMPLETE_TODO, {
-    refetchQueries: ['GetTodoListsPageNative'],
+    update: (cache) => invalidate(cache, ...DERIVED),
   });
   const [deleteTodo] = useMutation(DELETE_TODO, {
-    refetchQueries: ['GetTodoListsPageNative'],
+    update: (cache, _result, { variables }) => {
+      if (variables) evictEntity(cache, 'Todo', variables.id);
+      invalidate(cache, ...DERIVED);
+    },
   });
 
   function handleDelete() {

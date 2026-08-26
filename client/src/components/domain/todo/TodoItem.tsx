@@ -12,6 +12,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { priorityLabel } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Link } from 'expo-router';
@@ -79,18 +80,23 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
     useState<CompletionDialogTarget | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  // Both mutations return the todo, so the lists rendering it patch
+  // themselves; only the derived views have to be dropped.
   const [uncompleteTodo, { loading: uncompleting }] = useMutation(
     UNCOMPLETE_TODO,
-    { refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'] },
+    { update: (cache) => invalidate(cache, ...DERIVED) },
   );
 
   const [updateTodo, { loading: updatingLength }] = useMutation(
     UPDATE_TODO_LENGTH,
-    { refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'] },
+    { update: (cache) => invalidate(cache, ...DERIVED) },
   );
 
   const [deleteTodo, { loading: deleting }] = useMutation(DELETE_TODO, {
-    refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'],
+    update: (cache) => {
+      evictEntity(cache, 'Todo', todo.id);
+      invalidate(cache, ...DERIVED);
+    },
   });
 
   function handleSaveLength(estimatedLength: number) {
@@ -217,7 +223,6 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
       <CompletionDialog
         target={completionTarget}
         onOpenChange={(open) => !open && setCompletionTarget(null)}
-        refetchQueries={['GetTodoListsPage', 'GetProjectDetail']}
       />
     </div>
   );

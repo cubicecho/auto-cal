@@ -17,6 +17,7 @@ import {
 import { ColorDot } from '@/components/ui/color-dot';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
+import { DERIVED, invalidate } from '@/lib/cache';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { ArrowLeft, ArrowRight, Plus, SkipForward } from 'lucide-react';
 import { z } from 'zod';
@@ -66,7 +67,7 @@ export function StepHabits({ onBack, onNext, onSkip }: StepHabitsProps) {
     CreateHabitMutation,
     CreateHabitMutationVariables
   >(CREATE_HABIT, {
-    refetchQueries: ['GetMyHabitsForOnboarding', 'GetMyHabits'],
+    update: (cache) => invalidate(cache, 'myHabits', ...DERIVED),
   });
 
   const form = useAppForm({

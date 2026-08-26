@@ -10,6 +10,7 @@ import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTy
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
+import { DERIVED, invalidate } from '@/lib/cache';
 import { cn } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { useEffect } from 'react';
@@ -100,14 +101,16 @@ export function TimeBlockForm({
     CreateTimeBlockMutation,
     CreateTimeBlockMutationVariables
   >(CREATE_TIME_BLOCK, {
-    refetchQueries: ['GetMyTimeBlocks', 'GetCalendarData'],
+    update: (cache) => invalidate(cache, 'myTimeBlocks', ...DERIVED),
   });
 
   const [updateTimeBlock] = useMutation<
     UpdateTimeBlockMutation,
     UpdateTimeBlockMutationVariables
   >(UPDATE_TIME_BLOCK, {
-    refetchQueries: ['GetMyTimeBlocks', 'GetCalendarData'],
+    // The mutation returns the block, so the normalized entity — and every
+    // list holding it — patches itself. Only the schedule has to be dropped.
+    update: (cache) => invalidate(cache, ...DERIVED),
   });
 
   const defaultValues: TimeBlockFormValues = {

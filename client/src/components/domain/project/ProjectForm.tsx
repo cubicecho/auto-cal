@@ -9,6 +9,7 @@ import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTy
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
+import { DERIVED, invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
 import { useEffect } from 'react';
 import { z } from 'zod';
@@ -77,14 +78,16 @@ export function ProjectForm({ project, open, onOpenChange }: ProjectFormProps) {
     CreateProjectMutation,
     CreateProjectMutationVariables
   >(CREATE_PROJECT, {
-    refetchQueries: ['GetProjectsPage'],
+    update: (cache) => invalidate(cache, 'myProjects'),
   });
 
   const [updateProject] = useMutation<
     UpdateProjectMutation,
     UpdateProjectMutationVariables
   >(UPDATE_PROJECT, {
-    refetchQueries: ['GetProjectsPage', 'GetProjectDetail'],
+    // Returns the project, so both pages patch themselves; its activity type
+    // is what the scheduler reads, hence the derived fields.
+    update: (cache) => invalidate(cache, ...DERIVED),
   });
 
   const createForm = useAppForm({

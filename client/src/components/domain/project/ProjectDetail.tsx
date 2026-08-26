@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DetailHeader, EditButton } from '@/components/ui/detail-header';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { StatusChip } from '@/components/ui/status-chip';
+import { invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
 import { Archive } from 'lucide-react';
 import { useState } from 'react';
@@ -66,7 +67,9 @@ export function ProjectDetail({
     ArchiveProjectMutation,
     ArchiveProjectMutationVariables
   >(ARCHIVE_PROJECT, {
-    refetchQueries: ['GetProjectsPage', 'GetProjectDetail'],
+    // The status change drops it out of `myProjects` unless the caller asked
+    // for archived ones, so this is a membership change, not just a patch.
+    update: (cache) => invalidate(cache, 'myProjects'),
   });
 
   const listTodos = project.list

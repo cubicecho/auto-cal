@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
+import { DERIVED, invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
 import { Check } from 'lucide-react';
 import { useEffect } from 'react';
@@ -137,18 +138,19 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
     CreateTodoMutation,
     CreateTodoMutationVariables
   >(CREATE_TODO, {
-    refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'],
+    update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
   });
 
   const [updateTodo] = useMutation<
     UpdateTodoMutation,
     UpdateTodoMutationVariables
   >(UPDATE_TODO, {
-    refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'],
+    // Returns the todo, so the lists patch themselves.
+    update: (cache) => invalidate(cache, ...DERIVED),
   });
 
   const [completeTodo, { loading: completing }] = useMutation(COMPLETE_TODO, {
-    refetchQueries: ['GetTodoListsPage', 'GetProjectDetail'],
+    update: (cache) => invalidate(cache, ...DERIVED),
   });
 
   const defaultValues: TodoFormValues = {

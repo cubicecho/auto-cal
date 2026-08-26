@@ -13,6 +13,7 @@ import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
+import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
 import { Trash2 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -80,21 +81,27 @@ export function ActivityTypeForm({
     CreateActivityTypeMutation,
     CreateActivityTypeMutationVariables
   >(CREATE_ACTIVITY_TYPE, {
-    refetchQueries: ['GetMyActivityTypes', 'GetActivityTypeStats'],
+    update: (cache) => invalidate(cache, 'myActivityTypes', ...DERIVED),
   });
 
   const [updateActivityType] = useMutation<
     UpdateActivityTypeMutation,
     UpdateActivityTypeMutationVariables
   >(UPDATE_ACTIVITY_TYPE, {
-    refetchQueries: ['GetMyActivityTypes', 'GetActivityTypeStats'],
+    // Returns the activity type; every list and every `activityType { … }`
+    // sub-selection points at the same normalized entity, so a rename or a
+    // colour change lands everywhere without a refetch.
+    update: (cache) => invalidate(cache, ...DERIVED),
   });
 
   const [deleteActivityType] = useMutation<
     DeleteActivityTypeMutation,
     DeleteActivityTypeMutationVariables
   >(DELETE_ACTIVITY_TYPE, {
-    refetchQueries: ['GetMyActivityTypes', 'GetActivityTypeStats'],
+    update: (cache, _result, { variables }) => {
+      if (variables) evictEntity(cache, 'ActivityType', variables.id);
+      invalidate(cache, 'myActivityTypes', ...DERIVED);
+    },
   });
 
   const defaultValues: ActivityTypeFormValues = {

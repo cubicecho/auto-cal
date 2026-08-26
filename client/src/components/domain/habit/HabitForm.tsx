@@ -15,6 +15,7 @@ import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAppForm } from '@/hooks/form-hook';
+import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
 import { Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -177,21 +178,24 @@ export function HabitForm({
     CreateHabitMutation,
     CreateHabitMutationVariables
   >(CREATE_HABIT, {
-    refetchQueries: ['GetMyHabits'],
+    update: (cache) => invalidate(cache, 'myHabits', ...DERIVED),
   });
 
   const [updateHabit] = useMutation<
     UpdateHabitMutation,
     UpdateHabitMutationVariables
   >(UPDATE_HABIT, {
-    refetchQueries: ['GetMyHabits', 'GetHabitDetail'],
+    update: (cache) => invalidate(cache, ...DERIVED),
   });
 
   const [deleteHabit, { loading: deleting }] = useMutation<
     DeleteHabitMutation,
     DeleteHabitMutationVariables
   >(DELETE_HABIT, {
-    refetchQueries: ['GetMyHabits'],
+    update: (cache, _result, { variables }) => {
+      if (variables) evictEntity(cache, 'Habit', variables.id);
+      invalidate(cache, 'myHabits', ...DERIVED);
+    },
   });
 
   const defaultValues: HabitFormValues = {

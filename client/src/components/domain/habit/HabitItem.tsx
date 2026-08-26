@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
+import { DERIVED, invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
 import { Pencil } from 'lucide-react';
 
@@ -33,7 +34,9 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
   const [updateHabit, { loading: updatingLength }] = useMutation(
     UPDATE_HABIT_LENGTH,
     {
-      refetchQueries: ['GetMyHabits'],
+      // Returns the habit, so the list patches itself; only the schedule,
+      // which packs instances by estimated length, has to be dropped.
+      update: (cache) => invalidate(cache, ...DERIVED),
     },
   );
 

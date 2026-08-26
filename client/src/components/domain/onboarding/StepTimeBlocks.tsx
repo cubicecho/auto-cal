@@ -17,6 +17,7 @@ import {
 import { ColorDot } from '@/components/ui/color-dot';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
+import { DERIVED, invalidate } from '@/lib/cache';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
@@ -79,11 +80,7 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
     CreateTimeBlockMutation,
     CreateTimeBlockMutationVariables
   >(CREATE_TIME_BLOCK, {
-    refetchQueries: [
-      'GetMyTimeblocksForOnboarding',
-      'GetMyTimeBlocks',
-      'GetCalendarData',
-    ],
+    update: (cache) => invalidate(cache, 'myTimeBlocks', ...DERIVED),
   });
 
   const form = useAppForm({

@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAppForm } from '@/hooks/form-hook';
+import { DERIVED, invalidate } from '@/lib/cache';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { ArrowLeft, CheckCircle2, Plus, SkipForward } from 'lucide-react';
 import { z } from 'zod';
@@ -77,7 +78,7 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
     CreateTodoMutation,
     CreateTodoMutationVariables
   >(CREATE_TODO, {
-    refetchQueries: ['GetMyTodosForOnboarding', 'GetTodoListsPage'],
+    update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
   });
 
   const form = useAppForm({

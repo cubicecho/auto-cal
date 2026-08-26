@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Page, PageHeader } from '@/components/ui/page';
 import { useDataChanged } from '@/hooks/useDataChanged';
 import { useTodosUpdated } from '@/hooks/useTodosUpdated';
+import { DERIVED, invalidate } from '@/lib/cache';
 import { priorityLabel } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { addDays, format, isToday, parseISO } from 'date-fns';
@@ -123,14 +124,14 @@ export default function TodayPage() {
   const [completeHabit, { loading: completingHabit }] = useMutation(
     COMPLETE_HABIT,
     {
-      refetchQueries: ['MyToday'],
+      update: (cache) => invalidate(cache, ...DERIVED),
       onError: (err) => console.error('[completeHabit]', err.message),
     },
   );
   const [completeTodo, { loading: completingTodo }] = useMutation(
     COMPLETE_TODO,
     {
-      refetchQueries: ['MyToday'],
+      update: (cache) => invalidate(cache, ...DERIVED),
       onError: (err) => console.error('[completeTodo]', err.message),
     },
   );

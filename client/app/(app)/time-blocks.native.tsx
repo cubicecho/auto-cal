@@ -2,6 +2,7 @@ import type { TimeBlock_TimeBlockListFragment } from '@/__generated__/graphql.js
 import { graphql } from '@/__generated__/index.js';
 import { TIME_BLOCK_LIST_FRAGMENT } from '@/components/domain/time-block/TimeBlockList';
 import { useDataChanged } from '@/hooks/useDataChanged';
+import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useState } from 'react';
@@ -60,7 +61,7 @@ function TimeBlockModal({ onClose }: { onClose: () => void }) {
   const activityTypes = atData?.myActivityTypes ?? [];
 
   const [createTimeBlock, { loading }] = useMutation(CREATE_TIME_BLOCK, {
-    refetchQueries: ['GetMyTimeBlocksNative'],
+    update: (cache) => invalidate(cache, 'myTimeBlocks', ...DERIVED),
     onCompleted: onClose,
   });
 
@@ -174,7 +175,10 @@ function TimeBlockModal({ onClose }: { onClose: () => void }) {
 
 function TimeBlockRow({ timeBlock }: { timeBlock: TimeBlock }) {
   const [deleteBlock] = useMutation(DELETE_TIME_BLOCK, {
-    refetchQueries: ['GetMyTimeBlocksNative'],
+    update: (cache, _result, { variables }) => {
+      if (variables) evictEntity(cache, 'TimeBlock', variables.id);
+      invalidate(cache, ...DERIVED);
+    },
   });
 
   const days = timeBlock.daysOfWeek.map((d) => DAY_NAMES[d]).join(', ');

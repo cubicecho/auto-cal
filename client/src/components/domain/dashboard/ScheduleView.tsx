@@ -9,6 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { DERIVED, invalidate } from '@/lib/cache';
 import { priorityLabel } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import {
@@ -140,7 +141,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
   const [completeHabit, { loading: completingHabit }] = useMutation(
     COMPLETE_HABIT,
     {
-      refetchQueries: ['MySchedule'],
+      update: (cache) => invalidate(cache, ...DERIVED),
       onError: (err) => console.error('[completeHabit]', err.message),
     },
   );
@@ -148,7 +149,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
   const [completeTodo, { loading: completingTodo }] = useMutation(
     COMPLETE_TODO,
     {
-      refetchQueries: ['MySchedule'],
+      update: (cache) => invalidate(cache, ...DERIVED),
       onError: (err) => console.error('[completeTodo]', err.message),
     },
   );

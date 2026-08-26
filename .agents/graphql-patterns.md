@@ -329,7 +329,26 @@ mutation UpdateProfile($timezone: String!) {
 
 ## Cache Invalidation
 
-Use `refetchQueries` by operation name:
-```typescript
-useMutation(CREATE_TODO, { refetchQueries: ['GetMyTodos', 'MySchedule'] });
-```
+Mutations return the entity they changed, so Apollo's normalized cache patches
+every list and detail view holding it with no round trip. Only two things need
+help, and both go through `client/src/lib/cache.ts`:
+
+- **Membership changed** (created, deleted, or moved in or out of a filtered
+  list) — evict the root field, not the queries reading it:
+  ```typescript
+  useMutation(CREATE_TODO, {
+    update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
+  });
+  ```
+- **Server-derived fields** — `mySchedule` and the stats queries are recomputed,
+  never stored, so no mutation result can patch them. `DERIVED` is the list;
+  spread it into any write that could move the schedule.
+
+Deletes use `evictEntity(cache, 'Todo', id)`; Apollo drops dangling references
+when it reads an array, so lists holding the item fix themselves. Nested lists
+have no root field to evict — use `appendToField` (see `Project.notes`).
+
+`refetchQueries: ['SomeOperationName']` is the thing this replaced. It named
+the *pages* that existed when the mutation was written, so a page added later
+silently showed stale data. `RootField` is a checked union, and
+`cache.test.ts` asserts it against the SDL.

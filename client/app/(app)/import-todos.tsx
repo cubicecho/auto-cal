@@ -11,6 +11,7 @@ import {
 import { ColorDot } from '@/components/ui/color-dot';
 import { Input } from '@/components/ui/input';
 import { Page } from '@/components/ui/page';
+import { DERIVED, invalidate } from '@/lib/cache';
 import {
   GoogleTasksParseError,
   type ParsedList,
@@ -83,10 +84,19 @@ export default function ImportTodosPage() {
   const [result, setResult] = useState<ImportResult | null>(null);
 
   const [createActivityType] = useMutation(CREATE_ACTIVITY_TYPE_IMPORT, {
-    refetchQueries: ['GetActivityTypesForSelect'],
+    update: (cache) => invalidate(cache, 'myActivityTypes'),
   });
   const [importTodos] = useMutation(IMPORT_TODOS, {
-    refetchQueries: ['GetTodoListsPage', 'GetActivityTypesForSelect'],
+    // An import creates lists and todos in bulk, so nearly everything the
+    // schedule is built from moved.
+    update: (cache) =>
+      invalidate(
+        cache,
+        'myActivityTypes',
+        'myTodoLists',
+        'myTodos',
+        ...DERIVED,
+      ),
   });
 
   function loadFile(file: File): void {

@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
+import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
 import { Trash2 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -92,21 +93,26 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
     CreateTodoListMutation,
     CreateTodoListMutationVariables
   >(CREATE_TODO_LIST, {
-    refetchQueries: ['GetTodoListsPage', 'GetTodoListsForSelect'],
+    update: (cache) => invalidate(cache, 'myTodoLists'),
   });
 
   const [updateList] = useMutation<
     UpdateTodoListMutation,
     UpdateTodoListMutationVariables
   >(UPDATE_TODO_LIST, {
-    refetchQueries: ['GetTodoListsPage', 'GetTodoListsForSelect'],
+    // Returns the list; its activity type feeds the scheduler.
+    update: (cache) => invalidate(cache, ...DERIVED),
   });
 
   const [deleteList] = useMutation<
     DeleteTodoListMutation,
     DeleteTodoListMutationVariables
   >(DELETE_TODO_LIST, {
-    refetchQueries: ['GetTodoListsPage', 'GetTodoListsForSelect'],
+    // Deleting a list cascades to its todos, so `myTodos` goes too.
+    update: (cache, _result, { variables }) => {
+      if (variables) evictEntity(cache, 'TodoList', variables.id);
+      invalidate(cache, 'myTodoLists', 'myTodos', ...DERIVED);
+    },
   });
 
   const defaultValues: FormValues = {
