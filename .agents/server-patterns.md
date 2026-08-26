@@ -96,15 +96,17 @@ Any new public endpoint (e.g. a webhook or health check) must be added to this s
 
 ```typescript
 // server/src/schema/index.ts
-const { schema: drizzleSchema } = buildSchema(db, {
-  prefixes: { insert: 'create', update: 'update', delete: 'delete' },
-  suffixes: { list: 's', single: '' },
-  singularTypes: true,
-});
+import { buildSchemaConfig } from './build-config.ts';
+
+const { schema: drizzleSchema } = buildSchema(db, buildSchemaConfig);
 
 export const schema = applyCustomResolvers(drizzleSchema);
 blockUnscopedResolvers(schema); // blocks anything not prefixed "my" or in PUBLIC_MUTATIONS
 ```
+
+`buildSchemaConfig` lives in `server/src/schema/build-config.ts` and is shared by the runtime schema, `generate_schema.ts`, and the tests so the SDL is identical everywhere. It maps type names (`typeNameMapper`, which replaced v3's `prefixes`/`suffixes`/`singularTypes`) and turns off both aggregate features plus **all four generated CRUD mutations** — `insert`, `update`, `updateMany`, `delete`.
+
+Disabling all four means drizzle-graphql emits no `Mutation` type at all. That is deliberate: every write goes through a hand-written `my*` resolver, so the ~50 generated mutation fields existed only to be replaced with throwing resolvers by `blockUnscopedResolvers`, while still reaching client codegen (~400 lines of dead SDL). The consequence is that `extensionSDL` must **declare** `type Mutation` instead of extending it, and wire it as a root operation explicitly.
 
 ## Custom Resolver Pattern (extendSchema)
 
@@ -114,8 +116,16 @@ const extensionSDL = `
   extend type Query {
     myTodos(activityTypeId: ID, completed: Boolean): [Todo!]!
   }
-  extend type Mutation {
+  # Declared, not extended — build-config disables every generated mutation,
+  # so there is no Mutation type to extend.
+  type Mutation {
     myCreateTodo(input: CreateTodoArgs!): Todo!
+  }
+  # extendSchema does not auto-promote a conventionally-named type to a root
+  # operation, so Mutation (and Subscription) must be wired by hand.
+  extend schema {
+    mutation: Mutation
+    subscription: Subscription
   }
   input CreateTodoArgs {
     listId: ID!

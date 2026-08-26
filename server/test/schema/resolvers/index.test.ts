@@ -261,3 +261,31 @@ describe('resolver integration tests', () => {
     expect(incompleteList.some((t) => t.id === todoId)).toBe(false);
   });
 });
+
+describe('mutation surface', () => {
+  let db: Awaited<ReturnType<typeof createTestDb>>;
+  let testSchema: ReturnType<typeof buildTestSchema>;
+
+  beforeAll(async () => {
+    db = await createTestDb();
+    testSchema = buildTestSchema(db);
+  }, 30000);
+
+  // build-config turns every generated CRUD mutation off, which makes
+  // drizzle-graphql omit the Mutation type; resolvers/index.ts declares its own
+  // and wires it with `extend schema { mutation: Mutation }`. If either half
+  // regresses the root operation silently disappears, so assert it directly.
+  it('wires our own Mutation type as the root mutation operation', () => {
+    expect(testSchema.getMutationType()?.name).toBe('Mutation');
+  });
+
+  it('exposes only user-scoped and explicitly public mutations', () => {
+    const publicMutations = ['requestMagicLink', 'verifyMagicLink'];
+    const unscoped = Object.keys(
+      testSchema.getMutationType()?.getFields() ?? {},
+    ).filter(
+      (name) => !name.startsWith('my') && !publicMutations.includes(name),
+    );
+    expect(unscoped).toEqual([]);
+  });
+});

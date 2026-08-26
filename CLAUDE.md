@@ -52,6 +52,8 @@ Express + Apollo Server, running TypeScript directly via `--experimental-strip-t
 
 `PUBLIC_MUTATIONS` is a hard-coded `Set` in `server/src/schema/index.ts`. Any new public endpoint must be added there.
 
+**Generated mutations are off.** `server/src/schema/build-config.ts` disables `insert`/`update`/`updateMany`/`delete` (and both aggregate features). Every write goes through a hand-written `my*` resolver, so the generated mutations only ever existed to be replaced by `blockUnscopedResolvers`. With all four off, drizzle-graphql omits the `Mutation` type entirely — so `extensionSDL` **declares** `type Mutation` rather than extending it, and wires it as a root operation via `extend schema { mutation: Mutation }` (the same treatment `Subscription` needs, since `extendSchema` does not auto-promote conventionally-named types). Adding a mutation means adding a field to that declared block; there is no generated `Mutation` to extend.
+
 **Relation fields (drizzle-graphql v4):** every Drizzle-relation field on an object type gets a generated resolver — eager when the parent query pre-fetched it, request-batched lazy loading otherwise. Custom resolvers can return plain DB rows and relation fields resolve automatically. Explicit field resolvers in `applyCustomResolvers` (`schema/resolvers/index.ts`) exist only for what the generated machinery can't do: derived hops (`Todo.activityType` via its list), custom SDL fields (`Project.list`, `ActivityType.parent`/`children`), and `Project.notes`, which overrides the generated resolver to enforce position ordering. These use the per-request DataLoaders from context.
 
 **Resolver authoring pattern** — every domain has its own file:

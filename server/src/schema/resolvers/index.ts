@@ -324,12 +324,15 @@ const extensionSDL = `
     myDataChanged: DataChangedEvent!
   }
 
-  # drizzle-graphql's buildSchema sets the query/mutation root operations
-  # explicitly and no subscription, so a conventionally-named "type Subscription"
-  # is NOT auto-promoted to the root subscription operation by extendSchema.
-  # Wire it explicitly, otherwise graphql-js rejects every subscription with
-  # "Schema is not configured to execute subscription operation".
+  # drizzle-graphql's buildSchema sets the query root operation explicitly, and
+  # a conventionally-named "type Subscription" / "type Mutation" is NOT
+  # auto-promoted to a root operation by extendSchema. Both are wired here:
+  # Subscription because the library never generates one, Mutation because
+  # build-config turns every generated mutation off, which omits the type.
+  # Without this, graphql-js rejects the operation outright ("Schema is not
+  # configured to execute mutation/subscription operation").
   extend schema {
+    mutation: Mutation
     subscription: Subscription
   }
 
@@ -366,7 +369,9 @@ const extensionSDL = `
     myProject(id: ID!): Project
   }
 
-  extend type Mutation {
+  # Declared, not extended: build-config disables every generated mutation, so
+  # drizzle-graphql omits the Mutation type and there is nothing to extend.
+  type Mutation {
     myUpdateProfile(timezone: String!): Boolean!
     myCreateActivityType(input: CreateActivityTypeArgs!): ActivityType!
     myUpdateActivityType(input: UpdateActivityTypeArgs!): ActivityType!
