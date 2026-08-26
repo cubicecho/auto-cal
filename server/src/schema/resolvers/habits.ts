@@ -9,6 +9,12 @@ import { eq } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
 import { z } from 'zod';
 import type { Context } from '../../context.ts';
+import {
+  forbidden,
+  notFound,
+  requireOwner,
+  requireUser,
+} from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { startOfISOWeek } from '../../services/scheduler.ts';
 import { CompleteHabitInput, CreateHabitInput } from '../validators.ts';
@@ -62,8 +68,8 @@ export function applyHabitResolvers(
     args: { activityTypeId?: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const where: Record<string, unknown> = { userId: context.userId };
+    const userId = requireUser(context);
+    const where: Record<string, unknown> = { userId: userId };
     if (args.activityTypeId) where.activityTypeId = args.activityTypeId;
     return context.db.query.habits.findMany({
       where,
@@ -77,9 +83,9 @@ export function applyHabitResolvers(
     args: { habitId?: string; startDate?: string; endDate?: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
 
-    const habitWhere: Record<string, unknown> = { userId: context.userId };
+    const habitWhere: Record<string, unknown> = { userId: userId };
     if (args.habitId) habitWhere.id = args.habitId;
     const userHabits: Habit[] = await context.db.query.habits.findMany({
       where: habitWhere,
@@ -124,13 +130,16 @@ export function applyHabitResolvers(
     args: { habitId: string; periods?: number },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
 
-    const habit = await context.db.query.habits.findFirst({
-      where: { id: args.habitId },
-    });
-    if (!habit) throw new Error(`Habit ${args.habitId} not found`);
-    if (habit.userId !== context.userId) throw new Error('Forbidden');
+    const habit = requireOwner(
+      await context.db.query.habits.findFirst({
+        where: { id: args.habitId },
+      }),
+      'Habit',
+      args.habitId,
+      userId,
+    );
 
     const activityType: ActivityType | undefined =
       await context.db.query.activityTypes.findFirst({
@@ -220,12 +229,12 @@ export function applyHabitResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = CreateHabitInput.parse(args.input);
     const [habit] = await context.db
       .insert(habits)
       .values({
-        userId: context.userId,
+        userId: userId,
         title: input.title,
         description: input.description,
         priority: input.priority,
@@ -244,8 +253,8 @@ export function applyHabitResolvers(
       })
       .returning();
     if (!habit) throw new Error('Failed to create habit');
-    runSchedulerWriteback(context.db, context.userId).catch(console.error);
-    publishDataChanged(context.userId, 'habit', [habit.id]);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
+    publishDataChanged(userId, 'habit', [habit.id]);
     return habit;
   };
 
@@ -255,15 +264,18 @@ export function applyHabitResolvers(
     args: { id: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const existing = await context.db.query.habits.findFirst({
-      where: { id: args.id },
-    });
-    if (!existing) throw new Error(`Habit ${args.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const userId = requireUser(context);
+    requireOwner(
+      await context.db.query.habits.findFirst({
+        where: { id: args.id },
+      }),
+      'Habit',
+      args.id,
+      userId,
+    );
     await context.db.delete(habits).where(eq(habits.id, args.id));
-    runSchedulerWriteback(context.db, context.userId).catch(console.error);
-    publishDataChanged(context.userId, 'habit', [args.id]);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
+    publishDataChanged(userId, 'habit', [args.id]);
     return true;
   };
 
@@ -273,13 +285,16 @@ export function applyHabitResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = UpdateHabitInput.parse(args.input);
-    const existing = await context.db.query.habits.findFirst({
-      where: { id: input.id },
-    });
-    if (!existing) throw new Error(`Habit ${input.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    requireOwner(
+      await context.db.query.habits.findFirst({
+        where: { id: input.id },
+      }),
+      'Habit',
+      input.id,
+      userId,
+    );
     const [updated] = await context.db
       .update(habits)
       .set({
@@ -326,8 +341,8 @@ export function applyHabitResolvers(
       .where(eq(habits.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update habit ${input.id}`);
-    runSchedulerWriteback(context.db, context.userId).catch(console.error);
-    publishDataChanged(context.userId, 'habit', [updated.id]);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
+    publishDataChanged(userId, 'habit', [updated.id]);
     return updated;
   };
 
@@ -337,13 +352,16 @@ export function applyHabitResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = CompleteHabitInput.parse(args.input);
-    const habit = await context.db.query.habits.findFirst({
-      where: { id: input.habitId },
-    });
-    if (!habit) throw new Error(`Habit ${input.habitId} not found`);
-    if (habit.userId !== context.userId) throw new Error('Forbidden');
+    requireOwner(
+      await context.db.query.habits.findFirst({
+        where: { id: input.habitId },
+      }),
+      'Habit',
+      input.habitId,
+      userId,
+    );
     const [completion] = await context.db
       .insert(habitCompletions)
       .values({
@@ -355,8 +373,8 @@ export function applyHabitResolvers(
       })
       .returning();
     if (!completion) throw new Error('Failed to record habit completion');
-    runSchedulerWriteback(context.db, context.userId).catch(console.error);
-    publishDataChanged(context.userId, 'habit', [input.habitId]);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
+    publishDataChanged(userId, 'habit', [input.habitId]);
     return completion;
   };
 
@@ -366,24 +384,24 @@ export function applyHabitResolvers(
     args: { completionId: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     // Look up the completion + its habit to enforce ownership
     const completion = await context.db.query.habitCompletions.findFirst({
       where: { id: args.completionId },
     });
     if (!completion) {
-      throw new Error(`Habit completion ${args.completionId} not found`);
+      throw notFound('Habit completion', args.completionId);
     }
     const habit = await context.db.query.habits.findFirst({
       where: { id: completion.habitId },
     });
     if (!habit) throw new Error('Underlying habit not found');
-    if (habit.userId !== context.userId) throw new Error('Forbidden');
+    if (habit.userId !== userId) throw forbidden();
     await context.db
       .delete(habitCompletions)
       .where(eq(habitCompletions.id, args.completionId));
-    runSchedulerWriteback(context.db, context.userId).catch(console.error);
-    publishDataChanged(context.userId, 'habit', [completion.habitId]);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
+    publishDataChanged(userId, 'habit', [completion.habitId]);
     return true;
   };
 }

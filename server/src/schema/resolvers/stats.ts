@@ -6,6 +6,7 @@ import type {
 } from '@auto-cal/db/schema';
 import type { GraphQLObjectType } from 'graphql';
 import type { Context } from '../../context.ts';
+import { requireUser } from '../../errors.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
 
@@ -16,7 +17,7 @@ export function applyStatsResolvers(queryFields: Fields): void {
     args: { startDate?: string; endDate?: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
 
     const now = new Date();
     const start = args.startDate ? new Date(args.startDate) : null;
@@ -34,13 +35,13 @@ export function applyStatsResolvers(queryFields: Fields): void {
       ActivityType[],
     ] = await Promise.all([
       context.db.query.habits.findMany({
-        where: { userId: context.userId },
+        where: { userId: userId },
       }),
       context.db.query.todos.findMany({
-        where: { userId: context.userId, scheduledAt: scheduledAtFilter },
+        where: { userId: userId, scheduledAt: scheduledAtFilter },
       }),
       context.db.query.activityTypes.findMany({
-        where: { userId: context.userId },
+        where: { userId: userId },
       }),
     ]);
 

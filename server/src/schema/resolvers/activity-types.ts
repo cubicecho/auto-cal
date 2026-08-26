@@ -8,6 +8,7 @@ import {
 import { eq } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
 import type { Context } from '../../context.ts';
+import { requireOwner, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import {
   CreateActivityTypeInput,
@@ -27,9 +28,9 @@ export function applyActivityTypeResolvers(
     _args,
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     return context.db.query.activityTypes.findMany({
-      where: { userId: context.userId },
+      where: { userId: userId },
       orderBy: { name: 'asc' },
     });
   };
@@ -40,7 +41,7 @@ export function applyActivityTypeResolvers(
     args: { startDate?: string; endDate?: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
 
     const start = args.startDate ? new Date(args.startDate) : null;
     const end = args.endDate ? new Date(args.endDate) : null;
@@ -52,17 +53,17 @@ export function applyActivityTypeResolvers(
       Habit[],
     ] = await Promise.all([
       context.db.query.activityTypes.findMany({
-        where: { userId: context.userId },
+        where: { userId: userId },
       }),
       context.db.query.todos.findMany({
-        where: { userId: context.userId },
+        where: { userId: userId },
       }),
       context.db.query.todoLists.findMany({
-        where: { userId: context.userId },
+        where: { userId: userId },
       }),
       context.db.query.habits.findMany({
         where: {
-          userId: context.userId,
+          userId: userId,
           activityTypeId: { isNotNull: true },
         },
       }),
@@ -121,14 +122,14 @@ export function applyActivityTypeResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = CreateActivityTypeInput.parse(args.input);
     const [activityType] = await context.db
       .insert(activityTypes)
-      .values({ userId: context.userId, name: input.name, color: input.color })
+      .values({ userId: userId, name: input.name, color: input.color })
       .returning();
     if (!activityType) throw new Error('Failed to create activity type');
-    publishDataChanged(context.userId, 'activityType', [activityType.id]);
+    publishDataChanged(userId, 'activityType', [activityType.id]);
     return activityType;
   };
 
@@ -138,13 +139,16 @@ export function applyActivityTypeResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = UpdateActivityTypeInput.parse(args.input);
-    const existing = await context.db.query.activityTypes.findFirst({
-      where: { id: input.id },
-    });
-    if (!existing) throw new Error(`ActivityType ${input.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    requireOwner(
+      await context.db.query.activityTypes.findFirst({
+        where: { id: input.id },
+      }),
+      'ActivityType',
+      input.id,
+      userId,
+    );
     const [updated] = await context.db
       .update(activityTypes)
       .set({
@@ -155,7 +159,7 @@ export function applyActivityTypeResolvers(
       .where(eq(activityTypes.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update activity type ${input.id}`);
-    publishDataChanged(context.userId, 'activityType', [updated.id]);
+    publishDataChanged(userId, 'activityType', [updated.id]);
     return updated;
   };
 
@@ -165,15 +169,18 @@ export function applyActivityTypeResolvers(
     args: { id: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const existing = await context.db.query.activityTypes.findFirst({
-      where: { id: args.id },
-    });
-    if (!existing) throw new Error(`ActivityType ${args.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const userId = requireUser(context);
+    requireOwner(
+      await context.db.query.activityTypes.findFirst({
+        where: { id: args.id },
+      }),
+      'ActivityType',
+      args.id,
+      userId,
+    );
     await context.db.delete(activityTypes).where(eq(activityTypes.id, args.id));
-    runSchedulerWriteback(context.db, context.userId).catch(console.error);
-    publishDataChanged(context.userId, 'activityType', [args.id]);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
+    publishDataChanged(userId, 'activityType', [args.id]);
     return true;
   };
 }

@@ -12,6 +12,7 @@ import { eq, inArray } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
 import { z } from 'zod';
 import type { Context } from '../../context.ts';
+import { requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import {
   type TodoWithActivityType,
@@ -33,13 +34,13 @@ export function applyScheduleResolvers(
     args: { weekStart?: string; timezone?: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
 
     if (args.timezone) {
       context.db
         .update(users)
         .set({ timezone: args.timezone, updatedAt: new Date() })
-        .where(eq(users.id, context.userId))
+        .where(eq(users.id, userId))
         .catch(console.error);
     }
 
@@ -77,32 +78,32 @@ export function applyScheduleResolvers(
     ]: [TimeBlock[], Todo[], Todo[], TodoList[], Habit[], ActivityType[]] =
       await Promise.all([
         context.db.query.timeBlocks.findMany({
-          where: { userId: context.userId },
+          where: { userId: userId },
         }),
         context.db.query.todos.findMany({
           where: {
-            userId: context.userId,
+            userId: userId,
             completedAt: { isNull: true },
           },
           orderBy: { priority: 'desc' },
         }),
         context.db.query.todos.findMany({
           where: {
-            userId: context.userId,
+            userId: userId,
             completedAt: { isNotNull: true },
           },
         }),
         context.db.query.todoLists.findMany({
-          where: { userId: context.userId },
+          where: { userId: userId },
         }),
         context.db.query.habits.findMany({
           where: {
-            userId: context.userId,
+            userId: userId,
             activityTypeId: { isNotNull: true },
           },
         }),
         context.db.query.activityTypes.findMany({
-          where: { userId: context.userId },
+          where: { userId: userId },
         }),
       ]);
 
@@ -265,8 +266,8 @@ export function applyScheduleResolvers(
     _args: { weekStart?: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    await runSchedulerWriteback(context.db, context.userId);
+    const userId = requireUser(context);
+    await runSchedulerWriteback(context.db, userId);
     return true;
   };
 }

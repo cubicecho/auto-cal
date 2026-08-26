@@ -3,6 +3,7 @@ import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
 import type { InnerOrder, TodoOrderBy } from '../../__generated__/resolvers.ts';
 import type { Context } from '../../context.ts';
+import { requireOwner, requireUser } from '../../errors.ts';
 import { pubsub } from '../../pubsub.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { CreateTodoInput, UpdateTodoInput } from '../validators.ts';
@@ -37,8 +38,8 @@ export function applyTodoResolvers(
     },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const where: Record<string, unknown> = { userId: context.userId };
+    const userId = requireUser(context);
+    const where: Record<string, unknown> = { userId: userId };
     if (args.listId) where.listId = args.listId;
     if (args.completed === true) where.completedAt = { isNotNull: true };
     else if (args.completed === false) where.completedAt = { isNull: true };
@@ -54,20 +55,23 @@ export function applyTodoResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = CreateTodoInput.parse(args.input);
 
     // Validate list ownership before insert
-    const list = await context.db.query.todoLists.findFirst({
-      where: { id: input.listId },
-    });
-    if (!list) throw new Error(`TodoList ${input.listId} not found`);
-    if (list.userId !== context.userId) throw new Error('Forbidden');
+    requireOwner(
+      await context.db.query.todoLists.findFirst({
+        where: { id: input.listId },
+      }),
+      'TodoList',
+      input.listId,
+      userId,
+    );
 
     const [todo] = await context.db
       .insert(todos)
       .values({
-        userId: context.userId,
+        userId: userId,
         listId: input.listId,
         title: input.title,
         description: input.description,
@@ -80,9 +84,9 @@ export function applyTodoResolvers(
       })
       .returning();
     if (!todo) throw new Error('Failed to create todo');
-    runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
     pubsub
-      .publish(TODO_EVENT(context.userId), { type: 'created', todo })
+      .publish(TODO_EVENT(userId), { type: 'created', todo })
       .catch(console.error);
     return todo;
   };
@@ -93,20 +97,26 @@ export function applyTodoResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = UpdateTodoInput.parse(args.input);
-    const existing = await context.db.query.todos.findFirst({
-      where: { id: input.id },
-    });
-    if (!existing) throw new Error(`Todo ${input.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    requireOwner(
+      await context.db.query.todos.findFirst({
+        where: { id: input.id },
+      }),
+      'Todo',
+      input.id,
+      userId,
+    );
 
     if (input.listId !== undefined) {
-      const list = await context.db.query.todoLists.findFirst({
-        where: { id: input.listId },
-      });
-      if (!list) throw new Error(`TodoList ${input.listId} not found`);
-      if (list.userId !== context.userId) throw new Error('Forbidden');
+      requireOwner(
+        await context.db.query.todoLists.findFirst({
+          where: { id: input.listId },
+        }),
+        'TodoList',
+        input.listId,
+        userId,
+      );
     }
 
     const [updated] = await context.db
@@ -141,9 +151,9 @@ export function applyTodoResolvers(
       .where(eq(todos.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update todo ${input.id}`);
-    runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
     pubsub
-      .publish(TODO_EVENT(context.userId), { type: 'updated', todo: updated })
+      .publish(TODO_EVENT(userId), { type: 'updated', todo: updated })
       .catch(console.error);
     return updated;
   };
@@ -154,12 +164,15 @@ export function applyTodoResolvers(
     args: { id: string; completedAt?: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const existing = await context.db.query.todos.findFirst({
-      where: { id: args.id },
-    });
-    if (!existing) throw new Error(`Todo ${args.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const userId = requireUser(context);
+    requireOwner(
+      await context.db.query.todos.findFirst({
+        where: { id: args.id },
+      }),
+      'Todo',
+      args.id,
+      userId,
+    );
     const completedAt = args.completedAt
       ? new Date(args.completedAt)
       : new Date();
@@ -177,9 +190,9 @@ export function applyTodoResolvers(
       .where(eq(todos.id, args.id))
       .returning();
     if (!completed) throw new Error(`Failed to complete todo ${args.id}`);
-    runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
     pubsub
-      .publish(TODO_EVENT(context.userId), { type: 'updated', todo: completed })
+      .publish(TODO_EVENT(userId), { type: 'updated', todo: completed })
       .catch(console.error);
     return completed;
   };
@@ -190,16 +203,19 @@ export function applyTodoResolvers(
     args: { id: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const existing = await context.db.query.todos.findFirst({
-      where: { id: args.id },
-    });
-    if (!existing) throw new Error(`Todo ${args.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const userId = requireUser(context);
+    requireOwner(
+      await context.db.query.todos.findFirst({
+        where: { id: args.id },
+      }),
+      'Todo',
+      args.id,
+      userId,
+    );
     await context.db.delete(todos).where(eq(todos.id, args.id));
-    runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
     pubsub
-      .publish(TODO_EVENT(context.userId), {
+      .publish(TODO_EVENT(userId), {
         type: 'deleted',
         deletedId: args.id,
       })
@@ -213,12 +229,12 @@ export function applyTodoResolvers(
     args: { listId: string; completed?: boolean },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     // Scope every delete to the caller and a single list, so there is no way
     // to bulk-delete another user's todos or wipe everything with an empty
     // filter. `completed` optionally narrows to (in)complete todos.
     const conditions = [
-      eq(todos.userId, context.userId),
+      eq(todos.userId, userId),
       eq(todos.listId, args.listId),
     ];
     if (args.completed === true) conditions.push(isNotNull(todos.completedAt));
@@ -230,10 +246,10 @@ export function applyTodoResolvers(
       .where(and(...conditions))
       .returning();
 
-    runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
     for (const todo of deleted) {
       pubsub
-        .publish(TODO_EVENT(context.userId), {
+        .publish(TODO_EVENT(userId), {
           type: 'deleted',
           deletedId: todo.id,
         })

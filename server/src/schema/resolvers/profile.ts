@@ -2,6 +2,7 @@ import { users } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
 import type { Context } from '../../context.ts';
+import { requireUser } from '../../errors.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
 
@@ -11,9 +12,9 @@ export function applyProfileResolvers(
 ): void {
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   queryFields.myProfile!.resolve = async (_parent, _args, context: Context) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     return context.db.query.users.findFirst({
-      where: { id: context.userId },
+      where: { id: userId },
     });
   };
 
@@ -23,14 +24,14 @@ export function applyProfileResolvers(
     args: { timezone: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     if (!Intl.supportedValuesOf('timeZone').includes(args.timezone)) {
       throw new Error(`Invalid timezone: ${args.timezone}`);
     }
     await context.db
       .update(users)
       .set({ timezone: args.timezone, updatedAt: new Date() })
-      .where(eq(users.id, context.userId));
+      .where(eq(users.id, userId));
     return true;
   };
 }

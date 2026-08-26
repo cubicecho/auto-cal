@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
 import { generateApiKey } from '../../api-keys.ts';
 import type { Context } from '../../context.ts';
+import { requireOwner, requireUser } from '../../errors.ts';
 import { MyCreateApiKeyInput } from '../validators.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
@@ -13,9 +14,9 @@ export function applyApiKeyResolvers(
 ): void {
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   queryFields.myApiKeys!.resolve = async (_parent, _args, context: Context) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     return context.db.query.apiKeys.findMany({
-      where: { userId: context.userId, revokedAt: { isNull: true } },
+      where: { userId: userId, revokedAt: { isNull: true } },
       orderBy: { createdAt: 'desc' },
     });
   };
@@ -26,7 +27,7 @@ export function applyApiKeyResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     if (context.apiKey) {
       throw new Error('API keys cannot manage other keys');
     }
@@ -36,7 +37,7 @@ export function applyApiKeyResolvers(
     const [row] = await context.db
       .insert(apiKeys)
       .values({
-        userId: context.userId,
+        userId: userId,
         name: input.name,
         keyHash: hash,
         keyPrefix: prefix,
@@ -56,15 +57,18 @@ export function applyApiKeyResolvers(
     args: { id: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     if (context.apiKey) {
       throw new Error('API keys cannot manage other keys');
     }
-    const key = await context.db.query.apiKeys.findFirst({
-      where: { id: args.id },
-    });
-    if (!key) throw new Error(`ApiKey ${args.id} not found`);
-    if (key.userId !== context.userId) throw new Error('Forbidden');
+    requireOwner(
+      await context.db.query.apiKeys.findFirst({
+        where: { id: args.id },
+      }),
+      'ApiKey',
+      args.id,
+      userId,
+    );
 
     await context.db
       .update(apiKeys)

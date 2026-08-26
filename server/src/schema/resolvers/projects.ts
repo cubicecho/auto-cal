@@ -8,6 +8,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
 import type { Context } from '../../context.ts';
+import { requireOwner, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import {
   CreateProjectInput,
@@ -32,9 +33,9 @@ export function applyProjectResolvers(
     args: { includeArchived?: boolean },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const rows = await context.db.query.projects.findMany({
-      where: { userId: context.userId },
+      where: { userId: userId },
       orderBy: { createdAt: 'desc' },
     });
     if (args.includeArchived) return rows;
@@ -47,12 +48,15 @@ export function applyProjectResolvers(
     args: { id: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const project = await context.db.query.projects.findFirst({
-      where: { id: args.id },
-    });
-    if (!project) throw new Error(`Project ${args.id} not found`);
-    if (project.userId !== context.userId) throw new Error('Forbidden');
+    const userId = requireUser(context);
+    const project = requireOwner(
+      await context.db.query.projects.findFirst({
+        where: { id: args.id },
+      }),
+      'Project',
+      args.id,
+      userId,
+    );
     return project;
   };
 
@@ -62,8 +66,7 @@ export function applyProjectResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const userId = context.userId;
+    const userId = requireUser(context);
     const input = CreateProjectInput.parse(args.input);
 
     // Validate the chosen parent activity type belongs to the user and pick a
@@ -71,13 +74,14 @@ export function applyProjectResolvers(
     // grouped with their parent).
     let color = input.color ?? DEFAULT_ACTIVITY_COLOR;
     if (input.parentActivityTypeId) {
-      const parent = await context.db.query.activityTypes.findFirst({
-        where: { id: input.parentActivityTypeId },
-      });
-      if (!parent) {
-        throw new Error(`ActivityType ${input.parentActivityTypeId} not found`);
-      }
-      if (parent.userId !== userId) throw new Error('Forbidden');
+      const parent = requireOwner(
+        await context.db.query.activityTypes.findFirst({
+          where: { id: input.parentActivityTypeId },
+        }),
+        'ActivityType',
+        input.parentActivityTypeId,
+        userId,
+      );
       if (!input.color) color = parent.color;
     }
 
@@ -131,13 +135,16 @@ export function applyProjectResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = UpdateProjectInput.parse(args.input);
-    const existing = await context.db.query.projects.findFirst({
-      where: { id: input.id },
-    });
-    if (!existing) throw new Error(`Project ${input.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    requireOwner(
+      await context.db.query.projects.findFirst({
+        where: { id: input.id },
+      }),
+      'Project',
+      input.id,
+      userId,
+    );
 
     const [updated] = await context.db
       .update(projects)
@@ -149,7 +156,7 @@ export function applyProjectResolvers(
       .where(eq(projects.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update project ${input.id}`);
-    publishDataChanged(context.userId, 'project', [updated.id]);
+    publishDataChanged(userId, 'project', [updated.id]);
     return updated;
   };
 
@@ -159,12 +166,15 @@ export function applyProjectResolvers(
     args: { id: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const existing = await context.db.query.projects.findFirst({
-      where: { id: args.id },
-    });
-    if (!existing) throw new Error(`Project ${args.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const userId = requireUser(context);
+    requireOwner(
+      await context.db.query.projects.findFirst({
+        where: { id: args.id },
+      }),
+      'Project',
+      args.id,
+      userId,
+    );
 
     const [updated] = await context.db
       .update(projects)
@@ -172,7 +182,7 @@ export function applyProjectResolvers(
       .where(eq(projects.id, args.id))
       .returning();
     if (!updated) throw new Error(`Failed to archive project ${args.id}`);
-    publishDataChanged(context.userId, 'project', [updated.id]);
+    publishDataChanged(userId, 'project', [updated.id]);
     return updated;
   };
 
@@ -184,13 +194,16 @@ export function applyProjectResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = CreateProjectNoteInput.parse(args.input);
-    const project = await context.db.query.projects.findFirst({
-      where: { id: input.projectId },
-    });
-    if (!project) throw new Error(`Project ${input.projectId} not found`);
-    if (project.userId !== context.userId) throw new Error('Forbidden');
+    requireOwner(
+      await context.db.query.projects.findFirst({
+        where: { id: input.projectId },
+      }),
+      'Project',
+      input.projectId,
+      userId,
+    );
 
     // Append to the end of the note list.
     const siblings = await context.db.query.projectNotes.findMany({
@@ -205,7 +218,7 @@ export function applyProjectResolvers(
     const [note] = await context.db
       .insert(projectNotes)
       .values({
-        userId: context.userId,
+        userId: userId,
         projectId: input.projectId,
         title: input.title,
         content: input.content,
@@ -213,7 +226,7 @@ export function applyProjectResolvers(
       })
       .returning();
     if (!note) throw new Error('Failed to create project note');
-    publishDataChanged(context.userId, 'project', [input.projectId]);
+    publishDataChanged(userId, 'project', [input.projectId]);
     return note;
   };
 
@@ -223,13 +236,16 @@ export function applyProjectResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = UpdateProjectNoteInput.parse(args.input);
-    const existing = await context.db.query.projectNotes.findFirst({
-      where: { id: input.id },
-    });
-    if (!existing) throw new Error(`ProjectNote ${input.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const existing = requireOwner(
+      await context.db.query.projectNotes.findFirst({
+        where: { id: input.id },
+      }),
+      'ProjectNote',
+      input.id,
+      userId,
+    );
 
     const [updated] = await context.db
       .update(projectNotes)
@@ -241,7 +257,7 @@ export function applyProjectResolvers(
       .where(eq(projectNotes.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update project note ${input.id}`);
-    publishDataChanged(context.userId, 'project', [existing.projectId]);
+    publishDataChanged(userId, 'project', [existing.projectId]);
     return updated;
   };
 
@@ -251,14 +267,16 @@ export function applyProjectResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const userId = context.userId;
+    const userId = requireUser(context);
     const input = ReorderProjectNotesInput.parse(args.input);
-    const project = await context.db.query.projects.findFirst({
-      where: { id: input.projectId },
-    });
-    if (!project) throw new Error(`Project ${input.projectId} not found`);
-    if (project.userId !== userId) throw new Error('Forbidden');
+    requireOwner(
+      await context.db.query.projects.findFirst({
+        where: { id: input.projectId },
+      }),
+      'Project',
+      input.projectId,
+      userId,
+    );
 
     // Every id must belong to this project — reject a mismatched set outright.
     const existing = await context.db.query.projectNotes.findMany({
@@ -296,21 +314,21 @@ export function applyProjectResolvers(
     args: { id: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const existing = await context.db.query.projectNotes.findFirst({
-      where: { id: args.id },
-    });
-    if (!existing) throw new Error(`ProjectNote ${args.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const userId = requireUser(context);
+    const existing = requireOwner(
+      await context.db.query.projectNotes.findFirst({
+        where: { id: args.id },
+      }),
+      'ProjectNote',
+      args.id,
+      userId,
+    );
     await context.db
       .delete(projectNotes)
       .where(
-        and(
-          eq(projectNotes.id, args.id),
-          eq(projectNotes.userId, context.userId),
-        ),
+        and(eq(projectNotes.id, args.id), eq(projectNotes.userId, userId)),
       );
-    publishDataChanged(context.userId, 'project', [existing.projectId]);
+    publishDataChanged(userId, 'project', [existing.projectId]);
     return true;
   };
 }

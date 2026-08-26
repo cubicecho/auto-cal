@@ -1,6 +1,7 @@
 import { type NewTodo, todoLists, todos } from '@auto-cal/db/schema';
 import type { GraphQLObjectType } from 'graphql';
 import type { Context } from '../../context.ts';
+import { notFound, requireUser } from '../../errors.ts';
 import { pubsub } from '../../pubsub.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { ImportTodosInput } from '../validators.ts';
@@ -23,8 +24,7 @@ export function applyImportResolvers(mutationFields: Fields): void {
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const userId = context.userId;
+    const userId = requireUser(context);
     const input = ImportTodosInput.parse(args.input);
 
     // Validate every referenced activity type belongs to the caller up front,
@@ -35,7 +35,7 @@ export function applyImportResolvers(mutationFields: Fields): void {
     const owned = new Set(ownedTypes.map((t: { id: string }) => t.id));
     for (const list of input.lists) {
       if (!owned.has(list.activityTypeId)) {
-        throw new Error(`ActivityType ${list.activityTypeId} not found`);
+        throw notFound('ActivityType', list.activityTypeId);
       }
     }
 

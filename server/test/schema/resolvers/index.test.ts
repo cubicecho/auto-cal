@@ -262,6 +262,70 @@ describe('resolver integration tests', () => {
   });
 });
 
+describe('error codes', () => {
+  let db: Awaited<ReturnType<typeof createTestDb>>;
+  let testSchema: ReturnType<typeof buildTestSchema>;
+  let userId: string;
+
+  beforeAll(async () => {
+    db = await createTestDb();
+    testSchema = buildTestSchema(db);
+    const [user] = await db
+      .insert(users)
+      .values({ email: `codes-${Date.now()}@example.com` })
+      .returning();
+    if (!user) throw new Error('Failed to create test user');
+    userId = user.id;
+  }, 30000);
+
+  // The client decides whether to drop the session from extensions.code, so
+  // these are load-bearing: reword a message and nothing breaks, drop a code
+  // and the user silently stops being logged out.
+  it('tags an unauthenticated request UNAUTHENTICATED', async () => {
+    const result = await graphql({
+      schema: testSchema,
+      source: 'query { myTodos { id } }',
+      contextValue: { db, loaders: createLoaders(db) },
+    });
+    expect(result.errors?.[0]?.extensions?.code).toBe('UNAUTHENTICATED');
+  });
+
+  it('tags a missing row NOT_FOUND', async () => {
+    const result = await exec(
+      testSchema,
+      db,
+      userId,
+      'query { myProject(id: "00000000-0000-0000-0000-000000000000") { id } }',
+    );
+    expect(result.errors?.[0]?.extensions?.code).toBe('NOT_FOUND');
+  });
+
+  it("tags another user's row FORBIDDEN", async () => {
+    const [other] = await db
+      .insert(users)
+      .values({ email: `codes-other-${Date.now()}@example.com` })
+      .returning();
+    if (!other) throw new Error('Failed to create other user');
+
+    const created = await exec(
+      testSchema,
+      db,
+      other.id,
+      'mutation { myCreateProject(input: { name: "Theirs" }) { id } }',
+    );
+    expect(created.errors).toBeUndefined();
+    const projectId = (created.data?.myCreateProject as { id: string }).id;
+
+    const result = await exec(
+      testSchema,
+      db,
+      userId,
+      `query { myProject(id: "${projectId}") { id } }`,
+    );
+    expect(result.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+  });
+});
+
 describe('mutation surface', () => {
   let db: Awaited<ReturnType<typeof createTestDb>>;
   let testSchema: ReturnType<typeof buildTestSchema>;

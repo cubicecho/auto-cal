@@ -1,5 +1,6 @@
 import type { GraphQLObjectType } from 'graphql';
 import type { Context } from '../../context.ts';
+import { requireUser } from '../../errors.ts';
 import { pubsub } from '../../pubsub.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
@@ -31,8 +32,8 @@ export function applySubscriptionResolvers(subscriptionFields: Fields): void {
     _args,
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    return pubsub.asyncIterableIterator(TODO_EVENT(context.userId));
+    const userId = requireUser(context);
+    return pubsub.asyncIterableIterator(TODO_EVENT(userId));
   };
 
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
@@ -44,8 +45,8 @@ export function applySubscriptionResolvers(subscriptionFields: Fields): void {
     _args,
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    return pubsub.asyncIterableIterator(TODO_LIST_EVENT(context.userId));
+    const userId = requireUser(context);
+    return pubsub.asyncIterableIterator(TODO_LIST_EVENT(userId));
   };
 
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
@@ -58,8 +59,8 @@ export function applySubscriptionResolvers(subscriptionFields: Fields): void {
     _args,
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    return pubsub.asyncIterableIterator(DATA_EVENT(context.userId));
+    const userId = requireUser(context);
+    return pubsub.asyncIterableIterator(DATA_EVENT(userId));
   };
 
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above

@@ -2,6 +2,12 @@ import { todoLists } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
 import type { Context } from '../../context.ts';
+import {
+  forbidden,
+  notFound,
+  requireOwner,
+  requireUser,
+} from '../../errors.ts';
 import { pubsub } from '../../pubsub.ts';
 import { CreateTodoListInput, UpdateTodoListInput } from '../validators.ts';
 import { TODO_LIST_EVENT } from './subscriptions.ts';
@@ -18,9 +24,9 @@ export function applyTodoListResolvers(
     _args,
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     return context.db.query.todoLists.findMany({
-      where: { userId: context.userId },
+      where: { userId: userId },
       orderBy: { name: 'asc' },
     });
   };
@@ -31,7 +37,7 @@ export function applyTodoListResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = CreateTodoListInput.parse(args.input);
 
     // Validate activity type belongs to the user
@@ -39,16 +45,16 @@ export function applyTodoListResolvers(
       where: { id: input.activityTypeId },
     });
     if (!activityType) {
-      throw new Error(`ActivityType ${input.activityTypeId} not found`);
+      throw notFound('ActivityType', input.activityTypeId);
     }
-    if (activityType.userId !== context.userId) {
-      throw new Error('Forbidden');
+    if (activityType.userId !== userId) {
+      throw forbidden();
     }
 
     const [list] = await context.db
       .insert(todoLists)
       .values({
-        userId: context.userId,
+        userId: userId,
         name: input.name,
         description: input.description,
         activityTypeId: input.activityTypeId,
@@ -58,7 +64,7 @@ export function applyTodoListResolvers(
       .returning();
     if (!list) throw new Error('Failed to create todo list');
     pubsub
-      .publish(TODO_LIST_EVENT(context.userId), {
+      .publish(TODO_LIST_EVENT(userId), {
         type: 'created',
         todoList: list,
       })
@@ -72,22 +78,26 @@ export function applyTodoListResolvers(
     args: { input: unknown },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
+    const userId = requireUser(context);
     const input = UpdateTodoListInput.parse(args.input);
-    const existing = await context.db.query.todoLists.findFirst({
-      where: { id: input.id },
-    });
-    if (!existing) throw new Error(`TodoList ${input.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    requireOwner(
+      await context.db.query.todoLists.findFirst({
+        where: { id: input.id },
+      }),
+      'TodoList',
+      input.id,
+      userId,
+    );
 
     if (input.activityTypeId !== undefined) {
-      const at = await context.db.query.activityTypes.findFirst({
-        where: { id: input.activityTypeId },
-      });
-      if (!at) {
-        throw new Error(`ActivityType ${input.activityTypeId} not found`);
-      }
-      if (at.userId !== context.userId) throw new Error('Forbidden');
+      requireOwner(
+        await context.db.query.activityTypes.findFirst({
+          where: { id: input.activityTypeId },
+        }),
+        'ActivityType',
+        input.activityTypeId,
+        userId,
+      );
     }
 
     const [updated] = await context.db
@@ -112,7 +122,7 @@ export function applyTodoListResolvers(
       .returning();
     if (!updated) throw new Error(`Failed to update todo list ${input.id}`);
     pubsub
-      .publish(TODO_LIST_EVENT(context.userId), {
+      .publish(TODO_LIST_EVENT(userId), {
         type: 'updated',
         todoList: updated,
       })
@@ -126,12 +136,15 @@ export function applyTodoListResolvers(
     args: { id: string },
     context: Context,
   ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const existing = await context.db.query.todoLists.findFirst({
-      where: { id: args.id },
-    });
-    if (!existing) throw new Error(`TodoList ${args.id} not found`);
-    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const userId = requireUser(context);
+    requireOwner(
+      await context.db.query.todoLists.findFirst({
+        where: { id: args.id },
+      }),
+      'TodoList',
+      args.id,
+      userId,
+    );
 
     // Block delete when the list still has todos — todos.list_id is RESTRICT.
     const todoCount = await context.db.query.todos.findMany({
@@ -146,7 +159,7 @@ export function applyTodoListResolvers(
 
     await context.db.delete(todoLists).where(eq(todoLists.id, args.id));
     pubsub
-      .publish(TODO_LIST_EVENT(context.userId), {
+      .publish(TODO_LIST_EVENT(userId), {
         type: 'deleted',
         deletedId: args.id,
       })
