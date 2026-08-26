@@ -64,9 +64,13 @@ const splitLink = ApolloLink.split(
 
 const errorLink = new ErrorLink(({ error }) => {
   if (CombinedGraphQLErrors.is(error)) {
+    // Match on extensions.code, not the message. The server used to throw bare
+    // Errors, so this had to string-match 'Not authenticated' / 'Forbidden' and
+    // any reword on the server silently disabled session expiry.
     const needsLogin = error.errors.some(
       (e) =>
-        e.message.includes('Not authenticated') || e.message === 'Forbidden',
+        e.extensions?.code === 'UNAUTHENTICATED' ||
+        e.extensions?.code === 'FORBIDDEN',
     );
     if (needsLogin) {
       storage.removeItem('auth_token');

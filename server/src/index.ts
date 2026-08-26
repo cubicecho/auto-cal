@@ -3,6 +3,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ApolloServer } from '@apollo/server';
+import { unwrapResolverError } from '@apollo/server/errors';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import { expressMiddleware } from '@as-integrations/express4';
 import { db } from '@auto-cal/db';
@@ -12,10 +13,12 @@ import { eq } from 'drizzle-orm';
 import express from 'express';
 import { useServer } from 'graphql-ws/use/ws';
 import { WebSocketServer } from 'ws';
+import { ZodError } from 'zod';
 import { hashApiKey, isApiKey } from './api-keys.ts';
 import { verifyToken } from './auth.ts';
 import { createLoaders } from './context.ts';
 import type { Context } from './context.ts';
+import { ErrorCode } from './errors.ts';
 import { icalHandler } from './ical-route.ts';
 import { authLog, log, logLevelName, wsLog } from './logger.ts';
 import { schema } from './schema/index.ts';
@@ -197,6 +200,39 @@ const server = new ApolloServer<Context>({
   ],
   formatError(formattedError, error) {
     log.error('GraphQL error:', formattedError.message, error);
+
+    // Zod throws from the resolver boundary, so without this its failures reach
+    // the client as INTERNAL_SERVER_ERROR with a raw stringified issue list.
+    const original = unwrapResolverError(error);
+    if (original instanceof ZodError) {
+      return {
+        ...formattedError,
+        message: 'Invalid input',
+        extensions: {
+          code: ErrorCode.BadUserInput,
+          issues: original.issues.map((i) => ({
+            path: i.path.join('.'),
+            message: i.message,
+          })),
+        },
+      };
+    }
+
+    // Anything still uncoded is unexpected — a thrown bare Error, a driver
+    // failure. Those messages can carry SQL and internal paths, so in
+    // production they are replaced rather than forwarded. Coded errors are
+    // deliberate and pass through untouched.
+    if (
+      process.env.NODE_ENV === 'production' &&
+      formattedError.extensions?.code === 'INTERNAL_SERVER_ERROR'
+    ) {
+      return {
+        ...formattedError,
+        message: 'Internal server error',
+        extensions: { code: 'INTERNAL_SERVER_ERROR' },
+      };
+    }
+
     return formattedError;
   },
 });
