@@ -4,7 +4,7 @@ import type { GraphQLObjectType, GraphQLSchema } from 'graphql';
 import { buildSchemaConfig } from './build-config.ts';
 import { applyCustomResolvers } from './resolvers/index.ts';
 
-const { schema: drizzleSchema, entities } = buildSchema(db, buildSchemaConfig);
+const { schema: drizzleSchema } = buildSchema(db, buildSchemaConfig);
 
 // Block all auto-generated drizzle-graphql resolvers that aren't user-scoped.
 // Only fields starting with "my" and the two public auth mutations are allowed.
@@ -30,5 +30,3 @@ function blockUnscopedResolvers(schema: GraphQLSchema): void {
 
 export const schema = applyCustomResolvers(drizzleSchema);
 blockUnscopedResolvers(schema);
-
-export { entities };
