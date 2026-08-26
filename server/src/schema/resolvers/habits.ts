@@ -6,9 +6,7 @@ import {
   habits,
 } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
-import type { GraphQLObjectType } from 'graphql';
 import { z } from 'zod';
-import type { Context } from '../../context.ts';
 import {
   forbidden,
   notFound,
@@ -19,8 +17,7 @@ import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { startOfISOWeek } from '../../services/scheduler.ts';
 import { CompleteHabitInput, CreateHabitInput } from '../validators.ts';
 import { publishDataChanged } from './subscriptions.ts';
-
-type Fields = ReturnType<GraphQLObjectType['getFields']>;
+import type { MutationMap, QueryMap } from './types.ts';
 
 const UpdateHabitInput = z.object({
   id: z.string().uuid(),
@@ -58,16 +55,10 @@ const UpdateHabitInput = z.object({
   pomodoroMaxPerDay: z.number().int().min(1).max(100).nullable().optional(),
 });
 
-export function applyHabitResolvers(
-  queryFields: Fields,
-  mutationFields: Fields,
-): void {
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myHabits!.resolve = async (
-    _parent,
-    args: { activityTypeId?: string },
-    context: Context,
-  ) => {
+export const habitQueries: QueryMap<
+  'myHabits' | 'myHabitStats' | 'myHabitDetail'
+> = {
+  myHabits: async (_parent, args, context) => {
     const userId = requireUser(context);
     const where: Record<string, unknown> = { userId: userId };
     if (args.activityTypeId) where.activityTypeId = args.activityTypeId;
@@ -75,14 +66,9 @@ export function applyHabitResolvers(
       where,
       orderBy: { priority: 'desc', createdAt: 'desc' },
     });
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myHabitStats!.resolve = async (
-    _parent,
-    args: { habitId?: string; startDate?: string; endDate?: string },
-    context: Context,
-  ) => {
+  myHabitStats: async (_parent, args, context) => {
     const userId = requireUser(context);
 
     const habitWhere: Record<string, unknown> = { userId: userId };
@@ -122,14 +108,9 @@ export function applyHabitResolvers(
         totalCompletions,
       };
     });
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myHabitDetail!.resolve = async (
-    _parent,
-    args: { habitId: string; periods?: number },
-    context: Context,
-  ) => {
+  myHabitDetail: async (_parent, args, context) => {
     const userId = requireUser(context);
 
     const habit = requireOwner(
@@ -221,14 +202,17 @@ export function applyHabitResolvers(
       allTimeRate,
       periods,
     };
-  };
+  },
+};
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myCreateHabit!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+export const habitMutations: MutationMap<
+  | 'myCreateHabit'
+  | 'myDeleteHabit'
+  | 'myUpdateHabit'
+  | 'myCompleteHabit'
+  | 'myUncompleteHabit'
+> = {
+  myCreateHabit: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = CreateHabitInput.parse(args.input);
     const [habit] = await context.db
@@ -256,14 +240,9 @@ export function applyHabitResolvers(
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'habit', [habit.id]);
     return habit;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myDeleteHabit!.resolve = async (
-    _parent,
-    args: { id: string },
-    context: Context,
-  ) => {
+  myDeleteHabit: async (_parent, args, context) => {
     const userId = requireUser(context);
     requireOwner(
       await context.db.query.habits.findFirst({
@@ -277,14 +256,9 @@ export function applyHabitResolvers(
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'habit', [args.id]);
     return true;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myUpdateHabit!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+  myUpdateHabit: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateHabitInput.parse(args.input);
     requireOwner(
@@ -344,14 +318,9 @@ export function applyHabitResolvers(
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'habit', [updated.id]);
     return updated;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myCompleteHabit!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+  myCompleteHabit: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = CompleteHabitInput.parse(args.input);
     requireOwner(
@@ -376,14 +345,9 @@ export function applyHabitResolvers(
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'habit', [input.habitId]);
     return completion;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myUncompleteHabit!.resolve = async (
-    _parent,
-    args: { completionId: string },
-    context: Context,
-  ) => {
+  myUncompleteHabit: async (_parent, args, context) => {
     const userId = requireUser(context);
     // Look up the completion + its habit to enforce ownership
     const completion = await context.db.query.habitCompletions.findFirst({
@@ -403,5 +367,5 @@ export function applyHabitResolvers(
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'habit', [completion.habitId]);
     return true;
-  };
-}
+  },
+};

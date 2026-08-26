@@ -50,13 +50,19 @@ const extensionSDL = `
 `;
 ```
 
-Then attach resolvers inside `applyCustomResolvers`:
+Then add the resolver to the domain's typed map and spread that map into the
+matching `attach()` call in `applyCustomResolvers`:
 ```typescript
-queryFields.myNewThing!.resolve = async (_parent, args, context: Context) => {
-  if (!context.userId) throw new Error('Not authenticated');
-  // ...
+export const newThingQueries: QueryMap<'myNewThing'> = {
+  myNewThing: async (_parent, args, context) => {
+    const userId = requireUser(context);
+    // ...
+  },
 };
 ```
+`args` and the return type come from the SDL — regenerate with
+`npm run codegen` after editing `extensionSDL`, or the new field won't exist in
+`QueryResolvers` yet.
 
 ## Core Types (from Drizzle)
 

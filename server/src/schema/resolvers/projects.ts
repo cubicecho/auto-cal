@@ -6,8 +6,6 @@ import {
   todoLists,
 } from '@auto-cal/db/schema';
 import { and, eq } from 'drizzle-orm';
-import type { GraphQLObjectType } from 'graphql';
-import type { Context } from '../../context.ts';
 import { requireOwner, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import {
@@ -18,21 +16,12 @@ import {
   UpdateProjectNoteInput,
 } from '../validators.ts';
 import { publishDataChanged } from './subscriptions.ts';
-
-type Fields = ReturnType<GraphQLObjectType['getFields']>;
+import type { MutationMap, QueryMap } from './types.ts';
 
 const DEFAULT_ACTIVITY_COLOR = '#6366f1';
 
-export function applyProjectResolvers(
-  queryFields: Fields,
-  mutationFields: Fields,
-): void {
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myProjects!.resolve = async (
-    _parent,
-    args: { includeArchived?: boolean },
-    context: Context,
-  ) => {
+export const projectQueries: QueryMap<'myProjects' | 'myProject'> = {
+  myProjects: async (_parent, args, context) => {
     const userId = requireUser(context);
     const rows = await context.db.query.projects.findMany({
       where: { userId: userId },
@@ -40,14 +29,9 @@ export function applyProjectResolvers(
     });
     if (args.includeArchived) return rows;
     return rows.filter((p: Project) => p.status !== 'archived');
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myProject!.resolve = async (
-    _parent,
-    args: { id: string },
-    context: Context,
-  ) => {
+  myProject: async (_parent, args, context) => {
     const userId = requireUser(context);
     const project = requireOwner(
       await context.db.query.projects.findFirst({
@@ -58,14 +42,19 @@ export function applyProjectResolvers(
       userId,
     );
     return project;
-  };
+  },
+};
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myCreateProject!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+export const projectMutations: MutationMap<
+  | 'myCreateProject'
+  | 'myUpdateProject'
+  | 'myArchiveProject'
+  | 'myCreateProjectNote'
+  | 'myUpdateProjectNote'
+  | 'myReorderProjectNotes'
+  | 'myDeleteProjectNote'
+> = {
+  myCreateProject: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = CreateProjectInput.parse(args.input);
 
@@ -127,14 +116,9 @@ export function applyProjectResolvers(
     publishDataChanged(userId, 'project', [project.id]);
     publishDataChanged(userId, 'activityType', [project.activityTypeId]);
     return project;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myUpdateProject!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+  myUpdateProject: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateProjectInput.parse(args.input);
     requireOwner(
@@ -158,14 +142,9 @@ export function applyProjectResolvers(
     if (!updated) throw new Error(`Failed to update project ${input.id}`);
     publishDataChanged(userId, 'project', [updated.id]);
     return updated;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myArchiveProject!.resolve = async (
-    _parent,
-    args: { id: string },
-    context: Context,
-  ) => {
+  myArchiveProject: async (_parent, args, context) => {
     const userId = requireUser(context);
     requireOwner(
       await context.db.query.projects.findFirst({
@@ -184,16 +163,10 @@ export function applyProjectResolvers(
     if (!updated) throw new Error(`Failed to archive project ${args.id}`);
     publishDataChanged(userId, 'project', [updated.id]);
     return updated;
-  };
+  },
 
   // ─── Notes ─────────────────────────────────────────────────────────────
-
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myCreateProjectNote!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+  myCreateProjectNote: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = CreateProjectNoteInput.parse(args.input);
     requireOwner(
@@ -228,14 +201,9 @@ export function applyProjectResolvers(
     if (!note) throw new Error('Failed to create project note');
     publishDataChanged(userId, 'project', [input.projectId]);
     return note;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myUpdateProjectNote!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+  myUpdateProjectNote: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateProjectNoteInput.parse(args.input);
     const existing = requireOwner(
@@ -259,14 +227,9 @@ export function applyProjectResolvers(
     if (!updated) throw new Error(`Failed to update project note ${input.id}`);
     publishDataChanged(userId, 'project', [existing.projectId]);
     return updated;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myReorderProjectNotes!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+  myReorderProjectNotes: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = ReorderProjectNotesInput.parse(args.input);
     requireOwner(
@@ -306,14 +269,9 @@ export function applyProjectResolvers(
       where: { projectId: input.projectId },
       orderBy: { position: 'asc' },
     });
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myDeleteProjectNote!.resolve = async (
-    _parent,
-    args: { id: string },
-    context: Context,
-  ) => {
+  myDeleteProjectNote: async (_parent, args, context) => {
     const userId = requireUser(context);
     const existing = requireOwner(
       await context.db.query.projectNotes.findFirst({
@@ -330,5 +288,5 @@ export function applyProjectResolvers(
       );
     publishDataChanged(userId, 'project', [existing.projectId]);
     return true;
-  };
-}
+  },
+};

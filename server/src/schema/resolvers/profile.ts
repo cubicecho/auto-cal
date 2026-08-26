@@ -1,29 +1,21 @@
 import { users } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
-import type { GraphQLObjectType } from 'graphql';
-import type { Context } from '../../context.ts';
 import { requireUser } from '../../errors.ts';
+import type { MutationMap, QueryMap } from './types.ts';
 
-type Fields = ReturnType<GraphQLObjectType['getFields']>;
-
-export function applyProfileResolvers(
-  queryFields: Fields,
-  mutationFields: Fields,
-): void {
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myProfile!.resolve = async (_parent, _args, context: Context) => {
+export const profileQueries: QueryMap<'myProfile'> = {
+  myProfile: async (_parent, _args, context) => {
     const userId = requireUser(context);
-    return context.db.query.users.findFirst({
-      where: { id: userId },
-    });
-  };
+    return (
+      (await context.db.query.users.findFirst({
+        where: { id: userId },
+      })) ?? null
+    );
+  },
+};
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myUpdateProfile!.resolve = async (
-    _parent,
-    args: { timezone: string },
-    context: Context,
-  ) => {
+export const profileMutations: MutationMap<'myUpdateProfile'> = {
+  myUpdateProfile: async (_parent, args, context) => {
     const userId = requireUser(context);
     if (!Intl.supportedValuesOf('timeZone').includes(args.timezone)) {
       throw new Error(`Invalid timezone: ${args.timezone}`);
@@ -33,5 +25,5 @@ export function applyProfileResolvers(
       .set({ timezone: args.timezone, updatedAt: new Date() })
       .where(eq(users.id, userId));
     return true;
-  };
-}
+  },
+};

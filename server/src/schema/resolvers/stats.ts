@@ -4,19 +4,11 @@ import type {
   HabitCompletion,
   Todo,
 } from '@auto-cal/db/schema';
-import type { GraphQLObjectType } from 'graphql';
-import type { Context } from '../../context.ts';
 import { requireUser } from '../../errors.ts';
+import type { QueryMap } from './types.ts';
 
-type Fields = ReturnType<GraphQLObjectType['getFields']>;
-
-export function applyStatsResolvers(queryFields: Fields): void {
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myStats!.resolve = async (
-    _parent,
-    args: { startDate?: string; endDate?: string },
-    context: Context,
-  ) => {
+export const statsQueries: QueryMap<'myStats'> = {
+  myStats: async (_parent, args, context) => {
     const userId = requireUser(context);
 
     const now = new Date();
@@ -127,5 +119,5 @@ export function applyStatsResolvers(queryFields: Fields): void {
         completionRate: todoScore ?? 0,
       },
     };
-  };
-}
+  },
+};

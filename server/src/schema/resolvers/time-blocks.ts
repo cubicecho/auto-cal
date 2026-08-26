@@ -1,14 +1,11 @@
 import { timeBlocks } from '@auto-cal/db/schema';
 import { eq, sql } from 'drizzle-orm';
-import type { GraphQLObjectType } from 'graphql';
 import { z } from 'zod';
-import type { Context } from '../../context.ts';
 import { requireOwner, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { CreateTimeBlockInput } from '../validators.ts';
 import { publishDataChanged } from './subscriptions.ts';
-
-type Fields = ReturnType<GraphQLObjectType['getFields']>;
+import type { MutationMap, QueryMap } from './types.ts';
 
 const UpdateTimeBlockInput = z
   .object({
@@ -40,16 +37,8 @@ const UpdateTimeBlockInput = z
     { message: 'End time must be after start time', path: ['endTime'] },
   );
 
-export function applyTimeBlockResolvers(
-  queryFields: Fields,
-  mutationFields: Fields,
-): void {
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myTimeBlocks!.resolve = async (
-    _parent,
-    args: { activityTypeId?: string; containsDay?: number },
-    context: Context,
-  ) => {
+export const timeBlockQueries: QueryMap<'myTimeBlocks'> = {
+  myTimeBlocks: async (_parent, args, context) => {
     const userId = requireUser(context);
     const where: Record<string, unknown> = { userId: userId };
     if (args.activityTypeId) where.activityTypeId = args.activityTypeId;
@@ -62,14 +51,13 @@ export function applyTimeBlockResolvers(
       where,
       orderBy: { startTime: 'asc' },
     });
-  };
+  },
+};
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myCreateTimeBlock!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+export const timeBlockMutations: MutationMap<
+  'myCreateTimeBlock' | 'myUpdateTimeBlock' | 'myDeleteTimeBlock'
+> = {
+  myCreateTimeBlock: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = CreateTimeBlockInput.parse(args.input);
     const [block] = await context.db
@@ -87,14 +75,9 @@ export function applyTimeBlockResolvers(
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'timeBlock', [block.id]);
     return block;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myUpdateTimeBlock!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+  myUpdateTimeBlock: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateTimeBlockInput.parse(args.input);
     requireOwner(
@@ -123,14 +106,9 @@ export function applyTimeBlockResolvers(
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'timeBlock', [updated.id]);
     return updated;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myDeleteTimeBlock!.resolve = async (
-    _parent,
-    args: { id: string },
-    context: Context,
-  ) => {
+  myDeleteTimeBlock: async (_parent, args, context) => {
     const userId = requireUser(context);
     requireOwner(
       await context.db.query.timeBlocks.findFirst({
@@ -144,5 +122,5 @@ export function applyTimeBlockResolvers(
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'timeBlock', [args.id]);
     return true;
-  };
-}
+  },
+};

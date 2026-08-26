@@ -1,24 +1,28 @@
 import { MapperKind, mapSchema, pruneSchema } from '@graphql-tools/utils';
 import {
+  type GraphQLFieldResolver,
   type GraphQLObjectType,
   type GraphQLSchema,
   extendSchema,
   parse,
 } from 'graphql';
 import type { Context } from '../../context.ts';
-import { applyActivityTypeResolvers } from './activity-types.ts';
-import { applyApiKeyResolvers } from './api-keys.ts';
-import { applyAuthResolvers } from './auth.ts';
-import { applyHabitResolvers } from './habits.ts';
-import { applyImportResolvers } from './import.ts';
-import { applyProfileResolvers } from './profile.ts';
-import { applyProjectResolvers } from './projects.ts';
-import { applyScheduleResolvers } from './schedule.ts';
-import { applyStatsResolvers } from './stats.ts';
-import { applySubscriptionResolvers } from './subscriptions.ts';
-import { applyTimeBlockResolvers } from './time-blocks.ts';
-import { applyTodoListResolvers } from './todo-lists.ts';
-import { applyTodoResolvers } from './todos.ts';
+import {
+  activityTypeMutations,
+  activityTypeQueries,
+} from './activity-types.ts';
+import { apiKeyMutations, apiKeyQueries } from './api-keys.ts';
+import { authMutations } from './auth.ts';
+import { habitMutations, habitQueries } from './habits.ts';
+import { importMutations } from './import.ts';
+import { profileMutations, profileQueries } from './profile.ts';
+import { projectMutations, projectQueries } from './projects.ts';
+import { scheduleMutations, scheduleQueries } from './schedule.ts';
+import { statsQueries } from './stats.ts';
+import { subscriptionResolvers } from './subscriptions.ts';
+import { timeBlockMutations, timeBlockQueries } from './time-blocks.ts';
+import { todoListMutations, todoListQueries } from './todo-lists.ts';
+import { todoMutations, todoQueries } from './todos.ts';
 
 const extensionSDL = `
   type UserProfile {
@@ -473,6 +477,39 @@ function finalizeSchema(schema: GraphQLSchema): GraphQLSchema {
   return pruneSchema(mapped);
 }
 
+/**
+ * Attach a typed resolver map to a type, in place.
+ *
+ * A field-name typo is already a compile error (the maps are `Pick`s of the
+ * generated resolver types), so the runtime check here only catches the case
+ * the types cannot see: an SDL field that exists in `__generated__` but not in
+ * the schema this was called with — a stale codegen run.
+ */
+function attach(
+  type: GraphQLObjectType,
+  resolvers: Record<string, unknown>,
+): void {
+  const fields = type.getFields();
+  for (const [fieldName, resolver] of Object.entries(resolvers)) {
+    const field = fields[fieldName];
+    if (!field) {
+      throw new Error(
+        `${type.name}.${fieldName} has a resolver but is not in the schema — regenerate schema.graphql`,
+      );
+    }
+    if (typeof resolver === 'function') {
+      field.resolve = resolver as GraphQLFieldResolver<unknown, Context>;
+    } else {
+      const { subscribe, resolve } = resolver as {
+        subscribe: GraphQLFieldResolver<unknown, Context>;
+        resolve: GraphQLFieldResolver<unknown, Context>;
+      };
+      field.subscribe = subscribe;
+      field.resolve = resolve;
+    }
+  }
+}
+
 export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   const extended = extendSchema(schema, parse(extensionSDL));
 
@@ -481,23 +518,33 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   const subscriptionType = extended.getType(
     'Subscription',
   ) as GraphQLObjectType;
-  const queryFields = queryType.getFields();
-  const mutationFields = mutationType.getFields();
-  const subscriptionFields = subscriptionType.getFields();
 
-  applyProfileResolvers(queryFields, mutationFields);
-  applyActivityTypeResolvers(queryFields, mutationFields);
-  applyTodoListResolvers(queryFields, mutationFields);
-  applyTodoResolvers(queryFields, mutationFields);
-  applyHabitResolvers(queryFields, mutationFields);
-  applyTimeBlockResolvers(queryFields, mutationFields);
-  applyStatsResolvers(queryFields);
-  applyScheduleResolvers(queryFields, mutationFields);
-  applyProjectResolvers(queryFields, mutationFields);
-  applyAuthResolvers(mutationFields);
-  applyApiKeyResolvers(queryFields, mutationFields);
-  applyImportResolvers(mutationFields);
-  applySubscriptionResolvers(subscriptionFields);
+  attach(queryType, {
+    ...profileQueries,
+    ...activityTypeQueries,
+    ...todoListQueries,
+    ...todoQueries,
+    ...habitQueries,
+    ...timeBlockQueries,
+    ...statsQueries,
+    ...scheduleQueries,
+    ...projectQueries,
+    ...apiKeyQueries,
+  });
+  attach(mutationType, {
+    ...profileMutations,
+    ...activityTypeMutations,
+    ...todoListMutations,
+    ...todoMutations,
+    ...habitMutations,
+    ...timeBlockMutations,
+    ...scheduleMutations,
+    ...projectMutations,
+    ...authMutations,
+    ...apiKeyMutations,
+    ...importMutations,
+  });
+  attach(subscriptionType, subscriptionResolvers);
 
   // drizzle-graphql v4 attaches resolvers to every Drizzle-relation field
   // (eager when the parent query pre-fetched it, request-batched lazy loads

@@ -1,19 +1,13 @@
 import { users } from '@auto-cal/db/schema';
-import type { GraphQLObjectType } from 'graphql';
 import { z } from 'zod';
 import { signMagicToken, signSessionToken, verifyToken } from '../../auth.ts';
 import { magicLinkExposed } from '../../config.ts';
-import type { Context } from '../../context.ts';
+import type { MutationMap } from './types.ts';
 
-type Fields = ReturnType<GraphQLObjectType['getFields']>;
-
-export function applyAuthResolvers(mutationFields: Fields): void {
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.requestMagicLink!.resolve = async (
-    _parent,
-    args: { email: string },
-    context: Context,
-  ) => {
+export const authMutations: MutationMap<
+  'requestMagicLink' | 'verifyMagicLink'
+> = {
+  requestMagicLink: async (_parent, args, context) => {
     const email = z.string().email().parse(args.email).toLowerCase();
     const token = await signMagicToken(email);
     const magicLink = `${context.appBaseUrl}/auth/verify?token=${token}`;
@@ -24,14 +18,9 @@ export function applyAuthResolvers(mutationFields: Fields): void {
     // (non-production, or EXPOSE_MAGIC_LINK on local/secure networks). Otherwise
     // it must be delivered out-of-band (email) so it can't be guessed.
     return { ok: true, magicLink: magicLinkExposed() ? magicLink : null };
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.verifyMagicLink!.resolve = async (
-    _parent,
-    args: { token: string },
-    context: Context,
-  ) => {
+  verifyMagicLink: async (_parent, args, context) => {
     const payload = await verifyToken(args.token);
     if (!payload?.email) throw new Error('Invalid or expired magic link');
 
@@ -50,5 +39,5 @@ export function applyAuthResolvers(mutationFields: Fields): void {
 
     const sessionToken = await signSessionToken(user.id, user.email);
     return { token: sessionToken, userId: user.id };
-  };
-}
+  },
+};

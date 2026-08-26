@@ -1,15 +1,11 @@
 import { todos } from '@auto-cal/db/schema';
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
-import type { GraphQLObjectType } from 'graphql';
 import type { InnerOrder, TodoOrderBy } from '../../__generated__/resolvers.ts';
-import type { Context } from '../../context.ts';
 import { requireOwner, requireUser } from '../../errors.ts';
-import { pubsub } from '../../pubsub.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { CreateTodoInput, UpdateTodoInput } from '../validators.ts';
-import { TODO_EVENT } from './subscriptions.ts';
-
-type Fields = ReturnType<GraphQLObjectType['getFields']>;
+import { publishTodoEvent } from './subscriptions.ts';
+import type { MutationMap, QueryMap } from './types.ts';
 
 function buildTodoOrderBy(
   orderBy?: TodoOrderBy,
@@ -24,20 +20,8 @@ function buildTodoOrderBy(
   );
 }
 
-export function applyTodoResolvers(
-  queryFields: Fields,
-  mutationFields: Fields,
-): void {
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myTodos!.resolve = async (
-    _parent,
-    args: {
-      listId?: string;
-      completed?: boolean;
-      orderBy?: TodoOrderBy;
-    },
-    context: Context,
-  ) => {
+export const todoQueries: QueryMap<'myTodos'> = {
+  myTodos: async (_parent, args, context) => {
     const userId = requireUser(context);
     const where: Record<string, unknown> = { userId: userId };
     if (args.listId) where.listId = args.listId;
@@ -47,14 +31,17 @@ export function applyTodoResolvers(
       where,
       orderBy: buildTodoOrderBy(args.orderBy),
     });
-  };
+  },
+};
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myCreateTodo!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+export const todoMutations: MutationMap<
+  | 'myCreateTodo'
+  | 'myUpdateTodo'
+  | 'myCompleteTodo'
+  | 'myDeleteTodo'
+  | 'myDeleteTodos'
+> = {
+  myCreateTodo: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = CreateTodoInput.parse(args.input);
 
@@ -85,18 +72,11 @@ export function applyTodoResolvers(
       .returning();
     if (!todo) throw new Error('Failed to create todo');
     runSchedulerWriteback(context.db, userId).catch(console.error);
-    pubsub
-      .publish(TODO_EVENT(userId), { type: 'created', todo })
-      .catch(console.error);
+    publishTodoEvent(userId, { type: 'created', entity: todo });
     return todo;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myUpdateTodo!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+  myUpdateTodo: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateTodoInput.parse(args.input);
     requireOwner(
@@ -152,18 +132,11 @@ export function applyTodoResolvers(
       .returning();
     if (!updated) throw new Error(`Failed to update todo ${input.id}`);
     runSchedulerWriteback(context.db, userId).catch(console.error);
-    pubsub
-      .publish(TODO_EVENT(userId), { type: 'updated', todo: updated })
-      .catch(console.error);
+    publishTodoEvent(userId, { type: 'updated', entity: updated });
     return updated;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myCompleteTodo!.resolve = async (
-    _parent,
-    args: { id: string; completedAt?: string },
-    context: Context,
-  ) => {
+  myCompleteTodo: async (_parent, args, context) => {
     const userId = requireUser(context);
     requireOwner(
       await context.db.query.todos.findFirst({
@@ -191,18 +164,11 @@ export function applyTodoResolvers(
       .returning();
     if (!completed) throw new Error(`Failed to complete todo ${args.id}`);
     runSchedulerWriteback(context.db, userId).catch(console.error);
-    pubsub
-      .publish(TODO_EVENT(userId), { type: 'updated', todo: completed })
-      .catch(console.error);
+    publishTodoEvent(userId, { type: 'updated', entity: completed });
     return completed;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myDeleteTodo!.resolve = async (
-    _parent,
-    args: { id: string },
-    context: Context,
-  ) => {
+  myDeleteTodo: async (_parent, args, context) => {
     const userId = requireUser(context);
     requireOwner(
       await context.db.query.todos.findFirst({
@@ -214,21 +180,11 @@ export function applyTodoResolvers(
     );
     await context.db.delete(todos).where(eq(todos.id, args.id));
     runSchedulerWriteback(context.db, userId).catch(console.error);
-    pubsub
-      .publish(TODO_EVENT(userId), {
-        type: 'deleted',
-        deletedId: args.id,
-      })
-      .catch(console.error);
+    publishTodoEvent(userId, { type: 'deleted', deletedId: args.id });
     return true;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myDeleteTodos!.resolve = async (
-    _parent,
-    args: { listId: string; completed?: boolean },
-    context: Context,
-  ) => {
+  myDeleteTodos: async (_parent, args, context) => {
     const userId = requireUser(context);
     // Scope every delete to the caller and a single list, so there is no way
     // to bulk-delete another user's todos or wipe everything with an empty
@@ -248,13 +204,8 @@ export function applyTodoResolvers(
 
     runSchedulerWriteback(context.db, userId).catch(console.error);
     for (const todo of deleted) {
-      pubsub
-        .publish(TODO_EVENT(userId), {
-          type: 'deleted',
-          deletedId: todo.id,
-        })
-        .catch(console.error);
+      publishTodoEvent(userId, { type: 'deleted', deletedId: todo.id });
     }
     return deleted;
-  };
-}
+  },
+};

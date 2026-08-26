@@ -148,30 +148,80 @@ const extensionSDL = `
   }
 `;
 
+// server/src/schema/resolvers/todos.ts
+export const todoQueries: QueryMap<'myTodos'> = {
+  myTodos: async (_parent, args, context) => {
+    const userId = requireUser(context);
+    return context.db.query.todos.findMany({ where: { userId } });
+  },
+};
+
+export const todoMutations: MutationMap<'myCreateTodo'> = {
+  myCreateTodo: async (_parent, args, context) => {
+    const userId = requireUser(context);
+    const input = CreateTodoInput.parse(args.input); // Zod validation
+    const [todo] = await context.db.insert(todos).values({ ...input, userId }).returning();
+    if (!todo) throw new Error('Failed to create todo');
+    return todo;
+  },
+};
+
+// server/src/schema/resolvers/index.ts
 export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   const extended = extendSchema(schema, parse(extensionSDL));
   const queryType = extended.getType('Query') as GraphQLObjectType;
-  const queryFields = queryType.getFields();
   const mutationType = extended.getType('Mutation') as GraphQLObjectType;
-  const mutationFields = mutationType.getFields();
 
-  queryFields.myTodos!.resolve = async (_parent, args, context: Context) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    return context.db.query.todos.findMany({
-      where: eq(todos.userId, context.userId),
-    });
-  };
+  attach(queryType, { ...todoQueries, ...habitQueries /* … */ });
+  attach(mutationType, { ...todoMutations, ...habitMutations /* … */ });
 
-  mutationFields.myCreateTodo!.resolve = async (_parent, args, context: Context) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const input = CreateTodoInput.parse(args.input); // Zod validation
-    const [todo] = await context.db.insert(todos).values({ ...input, userId: context.userId }).returning();
-    return todo;
-  };
-
-  return extended;
+  return finalizeSchema(extended);
 }
 ```
+
+### Typed resolver maps
+
+`QueryMap`/`MutationMap`/`SubscriptionMap` live in
+`server/src/schema/resolvers/types.ts` and are `Required<Pick<…>>` over the
+resolver types graphql-codegen derives from the SDL:
+
+```typescript
+export type QueryMap<K extends keyof QueryResolvers> = Required<Pick<QueryResolvers, K>>;
+```
+
+What this buys over the old `queryFields.myTodos!.resolve = …` assignment:
+
+- `args` and the return value are checked against the SDL, so no per-resolver
+  `args: { id: string }` annotations and no `context: Context` annotation
+- a misspelled field name is a compile error rather than a silently orphaned
+  resolver; `attach()` additionally throws at startup if a resolver names a
+  field the schema does not have
+- no `!` assertions, so no `noNonNullAssertion` suppressions
+
+`Required<Pick<…>>` rather than plain `Pick<…>`: every key named in the type
+parameter must actually be implemented.
+
+The import of `__generated__/resolvers.ts` in `types.ts` is **type-only** and
+must stay that way. That file is generated *from* the SDL these resolver files
+produce, so a value import would be a bootstrap cycle; Node's type stripping
+erases the type-only form before it can bite, which is what lets
+`generate_schema.ts` run on a tree with no `__generated__/` at all. (`tsc
+--noEmit` does need codegen to have run first — see CLAUDE.md.)
+
+### codegen mappers
+
+`codegen.server.ts` sets two options this pattern depends on:
+
+- `mappers` — every table-backed GraphQL type maps to its Drizzle row
+  (`ActivityType: '@auto-cal/db#ActivityType as ActivityTypeRow'`). Resolvers
+  return plain rows and let the generated relation resolvers fill in the rest,
+  so the parent/return type must be the DB row, not the fully-resolved GraphQL
+  object. Without the mappers, `myActivityTypes` would have to satisfy
+  `children: ActivityType[]`. The `as *Row` alias is required: the bare name
+  collides with the type the `typescript` plugin generates from the SDL.
+- `enumsAsTypes` — string unions rather than TS enums, matching the
+  `db/src/models/enums.ts` convention. TS enums are nominal, so a resolver
+  could not return the plain `'created'` it publishes.
 
 ## Guard Clause Pattern
 
@@ -303,23 +353,28 @@ Magic links are logged to the server console in both dev and prod. In dev, `requ
 
 ## Resolver File Structure
 
-Each domain has its own resolver file exporting an `apply*Resolvers(queryFields, mutationFields)` function:
+Each domain has its own resolver file exporting typed maps keyed by field name:
 
 ```
 server/src/schema/resolvers/
-  index.ts          — extensionSDL + wires all apply* functions
-  todo-lists.ts     — applyTodoListResolvers
-  todos.ts          — applyTodoResolvers
-  habits.ts         — applyHabitResolvers
-  time-blocks.ts    — applyTimeBlockResolvers
-  activity-types.ts — applyActivityTypeResolvers
-  schedule.ts       — applyScheduleResolvers
-  stats.ts          — applyStatsResolvers
-  profile.ts        — applyProfileResolvers
-  auth.ts           — applyAuthResolvers
+  index.ts          — extensionSDL + attach()es every map, then finalizeSchema
+  types.ts          — QueryMap / MutationMap / SubscriptionMap helpers
+  todo-lists.ts     — todoListQueries, todoListMutations
+  todos.ts          — todoQueries, todoMutations
+  habits.ts         — habitQueries, habitMutations
+  time-blocks.ts    — timeBlockQueries, timeBlockMutations
+  activity-types.ts — activityTypeQueries, activityTypeMutations
+  projects.ts       — projectQueries, projectMutations
+  api-keys.ts       — apiKeyQueries, apiKeyMutations
+  schedule.ts       — scheduleQueries, scheduleMutations
+  stats.ts          — statsQueries
+  profile.ts        — profileQueries, profileMutations
+  import.ts         — importMutations
+  auth.ts           — authMutations
+  subscriptions.ts  — subscriptionResolvers + the publish* helpers
 ```
 
-New resolver domains follow the same pattern. SDL goes in `extensionSDL` in `index.ts`; resolver functions go in a new domain file.
+New resolver domains follow the same pattern. SDL goes in `extensionSDL` in `index.ts`; the typed maps go in a new domain file and get spread into the `attach()` calls.
 
 ## Scheduler Service (Pure Function)
 

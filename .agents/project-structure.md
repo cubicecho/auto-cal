@@ -61,11 +61,12 @@ server/src/
 │   ├── scheduler.test.ts
 │   └── scheduler-writeback.ts # DB-backed wrapper, fire-and-forget
 ├── schema/
-│   ├── index.ts              # buildSchema → applyCustomResolvers → blockUnscoped
+│   ├── index.ts              # buildSchema → applyCustomResolvers
 │   ├── validators.ts         # Zod validators for resolver inputs
 │   ├── validators.test.ts
 │   └── resolvers/
-│       ├── index.ts          # extensionSDL + wires apply* functions
+│       ├── index.ts          # extensionSDL + attach()es the typed maps
+│       ├── types.ts          # QueryMap / MutationMap / SubscriptionMap
 │       ├── todo-lists.ts
 │       ├── todos.ts
 │       ├── habits.ts
@@ -332,7 +333,7 @@ Request
     → Return row; field resolvers (activityType) lazily load via DataLoader
 ```
 
-Resolvers are split per-domain under `schema/resolvers/`. New domains follow the same pattern: SDL in `extensionSDL` (`schema/resolvers/index.ts`), `apply<Domain>Resolvers(queryFields, mutationFields)` in a sibling file, wired in `applyCustomResolvers`.
+Resolvers are split per-domain under `schema/resolvers/`. New domains follow the same pattern: SDL in `extensionSDL` (`schema/resolvers/index.ts`), `<domain>Queries` / `<domain>Mutations` maps typed with `QueryMap`/`MutationMap` in a sibling file, spread into the `attach()` calls in `applyCustomResolvers`.
 
 ---
 

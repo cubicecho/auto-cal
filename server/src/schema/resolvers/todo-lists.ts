@@ -1,42 +1,29 @@
 import { todoLists } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
-import type { GraphQLObjectType } from 'graphql';
-import type { Context } from '../../context.ts';
 import {
   forbidden,
   notFound,
   requireOwner,
   requireUser,
 } from '../../errors.ts';
-import { pubsub } from '../../pubsub.ts';
 import { CreateTodoListInput, UpdateTodoListInput } from '../validators.ts';
-import { TODO_LIST_EVENT } from './subscriptions.ts';
+import { publishTodoListEvent } from './subscriptions.ts';
+import type { MutationMap, QueryMap } from './types.ts';
 
-type Fields = ReturnType<GraphQLObjectType['getFields']>;
-
-export function applyTodoListResolvers(
-  queryFields: Fields,
-  mutationFields: Fields,
-): void {
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myTodoLists!.resolve = async (
-    _parent,
-    _args,
-    context: Context,
-  ) => {
+export const todoListQueries: QueryMap<'myTodoLists'> = {
+  myTodoLists: async (_parent, _args, context) => {
     const userId = requireUser(context);
     return context.db.query.todoLists.findMany({
       where: { userId: userId },
       orderBy: { name: 'asc' },
     });
-  };
+  },
+};
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myCreateTodoList!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+export const todoListMutations: MutationMap<
+  'myCreateTodoList' | 'myUpdateTodoList' | 'myDeleteTodoList'
+> = {
+  myCreateTodoList: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = CreateTodoListInput.parse(args.input);
 
@@ -63,21 +50,11 @@ export function applyTodoListResolvers(
       })
       .returning();
     if (!list) throw new Error('Failed to create todo list');
-    pubsub
-      .publish(TODO_LIST_EVENT(userId), {
-        type: 'created',
-        todoList: list,
-      })
-      .catch(console.error);
+    publishTodoListEvent(userId, { type: 'created', entity: list });
     return list;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myUpdateTodoList!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+  myUpdateTodoList: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateTodoListInput.parse(args.input);
     requireOwner(
@@ -121,21 +98,11 @@ export function applyTodoListResolvers(
       .where(eq(todoLists.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update todo list ${input.id}`);
-    pubsub
-      .publish(TODO_LIST_EVENT(userId), {
-        type: 'updated',
-        todoList: updated,
-      })
-      .catch(console.error);
+    publishTodoListEvent(userId, { type: 'updated', entity: updated });
     return updated;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myDeleteTodoList!.resolve = async (
-    _parent,
-    args: { id: string },
-    context: Context,
-  ) => {
+  myDeleteTodoList: async (_parent, args, context) => {
     const userId = requireUser(context);
     requireOwner(
       await context.db.query.todoLists.findFirst({
@@ -158,12 +125,7 @@ export function applyTodoListResolvers(
     }
 
     await context.db.delete(todoLists).where(eq(todoLists.id, args.id));
-    pubsub
-      .publish(TODO_LIST_EVENT(userId), {
-        type: 'deleted',
-        deletedId: args.id,
-      })
-      .catch(console.error);
+    publishTodoListEvent(userId, { type: 'deleted', deletedId: args.id });
     return true;
-  };
-}
+  },
+};

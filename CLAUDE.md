@@ -57,15 +57,40 @@ Unscoped fields are deleted, not given a throwing resolver, so they never reach 
 
 **Relation fields (drizzle-graphql v4):** every Drizzle-relation field on an object type gets a generated resolver — eager when the parent query pre-fetched it, request-batched lazy loading otherwise. Custom resolvers can return plain DB rows and relation fields resolve automatically. Explicit field resolvers in `applyCustomResolvers` (`schema/resolvers/index.ts`) exist only for what the generated machinery can't do: derived hops (`Todo.activityType` via its list), custom SDL fields (`Project.list`, `ActivityType.parent`/`children`), and `Project.notes`, which overrides the generated resolver to enforce position ordering. These use the per-request DataLoaders from context.
 
-**Resolver authoring pattern** — every domain has its own file:
+**Resolver authoring pattern** — every domain has its own file exporting plain
+resolver maps typed against the codegen output:
 ```
 schema/resolvers/
-  index.ts         — extensionSDL string + wires all apply* calls
-  todos.ts         — applyTodoResolvers(queryFields, mutationFields)
-  habits.ts        — applyHabitResolvers(...)
+  index.ts         — extensionSDL string + attach()es every map to the schema
+  types.ts         — QueryMap / MutationMap / SubscriptionMap helpers
+  todos.ts         — todoQueries, todoMutations
+  habits.ts        — habitQueries, habitMutations
   ...
 ```
-New domains: add SDL to `extensionSDL` in `index.ts`, create a sibling file, call it from `applyCustomResolvers`.
+```typescript
+export const todoQueries: QueryMap<'myTodos'> = {
+  myTodos: async (_parent, args, context) => { ... },
+};
+```
+`QueryMap<K>` is `Required<Pick<QueryResolvers, K>>` from
+`server/src/__generated__/resolvers.ts`, so `args` and the return value are
+checked against the SDL — no hand-written `args: { id: string }` annotations,
+no `!` assertions. A field name that isn't in the SDL is a compile error, and
+`attach()` throws at startup if a resolver names a field the schema lacks.
+
+The import in `types.ts` is type-only on purpose: `__generated__/resolvers.ts`
+is generated *from* the SDL these files produce, so a value import would be a
+bootstrap cycle. Node's type stripping erases it before that matters.
+
+`codegen.server.ts` maps every table-backed GraphQL type to its Drizzle row
+(`ActivityType: '@auto-cal/db#ActivityType as ActivityTypeRow'`, etc.) so
+resolvers can return plain rows and let the generated relation resolvers fill
+in the rest. It also sets `enumsAsTypes` — TS enums are nominal, so a resolver
+could not return the plain `'created'` string it publishes.
+
+New domains: add SDL to `extensionSDL` in `index.ts`, create a sibling file
+exporting typed maps, and spread them into the `attach()` calls in
+`applyCustomResolvers`.
 
 **Scheduler — two separate things:**
 - `computeSchedule(...)` in `services/scheduler.ts` — pure function, no DB. Recomputed fresh on every `mySchedule` query call.

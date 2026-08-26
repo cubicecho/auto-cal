@@ -6,8 +6,6 @@ import {
   activityTypes,
 } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
-import type { GraphQLObjectType } from 'graphql';
-import type { Context } from '../../context.ts';
 import { requireOwner, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import {
@@ -15,32 +13,20 @@ import {
   UpdateActivityTypeInput,
 } from '../validators.ts';
 import { publishDataChanged } from './subscriptions.ts';
+import type { MutationMap, QueryMap } from './types.ts';
 
-type Fields = ReturnType<GraphQLObjectType['getFields']>;
-
-export function applyActivityTypeResolvers(
-  queryFields: Fields,
-  mutationFields: Fields,
-): void {
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myActivityTypes!.resolve = async (
-    _parent,
-    _args,
-    context: Context,
-  ) => {
+export const activityTypeQueries: QueryMap<
+  'myActivityTypes' | 'myActivityTypeStats'
+> = {
+  myActivityTypes: async (_parent, _args, context) => {
     const userId = requireUser(context);
     return context.db.query.activityTypes.findMany({
       where: { userId: userId },
       orderBy: { name: 'asc' },
     });
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.myActivityTypeStats!.resolve = async (
-    _parent,
-    args: { startDate?: string; endDate?: string },
-    context: Context,
-  ) => {
+  myActivityTypeStats: async (_parent, args, context) => {
     const userId = requireUser(context);
 
     const start = args.startDate ? new Date(args.startDate) : null;
@@ -114,14 +100,13 @@ export function applyActivityTypeResolvers(
         totalHabits: habitsByType.get(at.id) ?? 0,
       };
     });
-  };
+  },
+};
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myCreateActivityType!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+export const activityTypeMutations: MutationMap<
+  'myCreateActivityType' | 'myUpdateActivityType' | 'myDeleteActivityType'
+> = {
+  myCreateActivityType: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = CreateActivityTypeInput.parse(args.input);
     const [activityType] = await context.db
@@ -131,14 +116,9 @@ export function applyActivityTypeResolvers(
     if (!activityType) throw new Error('Failed to create activity type');
     publishDataChanged(userId, 'activityType', [activityType.id]);
     return activityType;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myUpdateActivityType!.resolve = async (
-    _parent,
-    args: { input: unknown },
-    context: Context,
-  ) => {
+  myUpdateActivityType: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateActivityTypeInput.parse(args.input);
     requireOwner(
@@ -161,14 +141,9 @@ export function applyActivityTypeResolvers(
     if (!updated) throw new Error(`Failed to update activity type ${input.id}`);
     publishDataChanged(userId, 'activityType', [updated.id]);
     return updated;
-  };
+  },
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myDeleteActivityType!.resolve = async (
-    _parent,
-    args: { id: string },
-    context: Context,
-  ) => {
+  myDeleteActivityType: async (_parent, args, context) => {
     const userId = requireUser(context);
     requireOwner(
       await context.db.query.activityTypes.findFirst({
@@ -182,5 +157,5 @@ export function applyActivityTypeResolvers(
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'activityType', [args.id]);
     return true;
-  };
-}
+  },
+};

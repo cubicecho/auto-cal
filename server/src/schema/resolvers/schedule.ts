@@ -9,9 +9,7 @@ import {
   users,
 } from '@auto-cal/db/schema';
 import { eq, inArray } from 'drizzle-orm';
-import type { GraphQLObjectType } from 'graphql';
 import { z } from 'zod';
-import type { Context } from '../../context.ts';
 import { requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import {
@@ -21,19 +19,10 @@ import {
   startOfISOWeekStr,
   startOfLocalMonth,
 } from '../../services/scheduler.ts';
+import type { MutationMap, QueryMap } from './types.ts';
 
-type Fields = ReturnType<GraphQLObjectType['getFields']>;
-
-export function applyScheduleResolvers(
-  queryFields: Fields,
-  mutationFields: Fields,
-): void {
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.mySchedule!.resolve = async (
-    _parent,
-    args: { weekStart?: string; timezone?: string },
-    context: Context,
-  ) => {
+export const scheduleQueries: QueryMap<'mySchedule'> = {
+  mySchedule: async (_parent, args, context) => {
     const userId = requireUser(context);
 
     if (args.timezone) {
@@ -258,16 +247,13 @@ export function applyScheduleResolvers(
     });
 
     return [...scheduledItems, ...pinnedItems];
-  };
+  },
+};
 
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myReschedule!.resolve = async (
-    _parent,
-    _args: { weekStart?: string },
-    context: Context,
-  ) => {
+export const scheduleMutations: MutationMap<'myReschedule'> = {
+  myReschedule: async (_parent, _args, context) => {
     const userId = requireUser(context);
     await runSchedulerWriteback(context.db, userId);
     return true;
-  };
-}
+  },
+};
