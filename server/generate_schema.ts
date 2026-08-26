@@ -15,6 +15,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { buildSchema } from '@vantreeseba/drizzle-graphql';
 import { drizzle } from 'drizzle-orm/pglite';
 import { printSchema } from 'graphql';
+import { buildSchemaConfig } from './src/schema/build-config.ts';
 import { applyCustomResolvers } from './src/schema/resolvers/index.ts';
 
 const client = new PGlite(); // in-memory, no filesystem
@@ -23,11 +24,7 @@ await client.waitReady;
 // @ts-expect-error drizzle-orm 1.0-beta removed `schema` from DrizzlePgConfig types
 const db = drizzle({ client, schema, relations });
 
-const { schema: drizzleSchema } = buildSchema(db, {
-  prefixes: { insert: 'create', update: 'update', delete: 'delete' },
-  suffixes: { list: 's', single: '' },
-  singularTypes: true,
-});
+const { schema: drizzleSchema } = buildSchema(db, buildSchemaConfig);
 
 const fullSchema = applyCustomResolvers(drizzleSchema);
 

@@ -23,6 +23,7 @@ import { migrate } from 'drizzle-orm/pglite/migrator';
 import { graphql } from 'graphql';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createLoaders } from '../../../src/context.ts';
+import { buildSchemaConfig } from '../../../src/schema/build-config.ts';
 import { applyCustomResolvers } from '../../../src/schema/resolvers/index.ts';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -42,11 +43,7 @@ async function createTestDb() {
 
 /** Build the full GraphQL schema wired to the given drizzle instance. */
 function buildTestSchema(db: Awaited<ReturnType<typeof createTestDb>>) {
-  const { schema: drizzleSchema } = buildSchema(db, {
-    prefixes: { insert: 'create', update: 'update', delete: 'delete' },
-    suffixes: { list: 's', single: '' },
-    singularTypes: true,
-  });
+  const { schema: drizzleSchema } = buildSchema(db, buildSchemaConfig);
   return applyCustomResolvers(drizzleSchema);
 }
 

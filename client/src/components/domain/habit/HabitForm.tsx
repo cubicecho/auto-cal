@@ -1,19 +1,23 @@
 import type {
   CreateHabitMutation,
   CreateHabitMutationVariables,
+  DeleteHabitMutation,
+  DeleteHabitMutationVariables,
   Habit_HabitListFragment,
   UpdateHabitMutation,
   UpdateHabitMutationVariables,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
+import { Button } from '@/components/ui/button';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
-import { useEffect } from 'react';
+import { Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -65,6 +69,12 @@ const UPDATE_HABIT = graphql(`
       pomodoroLongBreakLength
       pomodoroMaxPerDay
     }
+  }
+`);
+
+const DELETE_HABIT = graphql(`
+  mutation DeleteHabit($id: ID!) {
+    myDeleteHabit(id: $id)
   }
 `);
 
@@ -149,12 +159,19 @@ type HabitFormProps = {
   habit?: Habit_HabitListFragment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDeleted?: () => void;
 };
 
 // ─── Component ─────────────────────────────────────────────────────────────
 
-export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
+export function HabitForm({
+  habit,
+  open,
+  onOpenChange,
+  onDeleted,
+}: HabitFormProps) {
   const isEdit = habit !== undefined;
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const [createHabit] = useMutation<
     CreateHabitMutation,
@@ -168,6 +185,13 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
     UpdateHabitMutationVariables
   >(UPDATE_HABIT, {
     refetchQueries: ['GetMyHabits', 'GetHabitDetail'],
+  });
+
+  const [deleteHabit, { loading: deleting }] = useMutation<
+    DeleteHabitMutation,
+    DeleteHabitMutationVariables
+  >(DELETE_HABIT, {
+    refetchQueries: ['GetMyHabits'],
   });
 
   const defaultValues: HabitFormValues = {
@@ -255,8 +279,22 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
   // instance is reused across create/edit targets.
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on habit?.id — we reset when a different item is selected, not on every field change; form.reset and defaultValues are derived from the current render
   useEffect(() => {
-    if (open) form.reset(defaultValues);
+    if (open) {
+      form.reset(defaultValues);
+      setConfirmingDelete(false);
+    }
   }, [open, habit?.id]);
+
+  async function handleDelete() {
+    if (!isEdit || !habit) return;
+    try {
+      await deleteHabit({ variables: { id: habit.id } });
+      onOpenChange(false);
+      onDeleted?.();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete habit');
+    }
+  }
 
   return (
     <FormDialog
@@ -462,7 +500,31 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
             }
           </form.Subscribe>
 
-          <FormDialogFooter onCancel={() => onOpenChange(false)}>
+          <FormDialogFooter
+            onCancel={() => onOpenChange(false)}
+            secondary={
+              isEdit ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleting}
+                  onClick={
+                    confirmingDelete
+                      ? handleDelete
+                      : () => setConfirmingDelete(true)
+                  }
+                >
+                  <Trash2 className="mr-1 h-4 w-4" />
+                  {deleting
+                    ? 'Deleting…'
+                    : confirmingDelete
+                      ? 'Confirm delete'
+                      : 'Delete'}
+                </Button>
+              ) : undefined
+            }
+          >
             <form.SubmitButton isEdit={isEdit} createLabel="Create Habit" />
           </FormDialogFooter>
         </Form>

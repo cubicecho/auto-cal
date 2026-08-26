@@ -6,6 +6,7 @@ const config: CodegenConfig = {
     'server/src/__generated__/resolvers.ts': {
       plugins: ['typescript', 'typescript-resolvers'],
       config: {
+        scalars: { UUID: 'string' },
         inputMaybeValue: 'T | undefined',
         contextType: '../context.ts#Context',
         avoidOptionals: {

@@ -20,6 +20,7 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { graphql } from 'graphql';
 import { createLoaders } from '../../../src/context.ts';
+import { buildSchemaConfig } from '../../../src/schema/build-config.ts';
 import { applyCustomResolvers } from '../../../src/schema/resolvers/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -37,11 +38,7 @@ export async function createTestDb() {
 export type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
 export function buildTestSchema(db: TestDb) {
-  const { schema: drizzleSchema } = buildSchema(db, {
-    prefixes: { insert: 'create', update: 'update', delete: 'delete' },
-    suffixes: { list: 's', single: '' },
-    singularTypes: true,
-  });
+  const { schema: drizzleSchema } = buildSchema(db, buildSchemaConfig);
   return applyCustomResolvers(drizzleSchema);
 }
 

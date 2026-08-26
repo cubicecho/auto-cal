@@ -1,13 +1,10 @@
 import { db } from '@auto-cal/db';
 import { buildSchema } from '@vantreeseba/drizzle-graphql';
 import type { GraphQLObjectType, GraphQLSchema } from 'graphql';
+import { buildSchemaConfig } from './build-config.ts';
 import { applyCustomResolvers } from './resolvers/index.ts';
 
-const { schema: drizzleSchema, entities } = buildSchema(db, {
-  prefixes: { insert: 'create', update: 'update', delete: 'delete' },
-  suffixes: { list: 's', single: '' },
-  singularTypes: true,
-});
+const { schema: drizzleSchema, entities } = buildSchema(db, buildSchemaConfig);
 
 // Block all auto-generated drizzle-graphql resolvers that aren't user-scoped.
 // Only fields starting with "my" and the two public auth mutations are allowed.

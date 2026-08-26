@@ -40,7 +40,7 @@
     "@graphql-codegen/typescript-resolvers": "^6.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vantreeseba/graphql-mocks": "^1.0.5",
+    "@vantreeseba/graphql-mocks": "^3.0.0",
     "@vitest/coverage-v8": "^4.1.6",
     "concurrently": "^9.1.2",
     "esbuild": "^0.28.0",

@@ -55,6 +55,7 @@ export default function HabitDetailPage() {
               setFormOpen(open);
               if (!open) setEditingHabit(null);
             }}
+            onDeleted={() => router.push('/habits')}
           />
         </>
       )}

@@ -18,6 +18,9 @@ const config: CodegenConfig = {
     [`${path.resolve(__dirname, 'client/src/__generated__')}/`]: {
       preset: 'client',
       presetConfig: { fragmentMasking: false },
+      // UUID columns surface as a UUID scalar since drizzle-graphql v4; keep
+      // them typed as plain strings on the client.
+      config: { scalars: { UUID: 'string' } },
       //       config: { documentMode: 'string' },
     },
   },
