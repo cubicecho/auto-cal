@@ -275,7 +275,7 @@ Conventions: all PKs use `uuid`+`defaultRandom`; user-owned tables cascade-delet
 
 ## 4. GraphQL Schema (high level)
 
-The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`, then scoped by `scopeRootFields()` (which renames the generated root queries to their `my*` form, filters each to the caller, and deletes the rest), extended in `server/src/schema/resolvers/index.ts` (`extensionSDL`), and locked down by `finalizeSchema()` (the last step of `applyCustomResolvers`), which removes every mutation that is not `my*` or in `PUBLIC_MUTATIONS` so only those appear in the SDL at all. Full SDL details in `graphql-patterns.md` and `server-patterns.md`.
+The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`, then narrowed by `scopeRootFields()` (which renames the generated root queries to their `my*` form, guards them with `requireUser`, and deletes the rest — the row scope itself is `TABLE_SCOPE`, handed to `buildSchema` in `build-config.ts`), extended in `server/src/schema/resolvers/index.ts` (`extensionSDL`), and locked down by `finalizeSchema()` (the last step of `applyCustomResolvers`), which removes every mutation that is not `my*` or in `PUBLIC_MUTATIONS` so only those appear in the SDL at all. Full SDL details in `graphql-patterns.md` and `server-patterns.md`.
 
 ### Queries (`my*` scoped)
 
