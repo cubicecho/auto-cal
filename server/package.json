@@ -12,7 +12,7 @@
     "@as-integrations/express4": "^1.1.2",
     "@auto-cal/db": "*",
     "@graphql-tools/utils": "^11.2.2",
-    "@vantreeseba/drizzle-graphql": "^7.0.0",
+    "@vantreeseba/drizzle-graphql": "^8.0.0",
     "cors": "^2.8.5",
     "dataloader": "^2.2.3",
     "date-fns": "^4.1.0",
