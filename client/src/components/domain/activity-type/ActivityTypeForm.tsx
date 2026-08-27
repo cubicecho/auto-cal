@@ -13,10 +13,13 @@ import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
+import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
+import { DEFAULT_ACTIVITY_COLOR } from '@/lib/form-constants';
+import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Trash2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -76,6 +79,8 @@ export function ActivityTypeForm({
   activityType,
 }: ActivityTypeFormProps) {
   const isEdit = activityType !== undefined;
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [createActivityType] = useMutation<
     CreateActivityTypeMutation,
@@ -106,7 +111,7 @@ export function ActivityTypeForm({
 
   const defaultValues: ActivityTypeFormValues = {
     name: activityType?.name ?? '',
-    color: activityType?.color ?? '#6366f1',
+    color: activityType?.color ?? DEFAULT_ACTIVITY_COLOR,
   };
 
   const form = useAppForm({
@@ -132,18 +137,28 @@ export function ActivityTypeForm({
     },
   });
 
-  // Reset to the selected item's values whenever the dialog opens or a
-  // different activity type is edited — defaultValues only apply on mount and
-  // this form instance is reused across create/edit targets.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on activityType?.id — we reset when a different item is selected, not on every field change; form.reset and defaultValues are derived from the current render
-  useEffect(() => {
-    if (open) form.reset(defaultValues);
-  }, [open, activityType?.id]);
+  useResetOnOpen(open, activityType?.id, () => {
+    form.reset(defaultValues);
+    setConfirmingDelete(false);
+    setDeleteError(null);
+  });
 
   async function handleDelete() {
     if (!isEdit) return;
-    await deleteActivityType({ variables: { id: activityType.id } });
-    onOpenChange(false);
+    try {
+      setDeleteError(null);
+      await deleteActivityType({ variables: { id: activityType.id } });
+      onOpenChange(false);
+    } catch (err) {
+      // Every FK to activity_types is onDelete: 'restrict', so the database
+      // refuses this whenever a habit, list, time block, or project uses it.
+      setDeleteError(
+        errorMessage(
+          err,
+          'Failed to delete — something still uses this activity type.',
+        ),
+      );
+    }
   }
 
   return (
@@ -186,7 +201,7 @@ export function ActivityTypeForm({
                         className="h-10 w-16 cursor-pointer rounded border border-input bg-background p-1"
                       />
                       <Input
-                        placeholder="#6366f1"
+                        placeholder={DEFAULT_ACTIVITY_COLOR}
                         value={field.state.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
@@ -201,16 +216,21 @@ export function ActivityTypeForm({
 
           <FormDialogFooter
             onCancel={() => onOpenChange(false)}
+            error={deleteError}
             secondary={
               isEdit ? (
                 <Button
                   type="button"
                   variant="destructive"
                   size="sm"
-                  onClick={handleDelete}
+                  onClick={
+                    confirmingDelete
+                      ? handleDelete
+                      : () => setConfirmingDelete(true)
+                  }
                 >
                   <Trash2 className="mr-1 h-4 w-4" />
-                  Delete
+                  {confirmingDelete ? 'Confirm delete' : 'Delete'}
                 </Button>
               ) : undefined
             }

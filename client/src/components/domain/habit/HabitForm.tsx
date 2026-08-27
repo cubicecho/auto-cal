@@ -15,10 +15,13 @@ import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAppForm } from '@/hooks/form-hook';
+import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
+import { DURATION_OPTIONS, PRIORITY_OPTIONS } from '@/lib/form-constants';
+import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -80,24 +83,6 @@ const DELETE_HABIT = graphql(`
 `);
 
 // ─── Constants ─────────────────────────────────────────────────────────────
-
-const PRIORITY_OPTIONS = [
-  { label: 'Low', value: '0' },
-  { label: 'Medium', value: '25' },
-  { label: 'High', value: '50' },
-  { label: 'Urgent', value: '100' },
-] as const;
-
-const DURATION_OPTIONS = [
-  { label: '15 minutes', value: '15' },
-  { label: '30 minutes', value: '30' },
-  { label: '45 minutes', value: '45' },
-  { label: '1 hour', value: '60' },
-  { label: '1.5 hours', value: '90' },
-  { label: '2 hours', value: '120' },
-  { label: '3 hours', value: '180' },
-  { label: '4+ hours', value: '480' },
-] as const;
 
 const FREQUENCY_UNIT_OPTIONS = [
   { label: 'per week', value: 'week' },
@@ -173,6 +158,7 @@ export function HabitForm({
 }: HabitFormProps) {
   const isEdit = habit !== undefined;
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [createHabit] = useMutation<
     CreateHabitMutation,
@@ -278,25 +264,21 @@ export function HabitForm({
     },
   });
 
-  // Reset to the selected item's values whenever the dialog opens or a
-  // different habit is edited — defaultValues only apply on mount and this form
-  // instance is reused across create/edit targets.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on habit?.id — we reset when a different item is selected, not on every field change; form.reset and defaultValues are derived from the current render
-  useEffect(() => {
-    if (open) {
-      form.reset(defaultValues);
-      setConfirmingDelete(false);
-    }
-  }, [open, habit?.id]);
+  useResetOnOpen(open, habit?.id, () => {
+    form.reset(defaultValues);
+    setConfirmingDelete(false);
+    setDeleteError(null);
+  });
 
   async function handleDelete() {
     if (!isEdit || !habit) return;
     try {
+      setDeleteError(null);
       await deleteHabit({ variables: { id: habit.id } });
       onOpenChange(false);
       onDeleted?.();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete habit');
+      setDeleteError(errorMessage(err, 'Failed to delete habit'));
     }
   }
 
@@ -506,6 +488,7 @@ export function HabitForm({
 
           <FormDialogFooter
             onCancel={() => onOpenChange(false)}
+            error={deleteError}
             secondary={
               isEdit ? (
                 <Button

@@ -8,6 +8,7 @@ import { FormModal } from '@/components/native/form-modal';
 import { ListScreen } from '@/components/native/list-screen';
 import { RowAction } from '@/components/native/row-action';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
+import { DAY_NAMES } from '@/lib/form-constants';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useState } from 'react';
@@ -38,8 +39,6 @@ const DELETE_TIME_BLOCK = graphql(`
 `);
 
 type TimeBlock = TimeBlock_TimeBlockListFragment;
-
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
 function TimeBlockModal({ onClose }: { onClose: () => void }) {
   const [activityTypeId, setActivityTypeId] = useState('');

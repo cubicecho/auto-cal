@@ -18,6 +18,7 @@ import { ColorDot } from '@/components/ui/color-dot';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { DAY_NAMES, WEEKDAYS, WEEKEND } from '@/lib/form-constants';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
@@ -45,10 +46,6 @@ const CREATE_TIME_BLOCK = graphql(`
     }
   }
 `);
-
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-const WEEKDAYS = [1, 2, 3, 4, 5];
-const WEEKEND = [0, 6];
 
 const schema = z
   .object({

@@ -10,10 +10,11 @@ import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTy
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
+import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { DAY_NAMES, WEEKDAYS, WEEKEND } from '@/lib/form-constants';
 import { cn } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
-import { useEffect } from 'react';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -49,13 +50,6 @@ const UPDATE_TIME_BLOCK = graphql(`
     }
   }
 `);
-
-// ─── Constants ─────────────────────────────────────────────────────────────
-
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-// 0=Sun, 1=Mon … 6=Sat
-const WEEKDAYS = [1, 2, 3, 4, 5];
-const WEEKEND = [0, 6];
 
 // ─── Validation Schema ──────────────────────────────────────────────────────
 
@@ -157,13 +151,7 @@ export function TimeBlockForm({
     },
   });
 
-  // Reset to the selected item's values whenever the dialog opens or a
-  // different time block is edited — useAppForm's defaultValues only apply on
-  // mount, and this form instance is reused across create/edit targets.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on timeBlock?.id — we reset when a different item is selected, not on every field change; form.reset and defaultValues are derived from the current render
-  useEffect(() => {
-    if (open) form.reset(defaultValues);
-  }, [open, timeBlock?.id]);
+  useResetOnOpen(open, timeBlock?.id, () => form.reset(defaultValues));
 
   return (
     <FormDialog

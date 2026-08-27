@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select';
 import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { PRIORITY_OPTIONS } from '@/lib/form-constants';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { ArrowLeft, CheckCircle2, Plus, SkipForward } from 'lucide-react';
 import { z } from 'zod';
@@ -48,13 +49,6 @@ const CREATE_TODO = graphql(`
     }
   }
 `);
-
-const PRIORITY_OPTIONS = [
-  { label: 'Low', value: '0' },
-  { label: 'Medium', value: '25' },
-  { label: 'High', value: '50' },
-  { label: 'Urgent', value: '100' },
-] as const;
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required').max(200),

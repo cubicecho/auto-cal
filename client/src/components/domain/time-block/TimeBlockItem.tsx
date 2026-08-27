@@ -8,6 +8,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
+import { DAY_NAMES_LONG } from '@/lib/form-constants';
+import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -20,16 +22,6 @@ const DELETE_TIME_BLOCK = graphql(`
 
 type TimeBlock = TimeBlock_TimeBlockListFragment;
 
-const DAY_NAMES = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-] as const;
-
 type TimeBlockItemProps = {
   timeBlock: TimeBlock;
   onEdit: (timeBlock: TimeBlock) => void;
@@ -37,6 +29,7 @@ type TimeBlockItemProps = {
 
 export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
   const [confirming, setConfirming] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [deleteTimeBlock, { loading: deleting }] = useMutation(
     DELETE_TIME_BLOCK,
@@ -49,7 +42,14 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
   );
 
   async function handleDelete() {
-    await deleteTimeBlock({ variables: { id: timeBlock.id } });
+    try {
+      setDeleteError(null);
+      await deleteTimeBlock({ variables: { id: timeBlock.id } });
+    } catch (err) {
+      // Without this the rejected promise was unhandled and the card just sat
+      // there in its "Delete / Cancel" state, looking like nothing happened.
+      setDeleteError(errorMessage(err, 'Failed to delete time block'));
+    }
   }
 
   return (
@@ -65,7 +65,7 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
             </CardTitle>
             <CardDescription>
               {timeBlock.daysOfWeek
-                .map((d) => DAY_NAMES[d] ?? `Day ${d}`)
+                .map((d) => DAY_NAMES_LONG[d] ?? `Day ${d}`)
                 .join(', ')}{' '}
               • {timeBlock.startTime} – {timeBlock.endTime}
               {timeBlock.priority > 0 && ` • Priority ${timeBlock.priority}`}
@@ -112,6 +112,12 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
             )}
           </div>
         </div>
+
+        {deleteError ? (
+          <p role="alert" className="mt-2 text-sm text-destructive">
+            {deleteError}
+          </p>
+        ) : null}
       </CardHeader>
     </Card>
   );

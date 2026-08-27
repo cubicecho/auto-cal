@@ -12,6 +12,7 @@ import { ColorDot } from '@/components/ui/color-dot';
 import { Input } from '@/components/ui/input';
 import { Page } from '@/components/ui/page';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { ACTIVITY_COLORS } from '@/lib/form-constants';
 import {
   GoogleTasksParseError,
   type ParsedList,
@@ -47,21 +48,6 @@ const IMPORT_TODOS = graphql(`
     }
   }
 `);
-
-// Distinct default colors handed to new activity types so imported lists are
-// visually separable out of the box.
-const PALETTE = [
-  '#6366f1',
-  '#ec4899',
-  '#f59e0b',
-  '#10b981',
-  '#3b82f6',
-  '#8b5cf6',
-  '#ef4444',
-  '#14b8a6',
-  '#f97316',
-  '#0ea5e9',
-] as const;
 
 const DEFAULT_LIST_DURATION = 30;
 
@@ -111,7 +97,7 @@ export default function ImportTodosPage() {
           lists.map((list, i) => ({
             mode: 'new',
             name: list.name,
-            color: PALETTE[i % PALETTE.length] as string,
+            color: ACTIVITY_COLORS[i % ACTIVITY_COLORS.length] as string,
           })),
         );
       } catch (err) {
@@ -383,7 +369,11 @@ function ListAssignmentCard({
               onClick={() => {
                 if (mode === assignment.mode) return;
                 if (mode === 'new')
-                  onChange({ mode: 'new', name: list.name, color: PALETTE[0] });
+                  onChange({
+                    mode: 'new',
+                    name: list.name,
+                    color: ACTIVITY_COLORS[0],
+                  });
                 else if (mode === 'existing')
                   onChange({ mode: 'existing', activityTypeId: '' });
                 else onChange({ mode: 'skip' });
@@ -408,7 +398,7 @@ function ListAssignmentCard({
               }
             />
             <div className="flex flex-wrap gap-1.5">
-              {PALETTE.map((color) => (
+              {ACTIVITY_COLORS.map((color) => (
                 <button
                   key={color}
                   type="button"

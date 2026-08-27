@@ -51,6 +51,12 @@ type FormDialogFooterProps = {
   cancelLabel?: string;
   /** Left-aligned action (e.g. Delete / Mark complete) shown only when set. */
   secondary?: ReactNode;
+  /**
+   * A rejected mutation's message, shown above the buttons. Field validation
+   * stays inline beneath its field — this is for what only the server knows,
+   * such as a delete the database refuses (`onDelete: 'restrict'`).
+   */
+  error?: string | null;
   /** The submit control — typically <form.SubmitButton …/>. */
   children: ReactNode;
 };
@@ -59,19 +65,27 @@ export function FormDialogFooter({
   onCancel,
   cancelLabel = 'Cancel',
   secondary,
+  error,
   children,
 }: FormDialogFooterProps) {
   return (
-    <DialogFooter
-      className={cn('items-center', secondary && 'sm:justify-between')}
-    >
-      {secondary ? <div>{secondary}</div> : null}
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          {cancelLabel}
-        </Button>
-        {children}
-      </div>
-    </DialogFooter>
+    <>
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+      <DialogFooter
+        className={cn('items-center', secondary && 'sm:justify-between')}
+      >
+        {secondary ? <div>{secondary}</div> : null}
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            {cancelLabel}
+          </Button>
+          {children}
+        </div>
+      </DialogFooter>
+    </>
   );
 }

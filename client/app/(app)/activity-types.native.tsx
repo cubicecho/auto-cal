@@ -7,6 +7,7 @@ import { FormModal } from '@/components/native/form-modal';
 import { ListScreen } from '@/components/native/list-screen';
 import { RowAction } from '@/components/native/row-action';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
+import { ACTIVITY_COLORS, DEFAULT_ACTIVITY_COLOR } from '@/lib/form-constants';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useState } from 'react';
@@ -46,19 +47,6 @@ const DELETE_ACTIVITY_TYPE = graphql(`
 
 type ActivityType = ActivityType_ActivityTypeListFragment;
 
-const PRESET_COLORS = [
-  '#6366f1',
-  '#8b5cf6',
-  '#ec4899',
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#22c55e',
-  '#14b8a6',
-  '#3b82f6',
-  '#6b7280',
-];
-
 function ActivityTypeModal({
   activityType,
   onClose,
@@ -68,7 +56,9 @@ function ActivityTypeModal({
 }) {
   const isEdit = activityType !== null;
   const [name, setName] = useState(activityType?.name ?? '');
-  const [color, setColor] = useState(activityType?.color ?? '#6366f1');
+  const [color, setColor] = useState(
+    activityType?.color ?? DEFAULT_ACTIVITY_COLOR,
+  );
 
   const [create, { loading: creating }] = useMutation(CREATE_ACTIVITY_TYPE, {
     update: (cache) => invalidate(cache, 'myActivityTypes'),
@@ -110,7 +100,7 @@ function ActivityTypeModal({
 
       <FieldLabel>Color</FieldLabel>
       <View className="flex-row flex-wrap gap-2 mb-2">
-        {PRESET_COLORS.map((c) => (
+        {ACTIVITY_COLORS.map((c) => (
           <TouchableOpacity
             key={c}
             onPress={() => setColor(c)}
@@ -123,7 +113,7 @@ function ActivityTypeModal({
       </View>
       <TextField
         className="font-mono"
-        placeholder="#6366f1"
+        placeholder={DEFAULT_ACTIVITY_COLOR}
         value={color}
         onChangeText={setColor}
         autoCapitalize="none"

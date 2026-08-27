@@ -18,6 +18,7 @@ import { FieldWrapper, Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { DEFAULT_ACTIVITY_COLOR } from '@/lib/form-constants';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { ArrowRight, Plus } from 'lucide-react';
 import { z } from 'zod';
@@ -69,7 +70,7 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
   });
 
   const form = useAppForm({
-    defaultValues: { name: '', color: '#6366f1' } as FormValues,
+    defaultValues: { name: '', color: DEFAULT_ACTIVITY_COLOR } as FormValues,
     validators: { onChange: schema },
     onSubmit: async ({ value, formApi }) => {
       await createActivityType({
@@ -119,7 +120,7 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
                         className="h-10 w-16 cursor-pointer rounded border border-input bg-background p-1"
                       />
                       <Input
-                        placeholder="#6366f1"
+                        placeholder={DEFAULT_ACTIVITY_COLOR}
                         value={field.state.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
