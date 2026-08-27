@@ -71,13 +71,13 @@ export function TodoListList({ lists, todosByListId }: TodoListListProps) {
                 Hide project lists
               </label>
             )}
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/import-todos">
+            <Link href="/import-todos" asChild>
+              <Button variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
                 Import
-              </Link>
-            </Button>
-            <Button size="sm" onClick={() => setCreatingList(true)}>
+              </Button>
+            </Link>
+            <Button size="sm" onPress={() => setCreatingList(true)}>
               <Plus className="mr-2 h-4 w-4" />
               New List
             </Button>
@@ -91,7 +91,7 @@ export function TodoListList({ lists, todosByListId }: TodoListListProps) {
           title="No todo lists yet"
           description="Create one to start adding todos"
           action={
-            <Button size="sm" onClick={() => setCreatingList(true)}>
+            <Button size="sm" onPress={() => setCreatingList(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Create list
             </Button>

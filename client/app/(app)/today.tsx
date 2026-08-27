@@ -139,7 +139,7 @@ export default function TodayPage() {
           title={viewingToday ? 'Today' : format(selectedDate, 'EEEE')}
           subtitle={format(selectedDate, 'EEEE, MMMM d')}
           actions={
-            <Button size="sm" onClick={() => setTodoOpen(true)}>
+            <Button size="sm" onPress={() => setTodoOpen(true)}>
               <Plus className="mr-1 h-4 w-4" />
               Add todo
             </Button>
@@ -150,8 +150,8 @@ export default function TodayPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedDate((d) => addDays(d, -1))}
-            title="Previous day"
+            onPress={() => setSelectedDate((d) => addDays(d, -1))}
+            aria-label="Previous day"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -160,7 +160,7 @@ export default function TodayPage() {
             size="sm"
             disabled={viewingToday}
             className="disabled:opacity-40"
-            onClick={() => {
+            onPress={() => {
               const d = new Date();
               d.setHours(0, 0, 0, 0);
               setSelectedDate(d);
@@ -171,8 +171,8 @@ export default function TodayPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedDate((d) => addDays(d, 1))}
-            title="Next day"
+            onPress={() => setSelectedDate((d) => addDays(d, 1))}
+            aria-label="Next day"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -276,10 +276,10 @@ function TodaySlot({
           size="icon"
           variant="ghost"
           className="h-7 w-7 text-muted-foreground opacity-0 transition-opacity hover:text-green-600 group-hover:opacity-100"
-          title={
+          aria-label={
             item.kind === 'habit' ? 'Mark habit complete' : 'Complete todo'
           }
-          onClick={onComplete}
+          onPress={onComplete}
         >
           <Check className="h-4 w-4" />
         </Button>

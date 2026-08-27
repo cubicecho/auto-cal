@@ -5,6 +5,7 @@ import {
   FieldLabel as FieldLabelPrimitive,
   Field as FieldPrimitive,
 } from '@/components/ui/field';
+import type { InputProps } from '@/components/ui/input-base';
 import { Input } from '@/components/ui/input.js';
 import type { Label } from '@/components/ui/label';
 import {
@@ -163,7 +164,7 @@ function FieldWrapper({ label, control }: FieldWrapperProps) {
 
 type InputFieldProps = {
   label: string;
-} & React.ComponentProps<'input'>;
+} & Omit<InputProps, 'value' | 'onChangeText' | 'onBlur'>;
 
 function InputField({ label, ...props }: InputFieldProps) {
   // biome-ignore lint/suspicious/noExplicitAny: field stores string | number | null depending on the schema
@@ -175,15 +176,14 @@ function InputField({ label, ...props }: InputFieldProps) {
       control={
         <Input
           {...props}
-          value={field.state.value ?? ''}
+          value={String(field.state.value ?? '')}
           onBlur={field.handleBlur}
-          onChange={(e) => {
+          onChangeText={(text) => {
             if (props.type === 'number') {
-              field.handleChange(
-                e.target.value === '' ? null : e.target.valueAsNumber,
-              );
+              // `valueAsNumber` is DOM-only; parse the text so native agrees.
+              field.handleChange(text === '' ? null : Number(text));
             } else {
-              field.handleChange(e.target.value);
+              field.handleChange(text);
             }
           }}
         />
@@ -275,8 +275,18 @@ function SubmitButton({
   const canSubmit = useStore(form.store, (s) => s.canSubmit);
   const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
 
+  // A `Pressable` is not a form control, so it never raises the DOM submit
+  // event `<Form>` listens for — it has to call `handleSubmit` itself. Enter
+  // inside a field still goes through `<form onSubmit>`, and because pressing
+  // this button no longer submits the form, the two cannot both fire.
   return (
-    <Button type="submit" disabled={!canSubmit || isSubmitting} {...props}>
+    <Button
+      disabled={!canSubmit || isSubmitting}
+      onPress={() => {
+        form.handleSubmit();
+      }}
+      {...props}
+    >
       {icon}
       {isSubmitting ? savingLabel : isEdit ? editLabel : createLabel}
     </Button>

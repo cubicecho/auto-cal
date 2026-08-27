@@ -190,7 +190,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
     <div className="flex flex-col gap-4 overflow-y-auto h-full">
       <TodoForm open={todoOpen} onOpenChange={setTodoOpen} />
 
-      <Button size="sm" className="w-full" onClick={() => setTodoOpen(true)}>
+      <Button size="sm" className="w-full" onPress={() => setTodoOpen(true)}>
         <Plus className="mr-1 h-4 w-4" />
         Add todo
       </Button>
@@ -304,8 +304,8 @@ function ScheduleCard({
                 size="icon"
                 variant="ghost"
                 className="h-6 w-6 text-muted-foreground hover:text-green-600"
-                title="Mark habit complete"
-                onClick={onComplete}
+                aria-label="Mark habit complete"
+                onPress={onComplete}
               >
                 <Check className="h-3.5 w-3.5" />
               </Button>

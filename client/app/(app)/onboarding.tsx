@@ -82,7 +82,7 @@ export default function OnboardingPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleSkipAll}
+            onPress={handleSkipAll}
             className="text-muted-foreground"
           >
             <X className="mr-1 h-3 w-3" />

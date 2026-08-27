@@ -31,7 +31,7 @@ export function WeekNavigator({
         size="sm"
         disabled={isCurrent}
         className="disabled:opacity-40"
-        onClick={onToday}
+        onPress={onToday}
       >
         Today
       </Button>
@@ -44,7 +44,7 @@ export function WeekNavigator({
             size="sm"
             variant={view === v ? 'default' : 'ghost'}
             className="h-7 px-2.5 text-xs capitalize"
-            onClick={() => onViewChange(v)}
+            onPress={() => onViewChange(v)}
           >
             {v}
           </Button>
@@ -52,13 +52,13 @@ export function WeekNavigator({
       </div>
 
       {/* Date navigation */}
-      <Button variant="outline" size="sm" onClick={onPrev}>
+      <Button variant="outline" size="sm" onPress={onPrev}>
         <ChevronLeft className="h-4 w-4" />
       </Button>
       <span className="min-w-[160px] text-center text-sm font-medium">
         {dateLabel}
       </span>
-      <Button variant="outline" size="sm" onClick={onNext}>
+      <Button variant="outline" size="sm" onPress={onNext}>
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>

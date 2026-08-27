@@ -76,7 +76,7 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => onEdit(timeBlock)}
+              onPress={() => onEdit(timeBlock)}
               aria-label="Edit time block"
             >
               <Pencil className="h-4 w-4" />
@@ -88,14 +88,14 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
                   size="sm"
                   variant="destructive"
                   disabled={deleting}
-                  onClick={handleDelete}
+                  onPress={handleDelete}
                 >
                   {deleting ? 'Deleting…' : 'Delete'}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setConfirming(false)}
+                  onPress={() => setConfirming(false)}
                 >
                   Cancel
                 </Button>
@@ -104,7 +104,7 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => setConfirming(true)}
+                onPress={() => setConfirming(true)}
                 aria-label="Delete time block"
               >
                 <Trash2 className="h-4 w-4 text-destructive" />

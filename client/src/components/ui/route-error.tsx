@@ -35,7 +35,7 @@ export function RouteError({ error, reset }: RouteErrorProps) {
           {friendlyMessage(error)}
         </p>
       </div>
-      <Button variant="outline" size="sm" onClick={reset}>
+      <Button variant="outline" size="sm" onPress={reset}>
         Try again
       </Button>
     </div>

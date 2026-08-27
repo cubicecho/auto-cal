@@ -61,7 +61,7 @@ export function ProjectList({ items, onSelect }: ProjectListProps) {
               />
               Show archived
             </label>
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" onPress={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               New Project
             </Button>
@@ -75,7 +75,7 @@ export function ProjectList({ items, onSelect }: ProjectListProps) {
           title="No projects yet"
           description="Create a project to group notes, tasks, and dedicated time"
           action={
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" onPress={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               New project
             </Button>

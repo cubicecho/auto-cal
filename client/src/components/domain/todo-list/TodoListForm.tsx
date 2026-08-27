@@ -234,12 +234,7 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
             error={deleteError}
             secondary={
               isEdit ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDelete}
-                >
+                <Button variant="destructive" size="sm" onPress={handleDelete}>
                   <Trash2 className="mr-1 h-4 w-4" />
                   Delete
                 </Button>

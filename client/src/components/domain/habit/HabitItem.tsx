@@ -52,7 +52,7 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
   return (
     <Card
       className="cursor-pointer transition-colors"
-      onClick={() => onSelect(habit)}
+      onPress={() => onSelect(habit)}
       accentColor={habit.activityType?.color}
       accentLabel={habit.activityType?.name}
     >
@@ -80,7 +80,7 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
           <Button
             size="icon"
             variant="ghost"
-            onClick={(e) => {
+            onPress={(e) => {
               e.stopPropagation();
               onEdit(habit);
             }}

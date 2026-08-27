@@ -492,11 +492,10 @@ export function HabitForm({
             secondary={
               isEdit ? (
                 <Button
-                  type="button"
                   variant="destructive"
                   size="sm"
                   disabled={deleting}
-                  onClick={
+                  onPress={
                     confirmingDelete
                       ? handleDelete
                       : () => setConfirmingDelete(true)

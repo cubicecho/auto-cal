@@ -33,7 +33,7 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleRunWizard}>
+          <Button onPress={handleRunWizard}>
             <Wand2 className="mr-2 h-4 w-4" />
             Run setup wizard
           </Button>
@@ -49,12 +49,12 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button asChild>
-            <Link href="/import-todos">
+          <Link href="/import-todos" asChild>
+            <Button>
               <Upload className="mr-2 h-4 w-4" />
               Import from Google Tasks
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 

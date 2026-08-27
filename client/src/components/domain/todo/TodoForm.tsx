@@ -293,10 +293,9 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
             secondary={
               isEdit && !todo?.completedAt ? (
                 <Button
-                  type="button"
                   variant="outline"
                   disabled={completing}
-                  onClick={async () => {
+                  onPress={async () => {
                     await completeTodo({ variables: { id: todo?.id } });
                     onOpenChange(false);
                   }}

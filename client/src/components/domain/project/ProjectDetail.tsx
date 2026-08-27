@@ -100,7 +100,7 @@ export function ProjectDetail({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setArchiveOpen(true)}
+                onPress={() => setArchiveOpen(true)}
               >
                 <Archive className="mr-1.5 h-3.5 w-3.5" />
                 Archive

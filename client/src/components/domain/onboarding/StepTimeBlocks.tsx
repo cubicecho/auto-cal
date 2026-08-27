@@ -163,18 +163,16 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
                     </div>
                     <div className="flex gap-2">
                       <Button
-                        type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => field.handleChange([...WEEKDAYS])}
+                        onPress={() => field.handleChange([...WEEKDAYS])}
                       >
                         Weekdays
                       </Button>
                       <Button
-                        type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => field.handleChange([...WEEKEND])}
+                        onPress={() => field.handleChange([...WEEKEND])}
                       >
                         Weekend
                       </Button>

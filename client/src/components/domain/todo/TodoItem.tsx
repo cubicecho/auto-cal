@@ -117,7 +117,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
         <Button
           size="icon"
           variant="ghost"
-          onClick={() =>
+          onPress={() =>
             setCompletionTarget({
               kind: 'todo',
               id: todo.id,
@@ -136,7 +136,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
               size="icon"
               variant="ghost"
               disabled={uncompleting}
-              onClick={() =>
+              onPress={() =>
                 uncompleteTodo({ variables: { id: todo.id } }).catch((err) =>
                   toast(errorMessage(err, 'Could not reopen this todo')),
                 )
@@ -195,7 +195,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
       <Button
         size="icon"
         variant="ghost"
-        onClick={() => onEdit(todo)}
+        onPress={() => onEdit(todo)}
         aria-label={`Edit ${todo.title}`}
         className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
       >
@@ -205,7 +205,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
       <Button
         size="icon"
         variant="ghost"
-        onClick={() => setDeleteOpen(true)}
+        onPress={() => setDeleteOpen(true)}
         aria-label={`Delete ${todo.title}`}
         className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
       >

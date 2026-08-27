@@ -3,6 +3,7 @@ import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
+import type { InputHandle } from '@/components/ui/input-base';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { appendToField, evictEntity } from '@/lib/cache';
@@ -69,7 +70,7 @@ export function ProjectNotesEditor({
   const [content, setContent] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Note | null>(null);
 
-  const titleInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<InputHandle>(null);
   // Set to the id of a just-created note so we can focus its title once the
   // refetch lands and the note becomes selectable.
   const pendingFocusId = useRef<string | null>(null);
@@ -99,7 +100,8 @@ export function ProjectNotesEditor({
     // Defer past the title-sync effect so the input holds the note's title.
     requestAnimationFrame(() => {
       titleInputRef.current?.focus();
-      titleInputRef.current?.select();
+      // Web-only — `TextInput` has no equivalent, so native just focuses.
+      titleInputRef.current?.select?.();
     });
   }, [selected]);
 
@@ -183,7 +185,7 @@ export function ProjectNotesEditor({
           size="sm"
           variant="outline"
           className="w-full"
-          onClick={handleAdd}
+          onPress={handleAdd}
           disabled={creating}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -215,7 +217,7 @@ export function ProjectNotesEditor({
                   variant="ghost"
                   className="h-6 w-6"
                   disabled={i === 0}
-                  onClick={() => handleMove(note, -1)}
+                  onPress={() => handleMove(note, -1)}
                   aria-label="Move up"
                 >
                   <ChevronUp className="h-3.5 w-3.5" />
@@ -225,7 +227,7 @@ export function ProjectNotesEditor({
                   variant="ghost"
                   className="h-6 w-6"
                   disabled={i === orderedNotes.length - 1}
-                  onClick={() => handleMove(note, 1)}
+                  onPress={() => handleMove(note, 1)}
                   aria-label="Move down"
                 >
                   <ChevronDown className="h-3.5 w-3.5" />
@@ -234,7 +236,7 @@ export function ProjectNotesEditor({
                   size="icon"
                   variant="ghost"
                   className="h-6 w-6 hover:text-destructive"
-                  onClick={() => setDeleteTarget(note)}
+                  onPress={() => setDeleteTarget(note)}
                   aria-label={`Delete ${note.title || 'note'}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -251,7 +253,7 @@ export function ProjectNotesEditor({
           <Input
             ref={titleInputRef}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChangeText={setTitle}
             placeholder="Note title"
             className="font-medium"
           />
@@ -263,7 +265,7 @@ export function ProjectNotesEditor({
               </TabsList>
               <Button
                 size="sm"
-                onClick={handleSave}
+                onPress={handleSave}
                 disabled={!dirty || saving}
               >
                 {saving ? 'Saving…' : 'Save'}

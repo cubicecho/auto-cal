@@ -465,11 +465,69 @@ Companion hook: `hooks/useListSection.ts` — owns the create/edit dialog open
 state (`formOpen`, `editing`, `openCreate`, `openEdit`, `handleOpenChange`) that
 every list component needs.
 
+## Cross-Platform Primitives (in progress)
+
+`button.tsx`, `card.tsx` and `input.tsx` have been converted to react-native
+primitives and now render on both platforms. The rest of `components/ui/` is
+still web-only. The conversion rules, which every further primitive follows:
+
+**File naming inverts.** The old convention was *plain = web, `.native.tsx` =
+native*. A converted primitive is *plain = shared*, with a `.web.tsx` **only**
+where the web behaviour genuinely has no native equivalent. `input` is the one
+case so far: `type="time"`/`type="number"` with `min`/`max` are real DOM input
+behaviour `TextInput` cannot reproduce. Both files export the same `InputProps`,
+so call sites never branch.
+
+**The shared contract goes in a third module.** `input-base.ts` exists because
+Metro resolves `./input` to `input.web.tsx` on web — the web file importing the
+shared types from `./input` would import itself. Any `.tsx`/`.web.tsx` pair that
+needs shared types needs a `-base.ts` alongside them.
+
+**Only `input.tsx` is typechecked against call sites.** TypeScript resolves the
+plain `.tsx`, so `input.web.tsx` is only checked standalone. A drifted `.web.tsx`
+compiles cleanly and breaks at runtime — `npx expo export --platform web` is the
+check that catches it.
+
+| DOM | Cross-platform |
+|-----|----------------|
+| `onClick` | `onPress` |
+| `onChange={(e) => f(e.target.value)}` | `onChangeText={f}` |
+| `onKeyDown` Enter | `onSubmitEditing` |
+| `type="submit"` | `onPress={() => form.handleSubmit()}` |
+| `title="…"` (hover tooltip) | `aria-label="…"`, or a real `<Tooltip>` |
+| `useRef<HTMLInputElement>` | `useRef<InputHandle>` (`focus`, optional `select`) |
+| `<Button asChild><Link/></Button>` | `<Link asChild><Button/></Link>` |
+
+**Text must be wrapped.** A bare string inside a `<View>` throws on native
+while rendering fine on web, so the two platforms disagree silently. `Button`
+wraps string children in a `<Text>` for you; `CardTitle`/`CardDescription` are
+`<Text>`. Anywhere else, wrap it yourself.
+
+**Text colour does not inherit on native.** Each `cva` variant therefore splits
+in two — container classes and `*TextVariants` classes applied to the `<Text>`.
+The container keeps its `text-*` class so web icons still pick up
+`currentColor`.
+
+**`disabled:` and other pseudo-class variants do not apply** to a `Pressable`
+on either platform. Apply the state directly: `disabled && 'opacity-50'`.
+
+**Give an interactive `Pressable` a `role`.** react-native-web renders one as a
+plain `<div>` otherwise — no tab stop, no Enter/Space, nothing announced. `role`
+is what restores what `<button>` gave for free. Biome's `useSemanticElements`
+fires on it and needs a `biome-ignore`.
+
+**Still to convert:** the eight radix-backed primitives (`dialog`, `popover`,
+`select`, `tabs`, `tooltip`, `switch`, plus `date-time-input` and
+`CalendarView`) keep a `.web.tsx`. `lucide-react` is DOM-only and has no
+installed native counterpart — icons are the open dependency of converting the
+screens themselves. See `.agents/todo.md`.
+
 ## Shared Native Primitives
 
-`components/ui/` is web-only — it renders `<div>`/`<button>` and cannot be used
-from a `.native.tsx` screen. `components/native/` is the RN-primitive equivalent,
-and every native list screen is built from it.
+`components/native/` is the RN-primitive equivalent of the not-yet-converted
+half of `components/ui/`, which renders `<div>`/`<button>` and cannot be used
+from a `.native.tsx` screen. Every native list screen is built from it. It is
+meant to be folded into the shared set as the conversion above proceeds.
 
 | Primitive | Purpose |
 |-----------|---------|

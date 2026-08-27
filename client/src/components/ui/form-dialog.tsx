@@ -80,7 +80,7 @@ export function FormDialogFooter({
       >
         {secondary ? <div>{secondary}</div> : null}
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button variant="outline" onPress={onCancel}>
             {cancelLabel}
           </Button>
           {children}

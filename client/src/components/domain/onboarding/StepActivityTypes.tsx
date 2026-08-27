@@ -111,7 +111,7 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
                     <Input
                       placeholder={DEFAULT_ACTIVITY_COLOR}
                       value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onChangeText={(text) => field.handleChange(text)}
                       onBlur={field.handleBlur}
                       className="font-mono"
                     />

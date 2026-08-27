@@ -123,7 +123,7 @@ export function ApiKeyManager() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setDialogOpen(true)}
+              onPress={() => setDialogOpen(true)}
             >
               <Plus className="h-4 w-4 mr-1" />
               Generate API Key
@@ -194,7 +194,7 @@ export function ApiKeyManager() {
                       size="sm"
                       variant="destructive"
                       disabled={revoking}
-                      onClick={() => handleRevoke(key.id)}
+                      onPress={() => handleRevoke(key.id)}
                     >
                       Revoke
                     </Button>

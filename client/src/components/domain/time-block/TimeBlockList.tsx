@@ -42,7 +42,7 @@ export function TimeBlockList({ items, loading, error }: TimeBlockListProps) {
         title="Time Blocks"
         subtitle="Designated time periods for different activity types"
         actions={
-          <Button size="sm" onClick={openCreate}>
+          <Button size="sm" onPress={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
             New Time Block
           </Button>
@@ -61,7 +61,7 @@ export function TimeBlockList({ items, loading, error }: TimeBlockListProps) {
           title="No time blocks yet"
           description="Time blocks define when the scheduler can place your todos and habits"
           action={
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" onPress={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               Add time block
             </Button>

@@ -123,14 +123,10 @@ export function CompletionDialog({
           <DateTimeInput value={completedAt} onChange={setCompletedAt} />
         </div>
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="outline" onPress={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" disabled={loading} onClick={handleConfirm}>
+          <Button disabled={loading} onPress={handleConfirm}>
             {loading ? 'Saving…' : 'Mark complete'}
           </Button>
         </DialogFooter>

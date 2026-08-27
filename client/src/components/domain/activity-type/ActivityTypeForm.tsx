@@ -203,7 +203,7 @@ export function ActivityTypeForm({
                       <Input
                         placeholder={DEFAULT_ACTIVITY_COLOR}
                         value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChangeText={(text) => field.handleChange(text)}
                         onBlur={field.handleBlur}
                         className="font-mono"
                       />
@@ -220,10 +220,9 @@ export function ActivityTypeForm({
             secondary={
               isEdit ? (
                 <Button
-                  type="button"
                   variant="destructive"
                   size="sm"
-                  onClick={
+                  onPress={
                     confirmingDelete
                       ? handleDelete
                       : () => setConfirmingDelete(true)

@@ -244,7 +244,7 @@ export default function ImportTodosPage() {
               {parsed.length} list{parsed.length === 1 ? '' : 's'} found. Choose
               an activity type for each.
             </p>
-            <Button variant="ghost" size="sm" onClick={reset}>
+            <Button variant="ghost" size="sm" onPress={reset}>
               Choose another file
             </Button>
           </div>
@@ -268,11 +268,11 @@ export default function ImportTodosPage() {
           )}
 
           <div className="mt-6 flex items-center justify-end gap-2">
-            <Button variant="outline" onClick={() => router.push('/settings')}>
+            <Button variant="outline" onPress={() => router.push('/settings')}>
               Cancel
             </Button>
             <Button
-              onClick={handleImport}
+              onPress={handleImport}
               disabled={importing || importable.length === 0}
             >
               {importing
@@ -366,7 +366,7 @@ function ListAssignmentCard({
               size="sm"
               variant={assignment.mode === mode ? 'default' : 'ghost'}
               className="h-7 flex-1 text-xs capitalize"
-              onClick={() => {
+              onPress={() => {
                 if (mode === assignment.mode) return;
                 if (mode === 'new')
                   onChange({
@@ -393,9 +393,7 @@ function ListAssignmentCard({
             <Input
               value={assignment.name}
               placeholder="Activity type name"
-              onChange={(e) =>
-                onChange({ ...assignment, name: e.target.value })
-              }
+              onChangeText={(text) => onChange({ ...assignment, name: text })}
             />
             <div className="flex flex-wrap gap-1.5">
               {ACTIVITY_COLORS.map((color) => (
@@ -459,11 +457,11 @@ function ImportSuccess({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex gap-2">
-        <Button onClick={onDone}>
+        <Button onPress={onDone}>
           <ListChecks className="mr-2 h-4 w-4" />
           View todos
         </Button>
-        <Button variant="outline" onClick={onAgain}>
+        <Button variant="outline" onPress={onAgain}>
           Import another file
         </Button>
       </CardContent>

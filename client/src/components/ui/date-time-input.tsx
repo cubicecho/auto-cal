@@ -42,8 +42,8 @@ export function DateTimeInput({
     setOpen(false);
   }
 
-  function handleTimeChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const parts = e.target.value.split(':').map(Number);
+  function handleTimeChange(text: string) {
+    const parts = text.split(':').map(Number);
     const hh = parts[0];
     const mm = parts[1];
     if (hh === undefined || mm === undefined) return;
@@ -77,7 +77,7 @@ export function DateTimeInput({
       <Input
         type="time"
         value={timeStr}
-        onChange={handleTimeChange}
+        onChangeText={handleTimeChange}
         className="w-[120px]"
       />
     </div>

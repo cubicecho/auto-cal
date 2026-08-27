@@ -60,19 +60,19 @@ export function OnboardingStep({
         className={onBack ? 'flex justify-between' : 'flex justify-end'}
       >
         {onBack ? (
-          <Button variant="outline" onClick={onBack}>
+          <Button variant="outline" onPress={onBack}>
             <ArrowLeft className="mr-1 h-4 w-4" />
             Back
           </Button>
         ) : null}
         <div className="flex gap-2">
           {onSkip ? (
-            <Button variant="ghost" onClick={onSkip}>
+            <Button variant="ghost" onPress={onSkip}>
               <SkipForward className="mr-1 h-4 w-4" />
               Skip
             </Button>
           ) : null}
-          <Button onClick={onNext} disabled={nextDisabled}>
+          <Button onPress={onNext} disabled={nextDisabled}>
             {isFinal ? <CheckCircle2 className="mr-1 h-4 w-4" /> : null}
             {nextLabel}
             {isFinal ? null : <ArrowRight className="ml-1 h-4 w-4" />}

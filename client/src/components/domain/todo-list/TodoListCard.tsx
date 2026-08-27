@@ -19,7 +19,7 @@ import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { formatDuration } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { FolderKanban, ListX, Pencil, Plus } from 'lucide-react';
-import { type KeyboardEvent, useState } from 'react';
+import { useState } from 'react';
 import { TodoListForm } from './TodoListForm';
 
 const QUICK_CREATE_TODO = graphql(`
@@ -97,13 +97,6 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
     setNewTitle('');
   }
 
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      void handleQuickAdd();
-    }
-  }
-
   async function handleClearCompleted() {
     try {
       await deleteTodos({
@@ -152,7 +145,7 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => setEditingList(true)}
+                onPress={() => setEditingList(true)}
                 aria-label={`Edit ${list.name}`}
                 className="h-7 w-7"
               >
@@ -162,9 +155,8 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => setClearCompletedOpen(true)}
+                  onPress={() => setClearCompletedOpen(true)}
                   aria-label={`Remove all completed todos from ${list.name}`}
-                  title="Remove all completed"
                   className="h-7 w-7 hover:text-destructive"
                 >
                   <ListX className="h-3.5 w-3.5" />
@@ -179,14 +171,16 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
             <Input
               value={newTitle}
               placeholder="Add a todo…"
-              onChange={(e) => setNewTitle(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onChangeText={setNewTitle}
+              onSubmitEditing={() => {
+                void handleQuickAdd();
+              }}
               className="h-8 text-sm"
             />
             <Button
               size="icon"
               variant="ghost"
-              onClick={handleQuickAdd}
+              onPress={handleQuickAdd}
               disabled={creating || newTitle.trim().length === 0}
               aria-label="Add todo"
               className="h-8 w-8 shrink-0"
@@ -211,7 +205,7 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setShowCompleted((v) => !v)}
+              onPress={() => setShowCompleted((v) => !v)}
               className="mt-1 h-7 self-start px-2 text-xs text-muted-foreground"
             >
               {showCompleted
