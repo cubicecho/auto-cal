@@ -4,10 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * `icons.tsx` and `icons.web.tsx` are a Metro platform pair, and TypeScript
- * only ever resolves the native one — a name added to one file and forgotten
- * in the other compiles cleanly and throws at runtime on the platform that is
- * missing it. This is the only thing checking they stay in step.
+ * What is specific to the icon modules. Name parity between `icons.tsx` and
+ * `icons.web.tsx` is `platform-pairs.test.ts`'s job, along with every other
+ * platform pair.
  *
  * Parsed as text rather than imported: the native module pulls in
  * react-native-svg and nativewind, neither of which runs under a node
@@ -39,20 +38,12 @@ function* sourceFiles(dir: string): Generator<string> {
 
 describe('icons', () => {
   const native = read('icons.tsx');
-  const web = read('icons.web.tsx');
 
   const nativeNames = namesMatching(native, /^export const (\w+) = icon\(/gm);
-  const webNames = namesMatching(
-    web.slice(web.indexOf('export {'), web.indexOf('} from')),
-    /^\s*(\w+),$/gm,
-  );
-
-  it('exports the same names from both platforms', () => {
-    expect(nativeNames.length).toBeGreaterThan(0);
-    expect(webNames).toEqual(nativeNames);
-  });
 
   it('imports each native icon directly, never through the barrel', () => {
+    expect(nativeNames.length).toBeGreaterThan(0);
+
     // The barrel re-exports ~1600 modules and Metro does not tree-shake, so
     // one *value* import of it would pull the whole set into the native
     // bundle. `import type` is erased before Metro sees it and is fine.
