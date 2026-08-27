@@ -13,26 +13,20 @@ import {
   activityTypeMutations,
   activityTypeQueries,
 } from './activity-types.ts';
-import { apiKeyMutations, apiKeyQueries } from './api-keys.ts';
+import { apiKeyMutations } from './api-keys.ts';
 import { authMutations } from './auth.ts';
 import { habitMutations, habitQueries } from './habits.ts';
 import { importMutations } from './import.ts';
-import { profileMutations, profileQueries } from './profile.ts';
-import { projectFields, projectMutations, projectQueries } from './projects.ts';
+import { profileMutations } from './profile.ts';
+import { projectFields, projectMutations } from './projects.ts';
 import { scheduleMutations, scheduleQueries } from './schedule.ts';
 import { statsQueries } from './stats.ts';
 import { subscriptionResolvers } from './subscriptions.ts';
-import { timeBlockMutations, timeBlockQueries } from './time-blocks.ts';
-import { todoListMutations, todoListQueries } from './todo-lists.ts';
-import { todoFields, todoMutations, todoQueries } from './todos.ts';
+import { timeBlockMutations } from './time-blocks.ts';
+import { todoListMutations } from './todo-lists.ts';
+import { todoFields, todoMutations } from './todos.ts';
 
 const extensionSDL = `
-  type UserProfile {
-    id: ID!
-    email: String!
-    timezone: String!
-  }
-
   type ActivityTypeStats {
     activityTypeId: String!
     activityTypeName: String!
@@ -359,21 +353,16 @@ const extensionSDL = `
     children: [ActivityType!]!
   }
 
+  # myProfile / myActivityTypes / myTodoLists / myTodos / myHabits /
+  # myTimeBlocks / myApiKeys / myProjects / myProject are generated queries,
+  # renamed and scoped to the caller by \`scopeRootFields\` (../scope.ts). Only
+  # the queries that compute something beyond a filter are declared here.
   extend type Query {
-    myProfile: UserProfile
-    myActivityTypes: [ActivityType!]!
-    myTodoLists: [TodoList!]!
-    myTodos(listId: ID, completed: Boolean, orderBy: TodoOrderBy): [Todo!]!
-    myHabits(activityTypeId: ID): [Habit!]!
-    myTimeBlocks(activityTypeId: ID, containsDay: Int): [TimeBlock!]!
     myActivityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
     myHabitStats(habitId: ID, startDate: String, endDate: String): [HabitStats!]!
     myHabitDetail(habitId: ID!, periods: Int): HabitDetail!
     myStats(startDate: String, endDate: String): StatsOverview!
     mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!
-    myApiKeys: [ApiKey!]!
-    myProjects(includeArchived: Boolean): [Project!]!
-    myProject(id: ID!): Project
   }
 
   # Declared, not extended: build-config disables every generated mutation, so
@@ -534,16 +523,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   ) as GraphQLObjectType;
 
   attach(queryType, {
-    ...profileQueries,
     ...activityTypeQueries,
-    ...todoListQueries,
-    ...todoQueries,
     ...habitQueries,
-    ...timeBlockQueries,
     ...statsQueries,
     ...scheduleQueries,
-    ...projectQueries,
-    ...apiKeyQueries,
   });
   attach(mutationType, {
     ...profileMutations,

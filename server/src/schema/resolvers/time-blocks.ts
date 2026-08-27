@@ -1,27 +1,10 @@
 import { timeBlocks } from '@auto-cal/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { requireOwner, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { CreateTimeBlockInput, UpdateTimeBlockInput } from '../validators.ts';
 import { publishDataChanged } from './subscriptions.ts';
-import type { MutationMap, QueryMap } from './types.ts';
-
-export const timeBlockQueries: QueryMap<'myTimeBlocks'> = {
-  myTimeBlocks: async (_parent, args, context) => {
-    const userId = requireUser(context);
-    const where: Record<string, unknown> = { userId: userId };
-    if (args.activityTypeId) where.activityTypeId = args.activityTypeId;
-    if (args.containsDay !== undefined && args.containsDay !== null) {
-      const day = args.containsDay;
-      where.RAW = (t: { daysOfWeek: unknown }) =>
-        sql`${t.daysOfWeek} @> ARRAY[${sql.param(day)}]::integer[]`;
-    }
-    return context.db.query.timeBlocks.findMany({
-      where,
-      orderBy: { startTime: 'asc' },
-    });
-  },
-};
+import type { MutationMap } from './types.ts';
 
 export const timeBlockMutations: MutationMap<
   'myCreateTimeBlock' | 'myUpdateTimeBlock' | 'myDeleteTimeBlock'

@@ -67,8 +67,9 @@ export function ProjectDetail({
     ArchiveProjectMutation,
     ArchiveProjectMutationVariables
   >(ARCHIVE_PROJECT, {
-    // The status change drops it out of `myProjects` unless the caller asked
-    // for archived ones, so this is a membership change, not just a patch.
+    // The status change drops it out of any `myProjects` that filters archived
+    // ones out, so this is a membership change, not just a patch. Evicting the
+    // root field covers every argument variant.
     update: (cache) => invalidate(cache, 'myProjects'),
   });
 

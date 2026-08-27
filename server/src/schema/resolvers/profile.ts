@@ -1,18 +1,7 @@
 import { users } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireUser } from '../../errors.ts';
-import type { MutationMap, QueryMap } from './types.ts';
-
-export const profileQueries: QueryMap<'myProfile'> = {
-  myProfile: async (_parent, _args, context) => {
-    const userId = requireUser(context);
-    return (
-      (await context.db.query.users.findFirst({
-        where: { id: userId },
-      })) ?? null
-    );
-  },
-};
+import type { MutationMap } from './types.ts';
 
 export const profileMutations: MutationMap<'myUpdateProfile'> = {
   myUpdateProfile: async (_parent, args, context) => {

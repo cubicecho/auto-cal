@@ -113,7 +113,7 @@ describe('time-block resolvers', () => {
         testSchema,
         db,
         userId,
-        'query($day: Int) { myTimeBlocks(containsDay: $day) { id daysOfWeek } }',
+        'query($day: Int) { myTimeBlocks(where: { daysOfWeek: { has: $day } }) { id daysOfWeek } }',
         { day: 1 },
       );
       expect(result.errors).toBeUndefined();
@@ -160,7 +160,7 @@ describe('time-block resolvers', () => {
         testSchema,
         db,
         userId,
-        'query($id: ID) { myTimeBlocks(activityTypeId: $id) { id } }',
+        'query($id: UUID) { myTimeBlocks(where: { activityTypeId: { eq: $id } }) { id } }',
         { id: at2.id },
       );
       expect(result.errors).toBeUndefined();

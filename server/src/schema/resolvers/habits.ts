@@ -22,19 +22,7 @@ import {
 import { publishDataChanged } from './subscriptions.ts';
 import type { MutationMap, QueryMap } from './types.ts';
 
-export const habitQueries: QueryMap<
-  'myHabits' | 'myHabitStats' | 'myHabitDetail'
-> = {
-  myHabits: async (_parent, args, context) => {
-    const userId = requireUser(context);
-    const where: Record<string, unknown> = { userId: userId };
-    if (args.activityTypeId) where.activityTypeId = args.activityTypeId;
-    return context.db.query.habits.findMany({
-      where,
-      orderBy: { priority: 'desc', createdAt: 'desc' },
-    });
-  },
-
+export const habitQueries: QueryMap<'myHabitStats' | 'myHabitDetail'> = {
   myHabitStats: async (_parent, args, context) => {
     const userId = requireUser(context);
 

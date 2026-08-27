@@ -1,38 +1,10 @@
 import { todos } from '@auto-cal/db/schema';
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
-import type { InnerOrder, TodoOrderBy } from '../../__generated__/resolvers.ts';
 import { requireOwner, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { CreateTodoInput, UpdateTodoInput } from '../validators.ts';
 import { publishTodoEvent } from './subscriptions.ts';
-import type { FieldMap, MutationMap, QueryMap } from './types.ts';
-
-function buildTodoOrderBy(
-  orderBy?: TodoOrderBy,
-): Record<string, 'asc' | 'desc'> {
-  if (!orderBy) return { priority: 'desc', createdAt: 'desc' };
-  const entries = Object.entries(orderBy)
-    .filter((e): e is [string, InnerOrder] => e[1] != null)
-    .sort(([, a], [, b]) => a.priority - b.priority);
-  if (entries.length === 0) return { priority: 'desc', createdAt: 'desc' };
-  return Object.fromEntries(
-    entries.map(([field, inner]) => [field, inner.direction]),
-  );
-}
-
-export const todoQueries: QueryMap<'myTodos'> = {
-  myTodos: async (_parent, args, context) => {
-    const userId = requireUser(context);
-    const where: Record<string, unknown> = { userId: userId };
-    if (args.listId) where.listId = args.listId;
-    if (args.completed === true) where.completedAt = { isNotNull: true };
-    else if (args.completed === false) where.completedAt = { isNull: true };
-    return context.db.query.todos.findMany({
-      where,
-      orderBy: buildTodoOrderBy(args.orderBy),
-    });
-  },
-};
+import type { FieldMap, MutationMap } from './types.ts';
 
 export const todoMutations: MutationMap<
   | 'myCreateTodo'

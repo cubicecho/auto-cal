@@ -3,17 +3,7 @@ import { eq } from 'drizzle-orm';
 import { generateApiKey } from '../../api-keys.ts';
 import { requireOwner, requireUser } from '../../errors.ts';
 import { MyCreateApiKeyInput } from '../validators.ts';
-import type { MutationMap, QueryMap } from './types.ts';
-
-export const apiKeyQueries: QueryMap<'myApiKeys'> = {
-  myApiKeys: async (_parent, _args, context) => {
-    const userId = requireUser(context);
-    return context.db.query.apiKeys.findMany({
-      where: { userId: userId, revokedAt: { isNull: true } },
-      orderBy: { createdAt: 'desc' },
-    });
-  },
-};
+import type { MutationMap } from './types.ts';
 
 export const apiKeyMutations: MutationMap<'myCreateApiKey' | 'myRevokeApiKey'> =
   {

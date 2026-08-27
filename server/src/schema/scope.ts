@@ -29,39 +29,85 @@ export const asc = (priority: number) => ({ direction: 'asc', priority });
  * The rules are deliberately not uniform. `users` has no `userId` column — it
  * scopes by `id` — and `apiKeys` hides revoked keys as part of its scope.
  */
-export const QUERY_SCOPE: Record<string, ScopedField> = {};
+export const QUERY_SCOPE: Record<string, ScopedField> = {
+  user: {
+    as: 'myProfile',
+    // No `userId` column — the caller *is* the row.
+    scope: (userId) => ({ id: { eq: userId } }),
+  },
+  activityTypes: {
+    as: 'myActivityTypes',
+    scope: (userId) => ({ userId: { eq: userId } }),
+    defaultOrderBy: { name: asc(0) },
+  },
+  todoLists: {
+    as: 'myTodoLists',
+    scope: (userId) => ({ userId: { eq: userId } }),
+    defaultOrderBy: { name: asc(0) },
+  },
+  todos: {
+    as: 'myTodos',
+    scope: (userId) => ({ userId: { eq: userId } }),
+    defaultOrderBy: { priority: desc(0), createdAt: desc(1) },
+  },
+  habits: {
+    as: 'myHabits',
+    scope: (userId) => ({ userId: { eq: userId } }),
+    defaultOrderBy: { priority: desc(0), createdAt: desc(1) },
+  },
+  timeBlocks: {
+    as: 'myTimeBlocks',
+    scope: (userId) => ({ userId: { eq: userId } }),
+    defaultOrderBy: { startTime: asc(0) },
+  },
+  apiKeys: {
+    as: 'myApiKeys',
+    // Revoked keys are not "the caller's keys" for any purpose the API has, and
+    // folding it into the scope keeps a revoked key from being resurrected by a
+    // caller-supplied `where`.
+    scope: (userId) => ({
+      userId: { eq: userId },
+      revokedAt: { isNull: true },
+    }),
+    defaultOrderBy: { createdAt: desc(0) },
+  },
+  projects: {
+    as: 'myProjects',
+    scope: (userId) => ({ userId: { eq: userId } }),
+    defaultOrderBy: { createdAt: desc(0) },
+  },
+  project: {
+    as: 'myProject',
+    scope: (userId) => ({ userId: { eq: userId } }),
+  },
+};
 
 /**
- * Generated root query fields deliberately not served.
+ * Generated root query fields deliberately not served. Nothing queries these as
+ * root fields today, and each is already reachable — correctly scoped — by
+ * traversing a relation from something that is.
  *
  * The single-row variants are redundant with their list form plus a `where`.
- * `habitCompletions` is different in kind: the table has no `userId` column and
- * generated filters are columns-only (no relation keys), so there is no filter
- * that scopes it. It stays reachable, correctly scoped, via `Habit.completions`,
- * where the generated loader ANDs the foreign-key predicate with the caller's
- * filter.
+ * `users` is the plural of the one table that scopes by `id`. `projectNotes` and
+ * `habitCompletions` are leaves owned by a parent (`Project.notes`,
+ * `Habit.completions`); `habitCompletions` has no `userId` column at all, so
+ * exposing it would need the relation form, `{ habit: { userId: { eq } } }`.
+ *
+ * Adding an entry here is a deliberate choice not to serve a table. Adding a
+ * Drizzle table and forgetting both maps throws at boot.
  */
 export const UNEXPOSED: ReadonlySet<string> = new Set([
-  'activityTypes',
   'activityType',
-  'apiKeys',
   'apiKey',
   'habitCompletions',
   'habitCompletion',
-  'habits',
   'habit',
   'projectNotes',
   'projectNote',
-  'projects',
-  'project',
-  'timeBlocks',
   'timeBlock',
-  'todoLists',
   'todoList',
-  'todos',
   'todo',
   'users',
-  'user',
 ]);
 
 /**
@@ -77,9 +123,12 @@ export const UNEXPOSED: ReadonlySet<string> = new Set([
  *
  * Two invariants hold this up:
  *
- * - **The caller's filter is AND-ed, never merged.** Generated filters expose
- *   `OR`/`NOT` at every level, so a spread would let
- *   `where: { OR: [...] }` widen past the scope. `AND` can only narrow.
+ * - **The caller's filter is AND-ed, never merged.** Spreading the two into one
+ *   object puts them on the same keys, so `where: { userId: { eq: <them> } }`
+ *   silently replaces the scope. Wrapping both in `AND` keeps them as separate
+ *   operands, which can only ever narrow. (`OR`/`NOT` do not widen either way —
+ *   generated filters AND sibling fields with `OR` branches — but that is the
+ *   dependency's semantics, not something worth depending on here.)
  * - **Unknown fields are removed, not guarded.** A generated field with no rule
  *   is deleted from the schema, so naming it fails validation rather than
  *   execution — and, because {@link UNEXPOSED} must list it explicitly, adding a

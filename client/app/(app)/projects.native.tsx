@@ -18,7 +18,8 @@ import {
 
 const GET_PROJECTS = graphql(`
   query GetProjectsNative {
-    myProjects {
+    # Archived projects stay out of the list (see the archive confirmation copy).
+    myProjects(where: { status: { ne: "archived" } }) {
       id
       name
       status

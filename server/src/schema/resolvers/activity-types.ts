@@ -15,17 +15,7 @@ import {
 import { publishDataChanged } from './subscriptions.ts';
 import type { FieldMap, MutationMap, QueryMap } from './types.ts';
 
-export const activityTypeQueries: QueryMap<
-  'myActivityTypes' | 'myActivityTypeStats'
-> = {
-  myActivityTypes: async (_parent, _args, context) => {
-    const userId = requireUser(context);
-    return context.db.query.activityTypes.findMany({
-      where: { userId: userId },
-      orderBy: { name: 'asc' },
-    });
-  },
-
+export const activityTypeQueries: QueryMap<'myActivityTypeStats'> = {
   myActivityTypeStats: async (_parent, args, context) => {
     const userId = requireUser(context);
 

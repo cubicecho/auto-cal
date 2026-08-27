@@ -7,8 +7,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 
 const GET_PROJECT_DETAIL = graphql(`
-  query GetProjectDetail($id: ID!) {
-    myProject(id: $id) {
+  query GetProjectDetail($id: UUID!) {
+    myProject(where: { id: { eq: $id } }) {
       ...Project_ProjectDetail
     }
     myTodos {

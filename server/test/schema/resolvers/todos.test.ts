@@ -85,7 +85,7 @@ describe('todo resolvers', () => {
         testSchema,
         db,
         userId,
-        'query($id: ID) { myTodos(listId: $id) { title } }',
+        'query($id: UUID) { myTodos(where: { listId: { eq: $id } }) { title } }',
         { id: list1.id },
       );
       expect(result.errors).toBeUndefined();
@@ -108,7 +108,7 @@ describe('todo resolvers', () => {
         testSchema,
         db,
         userId,
-        'query { myTodos(completed: true) { title } }',
+        'query { myTodos(where: { completedAt: { isNotNull: true } }) { title } }',
       );
       expect(result.errors).toBeUndefined();
       const items = result.data?.myTodos as Array<{ title: string }>;
@@ -170,7 +170,7 @@ describe('todo resolvers', () => {
         testSchema,
         db,
         userId,
-        'query { myTodos(completed: false) { title } }',
+        'query { myTodos(where: { completedAt: { isNull: true } }) { title } }',
       );
       expect(result.errors).toBeUndefined();
       const items = result.data?.myTodos as Array<{ title: string }>;

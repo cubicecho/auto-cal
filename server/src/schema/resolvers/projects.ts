@@ -1,4 +1,4 @@
-import type { Project, ProjectNote, TodoList } from '@auto-cal/db';
+import type { ProjectNote, TodoList } from '@auto-cal/db';
 import {
   activityTypes,
   projectNotes,
@@ -16,34 +16,9 @@ import {
   UpdateProjectNoteInput,
 } from '../validators.ts';
 import { publishDataChanged, publishTodoListEvent } from './subscriptions.ts';
-import type { FieldMap, MutationMap, QueryMap } from './types.ts';
+import type { FieldMap, MutationMap } from './types.ts';
 
 const DEFAULT_ACTIVITY_COLOR = '#6366f1';
-
-export const projectQueries: QueryMap<'myProjects' | 'myProject'> = {
-  myProjects: async (_parent, args, context) => {
-    const userId = requireUser(context);
-    const rows = await context.db.query.projects.findMany({
-      where: { userId: userId },
-      orderBy: { createdAt: 'desc' },
-    });
-    if (args.includeArchived) return rows;
-    return rows.filter((p: Project) => p.status !== 'archived');
-  },
-
-  myProject: async (_parent, args, context) => {
-    const userId = requireUser(context);
-    const project = requireOwner(
-      await context.db.query.projects.findFirst({
-        where: { id: args.id },
-      }),
-      'Project',
-      args.id,
-      userId,
-    );
-    return project;
-  },
-};
 
 export const projectMutations: MutationMap<
   | 'myCreateProject'

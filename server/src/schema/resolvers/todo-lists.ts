@@ -8,17 +8,7 @@ import {
 } from '../../errors.ts';
 import { CreateTodoListInput, UpdateTodoListInput } from '../validators.ts';
 import { publishTodoListEvent } from './subscriptions.ts';
-import type { MutationMap, QueryMap } from './types.ts';
-
-export const todoListQueries: QueryMap<'myTodoLists'> = {
-  myTodoLists: async (_parent, _args, context) => {
-    const userId = requireUser(context);
-    return context.db.query.todoLists.findMany({
-      where: { userId: userId },
-      orderBy: { name: 'asc' },
-    });
-  },
-};
+import type { MutationMap } from './types.ts';
 
 export const todoListMutations: MutationMap<
   'myCreateTodoList' | 'myUpdateTodoList' | 'myDeleteTodoList'
