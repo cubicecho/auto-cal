@@ -467,9 +467,9 @@ every list component needs.
 
 ## Cross-Platform Primitives (in progress)
 
-`button.tsx`, `card.tsx`, `input.tsx`, `icons.tsx` and `dialog.tsx` have been
-converted to react-native primitives and now render on both platforms. The rest
-of `components/ui/` is still web-only. The conversion rules, which every further
+`button.tsx`, `card.tsx`, `input.tsx`, `icons.tsx`, `dialog.tsx`, `label.tsx`
+and `field.tsx` have been converted to react-native primitives and now render on
+both platforms. The rest of `components/ui/` is still web-only. The conversion rules, which every further
 primitive follows:
 
 **File naming inverts.** The old convention was *plain = web, `.native.tsx` =
@@ -569,8 +569,24 @@ Two native details worth not re-deriving. The backdrop is a `Pressable` laid out
 press. And `space-y-*`/`space-x-*` are child-combinator utilities nativewind
 does not implement; use `gap`.
 
+### Label and Field
+
+`label` splits because radix's one job — clicking the label focuses the control
+named by `htmlFor` — has no native counterpart. `label.tsx` accepts `htmlFor`
+and ignores it rather than pretending.
+
+`field.tsx` does **not** split. None of the label/description/error furniture
+did anything a `<div>` did that a `View` cannot, so it is shared with no
+`.web.tsx` at all — the first primitive to convert outright. Not everything
+needs a pair; reach for one only when the web behaviour is genuinely absent on
+native.
+
+One thing was dropped in that conversion: `FieldLabel`'s
+`group-data-[disabled=true]/field:opacity-50`. `data-*` attributes and group
+variants are DOM-only, and nothing was setting that attribute.
+
 **Still to convert:** the remaining radix-backed primitives (`popover`,
-`select`, `tabs`, `tooltip`, `switch`, `label`, plus `date-time-input` and
+`select`, `tabs`, `tooltip`, `switch`, plus `date-time-input` and
 `CalendarView`) keep a `.web.tsx`. See `.agents/todo.md`.
 
 ## Shared Native Primitives

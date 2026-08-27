@@ -156,9 +156,9 @@ operations duplicate their web counterparts.
 
 **What's left, in order:**
 1. Convert the remaining pure primitives in `components/ui/`. The radix-backed
-   ones (`popover`, `select`, `tabs`, `tooltip`, `switch`, `label`, plus
-   `date-time-input` and `CalendarView`) keep a `.web.tsx`. `dialog` is done —
-   `label` is the next one worth doing, since `ui/field.tsx` sits on it.
+   ones (`popover`, `select`, `tabs`, `tooltip`, `switch`, plus
+   `date-time-input` and `CalendarView`) keep a `.web.tsx`. `dialog`, `label`
+   and `field` are done; `field` needed no `.web.tsx` at all.
 2. ~~Icons.~~ **Done.** `components/ui/icons{,-base,.web}.tsx` wraps
    `lucide-react` / `lucide-react-native` behind one module; all 36 call sites
    import from it. Only add an icon in both files, and never import lucide
@@ -170,7 +170,7 @@ operations duplicate their web counterparts.
    |---|---|---|
    | `form-modal.tsx` | `ui/form-dialog.tsx` | unblocked — `dialog` is converted |
    | `confirm.ts` | `ui/confirm-dialog.tsx` | unblocked, but the shapes differ: one is an imperative `Alert.alert`, the other a rendered component. Unifying means a `useConfirm()` provider mounted in `(app)/_layout.tsx` |
-   | `field.tsx` | `ui/form.tsx` `InputField` + `ui/field.tsx` | blocked on `label` |
+   | `field.tsx` | `ui/form.tsx` `InputField` + `ui/field.tsx` | unblocked — `label` and `field` are converted |
    | `row-action.tsx` | `Button variant="outline"` | unblocked, wants a destructive-outline variant |
    | `list-screen.tsx` | `ui/page.tsx` + `CardGrid` | unblocked, but a design call — `FlatList` vs. the web grid |
    | `activity-type-picker.tsx` | the web filter chips | unblocked; it owns its own query, so it moves to `components/domain/activity-type/` |
