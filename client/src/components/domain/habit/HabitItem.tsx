@@ -9,7 +9,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
+import { useToast } from '@/components/ui/toast';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Pencil } from 'lucide-react';
 
@@ -31,6 +33,7 @@ type HabitItemProps = {
 };
 
 export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
+  const toast = useToast();
   const [updateHabit, { loading: updatingLength }] = useMutation(
     UPDATE_HABIT_LENGTH,
     {
@@ -41,7 +44,9 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
   );
 
   function handleSaveLength(estimatedLength: number) {
-    updateHabit({ variables: { input: { id: habit.id, estimatedLength } } });
+    updateHabit({
+      variables: { input: { id: habit.id, estimatedLength } },
+    }).catch((err) => toast(errorMessage(err, 'Could not save the length')));
   }
 
   return (

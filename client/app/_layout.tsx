@@ -1,5 +1,6 @@
 import { apolloClient } from '@/apollo-client';
 import { RouteError } from '@/components/ui/route-error';
+import { ToastProvider } from '@/components/ui/toast';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { storage } from '@/storage';
 import { ApolloProvider } from '@apollo/client/react';
@@ -36,9 +37,12 @@ export default function RootLayout() {
 
   return (
     <ApolloProvider client={apolloClient}>
-      <AuthGuard>
-        <Stack screenOptions={{ headerShown: false }} />
-      </AuthGuard>
+      {/* Outside the guard so a toast survives a redirect to /auth/login. */}
+      <ToastProvider>
+        <AuthGuard>
+          <Stack screenOptions={{ headerShown: false }} />
+        </AuthGuard>
+      </ToastProvider>
     </ApolloProvider>
   );
 }

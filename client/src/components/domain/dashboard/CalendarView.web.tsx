@@ -3,6 +3,7 @@ import type {
   TimeBlock_CalendarViewFragment,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
+import { useToast } from '@/components/ui/toast';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { weekStart } from '@/lib/date';
 import { useMutation } from '@apollo/client/react';
@@ -203,11 +204,15 @@ function eventStyleGetter(event: CalendarEvent) {
 // ─── Custom Event Component ──────────────────────────────────────────────────
 
 function CalendarEventComponent({ event }: { event: CalendarEvent }) {
+  const toast = useToast();
+
+  // These fire optimistically, so a rejection silently rolls the event back to
+  // where it was — the toast is the only sign anything happened.
   const [completeHabit, { loading: completingHabit }] = useMutation(
     COMPLETE_HABIT,
     {
       update: (cache) => invalidate(cache, ...DERIVED),
-      onError: (err) => console.error('[completeHabit]', err.message),
+      onError: (err) => toast(err.message || 'Could not complete this habit'),
     },
   );
 
@@ -215,7 +220,7 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
     COMPLETE_TODO,
     {
       update: (cache) => invalidate(cache, ...DERIVED),
-      onError: (err) => console.error('[completeTodo]', err.message),
+      onError: (err) => toast(err.message || 'Could not complete this todo'),
     },
   );
 
@@ -243,7 +248,7 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
             completedAt: now,
           },
         },
-      }).catch(console.error);
+      }).catch(() => {});
     } else if (isTodo) {
       const todoId = event.id.replace(/^scheduled-todo-/, '');
       completeTodo({
@@ -251,7 +256,7 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
         optimisticResponse: {
           myCompleteTodo: { __typename: 'Todo', id: todoId, completedAt: now },
         },
-      }).catch(console.error);
+      }).catch(() => {});
     }
   }
 
@@ -297,8 +302,13 @@ export function CalendarView({
   date,
   view,
 }: CalendarViewProps) {
+  const toast = useToast();
+
   const [pinTodo] = useMutation(PIN_TODO, {
     update: (cache) => invalidate(cache, ...DERIVED),
+    // A refused drag snaps the event back to where it started, which on its own
+    // is indistinguishable from the drop not registering.
+    onError: (err) => toast(err.message || 'Could not move this todo'),
   });
 
   const backgroundEvents = useMemo<CalendarEvent[]>(() => {
@@ -383,7 +393,7 @@ export function CalendarView({
           manuallyScheduled: true,
         },
       },
-    }).catch(console.error);
+    }).catch(() => {});
   }
 
   return (

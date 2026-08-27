@@ -4,6 +4,7 @@ import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
 import { SectionHeading } from '@/components/ui/section-heading';
+import { useToast } from '@/components/ui/toast';
 import {
   Tooltip,
   TooltipContent,
@@ -117,6 +118,7 @@ function viewWindow(
 }
 
 export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
+  const toast = useToast();
   const [todoOpen, setTodoOpen] = useState(false);
 
   const { start: windowStart, end: windowEnd } = useMemo(
@@ -143,7 +145,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
     COMPLETE_HABIT,
     {
       update: (cache) => invalidate(cache, ...DERIVED),
-      onError: (err) => console.error('[completeHabit]', err.message),
+      onError: (err) => toast(err.message || 'Could not complete this habit'),
     },
   );
 
@@ -151,7 +153,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
     COMPLETE_TODO,
     {
       update: (cache) => invalidate(cache, ...DERIVED),
-      onError: (err) => console.error('[completeTodo]', err.message),
+      onError: (err) => toast(err.message || 'Could not complete this todo'),
     },
   );
 

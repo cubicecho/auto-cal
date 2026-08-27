@@ -7,13 +7,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
+import { useToast } from '@/components/ui/toast';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
-import { priorityLabel } from '@/lib/utils';
+import { errorMessage, priorityLabel } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Link } from 'expo-router';
 import { AlertTriangle, Check, Pencil, Trash2, Undo2 } from 'lucide-react';
@@ -75,6 +76,7 @@ type TodoItemProps = {
 };
 
 export function TodoItem({ todo, onEdit }: TodoItemProps) {
+  const toast = useToast();
   const isCompleted = todo.completedAt !== null;
   const [completionTarget, setCompletionTarget] =
     useState<CompletionDialogTarget | null>(null);
@@ -100,7 +102,9 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
   });
 
   function handleSaveLength(estimatedLength: number) {
-    updateTodo({ variables: { input: { id: todo.id, estimatedLength } } });
+    updateTodo({
+      variables: { input: { id: todo.id, estimatedLength } },
+    }).catch((err) => toast(errorMessage(err, 'Could not save the length')));
   }
 
   return (
@@ -132,7 +136,11 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
               size="icon"
               variant="ghost"
               disabled={uncompleting}
-              onClick={() => uncompleteTodo({ variables: { id: todo.id } })}
+              onClick={() =>
+                uncompleteTodo({ variables: { id: todo.id } }).catch((err) =>
+                  toast(errorMessage(err, 'Could not reopen this todo')),
+                )
+              }
               aria-label={`Mark ${todo.title} as incomplete`}
               className="h-6 w-6 shrink-0 text-muted-foreground hover:text-amber-600"
             >
@@ -214,9 +222,11 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
         confirmLabel="Delete"
         loading={deleting}
         onConfirm={() =>
-          deleteTodo({ variables: { id: todo.id } }).then(() =>
-            setDeleteOpen(false),
-          )
+          deleteTodo({ variables: { id: todo.id } })
+            .then(() => setDeleteOpen(false))
+            .catch((err) =>
+              toast(errorMessage(err, 'Could not delete this todo')),
+            )
         }
       />
 
