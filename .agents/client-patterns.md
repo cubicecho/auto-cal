@@ -84,6 +84,36 @@ queries) that no mutation result can patch. Spread it into any write that could
 move the schedule. `RootField` is a checked union and `cache.test.ts` asserts it
 against the SDL.
 
+## Live Updates
+
+`client/src/hooks/useLiveUpdates.ts` is the **only** subscriber to the server's
+change streams, mounted once in `app/(app)/_layout.tsx`. It translates each
+event into the same `lib/cache.ts` calls a local mutation would make, so a
+change from another tab, another device, or an API key takes the same route.
+
+**Pages do not subscribe.** They just read the cache and let it go stale or not.
+Adding `useSubscription` + `refetch()` to a screen is the pattern this replaced:
+per-page entity lists nothing checked, and a `refetch()` that only refreshed the
+screen you happened to be on.
+
+The `dataChanged` mapping lives in one `Record<DataEntity, readonly RootField[]>`,
+so a new entity in the SDL fails to compile until someone says what it
+invalidates:
+
+```typescript
+const DATA_FIELDS: Record<DataEntity, readonly RootField[]> = {
+  activityType: ['myActivityTypes', ...DERIVED],
+  habit: ['myHabits', ...DERIVED],
+  project: ['myProjects', 'myProject'],
+  timeBlock: ['myTimeBlocks', ...DERIVED],
+};
+```
+
+The typed `myTodosUpdated` / `myTodoListsUpdated` streams carry the whole
+entity, so Apollo has normalized it before the handler runs — an `updated`
+event only has to drop `DERIVED`. Membership changes also evict the list field,
+and deletes evict the entity.
+
 ## Nav Structure
 
 Top nav (hidden during onboarding): **Dashboard · Todos · Todo Lists · Habits · Time Blocks · Activity Types · Stats** + Settings icon + Sign out + dark mode toggle.
@@ -296,8 +326,7 @@ client/src/
   apollo-client.ts — the single ApolloClient (link split, typePolicies)
   storage.ts       — key-value store; no-ops off web
   lib/cache.ts     — cache invalidation helpers (see above)
-  hooks/           — form-hook (useAppForm), useDataChanged,
-                     useListSection, useTodosUpdated, useTodoListsUpdated
+  hooks/           — form-hook (useAppForm), useLiveUpdates, useListSection
 ```
 
 ## Shared UI Primitives

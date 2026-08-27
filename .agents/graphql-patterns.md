@@ -355,3 +355,9 @@ have no root field to evict — use `appendToField` (see `Project.notes`).
 the *pages* that existed when the mutation was written, so a page added later
 silently showed stale data. `RootField` is a checked union, and
 `cache.test.ts` asserts it against the SDL.
+
+The subscription streams go through the same vocabulary. `useLiveUpdates`
+(mounted once, in `app/(app)/_layout.tsx`) is the client's only subscriber;
+individual screens never call `useSubscription`. A new `DataEntity` value must
+be added to its `Record<DataEntity, readonly RootField[]>` or the client will
+not compile.

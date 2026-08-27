@@ -209,6 +209,27 @@ What this buys over the old `queryFields.myTodos!.resolve = …` assignment:
 `Required<Pick<…>>` rather than plain `Pick<…>`: every key named in the type
 parameter must actually be implemented.
 
+`FieldMap<TypeName, K>` is the same thing for a field on an object type, and
+goes through the same `attach()`:
+
+```typescript
+export const todoFields: FieldMap<'Todo', 'activityType'> = {
+  activityType: async (parent, _args, context) => { … },
+};
+```
+
+`parent` here is the **Drizzle row**, not the GraphQL type — `codegen.server.ts`
+maps every table-backed type to its row (`Todo: '@auto-cal/db#Todo as TodoRow'`),
+so `parent.listId` is checked against the actual column set. That is what the
+old hand-written `parent: { listId: string }` shapes were approximating.
+
+Only five fields need one: `ActivityType.parent`/`children` (a self-reference
+the SDL declares, plus its inverse), `Project.list` (custom SDL field),
+`Project.notes` (overrides the generated relation resolver to force position
+order), and `Todo.activityType` (a derived hop through the todo's list —
+`todos` has no `activityTypeId` column). Every other relation field gets a
+generated resolver from drizzle-graphql; do not hand-write one.
+
 The import of `__generated__/resolvers.ts` in `types.ts` is **type-only** and
 must stay that way. That file is generated *from* the SDL these resolver files
 produce, so a value import would be a bootstrap cycle; Node's type stripping

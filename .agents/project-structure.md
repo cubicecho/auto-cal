@@ -122,7 +122,7 @@ client/src/
 ├── lib/cache.ts          # Cache invalidation helpers (replaces refetchQueries)
 ├── lib/utils.ts          # cn(), priorityLabel()
 ├── lib/google-tasks.ts   # parseGoogleTasks() — Takeout Tasks.json parser
-├── hooks/                # form-hook, useDataChanged, useListSection, …
+├── hooks/                # form-hook, useLiveUpdates, useListSection, …
 ├── components/
 │   ├── ui/               # ShadCN primitives + custom (route-error, page, …)
 │   └── domain/

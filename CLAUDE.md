@@ -55,14 +55,14 @@ Unscoped fields are deleted, not given a throwing resolver, so they never reach 
 
 **Generated mutations are off.** `server/src/schema/build-config.ts` disables `insert`/`update`/`updateMany`/`delete` (and both aggregate features). Every write goes through a hand-written `my*` resolver, so the generated mutations only ever existed to be stripped again. Generated *queries* have no such feature flag, which is why `finalizeSchema` removes them after the fact. With all four mutation features off, drizzle-graphql omits the `Mutation` type entirely — so `extensionSDL` **declares** `type Mutation` rather than extending it, and wires it as a root operation via `extend schema { mutation: Mutation }` (the same treatment `Subscription` needs, since `extendSchema` does not auto-promote conventionally-named types). Adding a mutation means adding a field to that declared block; there is no generated `Mutation` to extend.
 
-**Relation fields (drizzle-graphql v4):** every Drizzle-relation field on an object type gets a generated resolver — eager when the parent query pre-fetched it, request-batched lazy loading otherwise. Custom resolvers can return plain DB rows and relation fields resolve automatically. Explicit field resolvers in `applyCustomResolvers` (`schema/resolvers/index.ts`) exist only for what the generated machinery can't do: derived hops (`Todo.activityType` via its list), custom SDL fields (`Project.list`, `ActivityType.parent`/`children`), and `Project.notes`, which overrides the generated resolver to enforce position ordering. These use the per-request DataLoaders from context.
+**Relation fields (drizzle-graphql v4):** every Drizzle-relation field on an object type gets a generated resolver — eager when the parent query pre-fetched it, request-batched lazy loading otherwise. Custom resolvers can return plain DB rows and relation fields resolve automatically. Explicit field resolvers — `FieldMap<'Todo', 'activityType'>` maps in the domain files, attached alongside the query/mutation maps — exist only for what the generated machinery can't do: derived hops (`Todo.activityType` via its list), custom SDL fields (`Project.list`, `ActivityType.parent`/`children`), and `Project.notes`, which overrides the generated resolver to enforce position ordering. These use the per-request DataLoaders from context.
 
 **Resolver authoring pattern** — every domain has its own file exporting plain
 resolver maps typed against the codegen output:
 ```
 schema/resolvers/
   index.ts         — extensionSDL string + attach()es every map to the schema
-  types.ts         — QueryMap / MutationMap / SubscriptionMap helpers
+  types.ts         — QueryMap / MutationMap / SubscriptionMap / FieldMap helpers
   todos.ts         — todoQueries, todoMutations
   habits.ts        — habitQueries, habitMutations
   ...
@@ -108,6 +108,8 @@ Expo + expo-router (file-based) + React Native Web + Apollo Client. Routes live 
 Web and native diverge by file extension: `todo-lists.tsx` is the web screen, `todo-lists.native.tsx` the native one. Metro picks the `.native` variant on iOS/Android and the plain one on web — a change to a screen usually needs to land in both. Never touch `window` or `localStorage` directly; use `client/src/storage.ts`, which is a no-op off web.
 
 GraphQL operations are colocated with the component that uses them. Fragments are defined in the leaf component and spread in the route-level query.
+
+**Subscriptions are centralized.** `src/hooks/useLiveUpdates.ts` is the only subscriber, mounted once in `app/(app)/_layout.tsx`; it turns every server event into `src/lib/cache.ts` invalidation. Screens never call `useSubscription` or `refetch()` — and `refetchQueries` is banned for the same reason. See `.agents/client-patterns.md`.
 
 ## Key Conventions
 
