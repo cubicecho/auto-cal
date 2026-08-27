@@ -6,12 +6,13 @@ import {
   activityTypes,
 } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireOwner, requireUser } from '../../errors.ts';
+import { requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import {
   CreateActivityTypeInput,
   UpdateActivityTypeInput,
 } from '../validators.ts';
+import { loadOwned } from './load.ts';
 import { publishDataChanged } from './subscriptions.ts';
 import type { FieldMap, MutationMap, QueryMap } from './types.ts';
 
@@ -29,17 +30,17 @@ export const activityTypeQueries: QueryMap<'myActivityTypeStats'> = {
       Habit[],
     ] = await Promise.all([
       context.db.query.activityTypes.findMany({
-        where: { userId: userId },
+        where: { userId },
       }),
       context.db.query.todos.findMany({
-        where: { userId: userId },
+        where: { userId },
       }),
       context.db.query.todoLists.findMany({
-        where: { userId: userId },
+        where: { userId },
       }),
       context.db.query.habits.findMany({
         where: {
-          userId: userId,
+          userId,
           activityTypeId: { isNotNull: true },
         },
       }),
@@ -101,7 +102,7 @@ export const activityTypeMutations: MutationMap<
     const input = CreateActivityTypeInput.parse(args.input);
     const [activityType] = await context.db
       .insert(activityTypes)
-      .values({ userId: userId, name: input.name, color: input.color })
+      .values({ userId, name: input.name, color: input.color })
       .returning();
     if (!activityType) throw new Error('Failed to create activity type');
     publishDataChanged(userId, 'activityType', [activityType.id]);
@@ -111,14 +112,7 @@ export const activityTypeMutations: MutationMap<
   myUpdateActivityType: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateActivityTypeInput.parse(args.input);
-    requireOwner(
-      await context.db.query.activityTypes.findFirst({
-        where: { id: input.id },
-      }),
-      'ActivityType',
-      input.id,
-      userId,
-    );
+    await loadOwned(context, 'activityTypes', input.id, userId);
     const [updated] = await context.db
       .update(activityTypes)
       .set({
@@ -135,14 +129,7 @@ export const activityTypeMutations: MutationMap<
 
   myDeleteActivityType: async (_parent, args, context) => {
     const userId = requireUser(context);
-    requireOwner(
-      await context.db.query.activityTypes.findFirst({
-        where: { id: args.id },
-      }),
-      'ActivityType',
-      args.id,
-      userId,
-    );
+    await loadOwned(context, 'activityTypes', args.id, userId);
     await context.db.delete(activityTypes).where(eq(activityTypes.id, args.id));
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'activityType', [args.id]);

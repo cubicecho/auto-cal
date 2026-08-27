@@ -1,8 +1,9 @@
 import { timeBlocks } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
-import { requireOwner, requireUser } from '../../errors.ts';
+import { requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { CreateTimeBlockInput, UpdateTimeBlockInput } from '../validators.ts';
+import { loadOwned } from './load.ts';
 import { publishDataChanged } from './subscriptions.ts';
 import type { MutationMap } from './types.ts';
 
@@ -15,7 +16,7 @@ export const timeBlockMutations: MutationMap<
     const [block] = await context.db
       .insert(timeBlocks)
       .values({
-        userId: userId,
+        userId,
         activityTypeId: input.activityTypeId,
         daysOfWeek: input.daysOfWeek,
         startTime: input.startTime,
@@ -32,14 +33,7 @@ export const timeBlockMutations: MutationMap<
   myUpdateTimeBlock: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateTimeBlockInput.parse(args.input);
-    requireOwner(
-      await context.db.query.timeBlocks.findFirst({
-        where: { id: input.id },
-      }),
-      'TimeBlock',
-      input.id,
-      userId,
-    );
+    await loadOwned(context, 'timeBlocks', input.id, userId);
     const [updated] = await context.db
       .update(timeBlocks)
       .set({
@@ -62,14 +56,7 @@ export const timeBlockMutations: MutationMap<
 
   myDeleteTimeBlock: async (_parent, args, context) => {
     const userId = requireUser(context);
-    requireOwner(
-      await context.db.query.timeBlocks.findFirst({
-        where: { id: args.id },
-      }),
-      'Time block',
-      args.id,
-      userId,
-    );
+    await loadOwned(context, 'timeBlocks', args.id, userId);
     await context.db.delete(timeBlocks).where(eq(timeBlocks.id, args.id));
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'timeBlock', [args.id]);

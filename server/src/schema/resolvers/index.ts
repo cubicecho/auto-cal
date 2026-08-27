@@ -415,8 +415,8 @@ const extensionSDL = `
 `;
 
 /**
- * Root fields that may be reached without the `my` prefix. Everything else on
- * `Query`/`Mutation` is generated, unscoped, and removed by `finalizeSchema`.
+ * Mutations reachable without authentication, and so without the `my` prefix.
+ * Every other mutation must be `my`-prefixed or `finalizeSchema` removes it.
  */
 export const PUBLIC_MUTATIONS = new Set([
   'requestMagicLink',
@@ -450,13 +450,13 @@ export const PUBLIC_MUTATIONS = new Set([
  * (generated relation resolvers included) are carried across intact.
  */
 function finalizeSchema(schema: GraphQLSchema): GraphQLSchema {
-  const isScoped = (fieldName: string) =>
-    fieldName.startsWith('my') || PUBLIC_MUTATIONS.has(fieldName);
   const isApiKeyInput = (typeName: string) => typeName.startsWith('ApiKey');
 
   const mapped = mapSchema(schema, {
+    // Queries have no public exemption: `PUBLIC_MUTATIONS` is not consulted
+    // here, so a query borrowing one of those names still fails the assertion.
     [MapperKind.QUERY_ROOT_FIELD]: (_field, fieldName) => {
-      if (!isScoped(fieldName)) {
+      if (!fieldName.startsWith('my')) {
         throw new Error(
           `Query.${fieldName} is not scoped to the caller — every query must be \`my\`-prefixed`,
         );
@@ -464,7 +464,9 @@ function finalizeSchema(schema: GraphQLSchema): GraphQLSchema {
       return undefined;
     },
     [MapperKind.MUTATION_ROOT_FIELD]: (_field, fieldName) =>
-      isScoped(fieldName) ? undefined : null,
+      fieldName.startsWith('my') || PUBLIC_MUTATIONS.has(fieldName)
+        ? undefined
+        : null,
     [MapperKind.INPUT_OBJECT_FIELD]: (_field, fieldName, typeName) =>
       fieldName === 'keyHash' && isApiKeyInput(typeName) ? null : undefined,
     [MapperKind.ENUM_VALUE]: (_value, typeName, _schema, valueName) =>
@@ -550,13 +552,12 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   // only what that machinery can't: custom SDL fields, derived hops, and one
   // to-many relation that needs a specific ordering.
 
-  attach(extended.getType('ActivityType') as GraphQLObjectType, {
-    ...activityTypeFields,
-  });
-  attach(extended.getType('Project') as GraphQLObjectType, {
-    ...projectFields,
-  });
-  attach(extended.getType('Todo') as GraphQLObjectType, { ...todoFields });
+  attach(
+    extended.getType('ActivityType') as GraphQLObjectType,
+    activityTypeFields,
+  );
+  attach(extended.getType('Project') as GraphQLObjectType, projectFields);
+  attach(extended.getType('Todo') as GraphQLObjectType, todoFields);
 
   // The token hash must never leave the server. myApiKeys/myCreateApiKey
   // return raw DB rows, so the field itself has to go, not just its value.

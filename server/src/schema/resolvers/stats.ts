@@ -27,13 +27,13 @@ export const statsQueries: QueryMap<'myStats'> = {
       ActivityType[],
     ] = await Promise.all([
       context.db.query.habits.findMany({
-        where: { userId: userId },
+        where: { userId },
       }),
       context.db.query.todos.findMany({
-        where: { userId: userId, scheduledAt: scheduledAtFilter },
+        where: { userId, scheduledAt: scheduledAtFilter },
       }),
       context.db.query.activityTypes.findMany({
-        where: { userId: userId },
+        where: { userId },
       }),
     ]);
 

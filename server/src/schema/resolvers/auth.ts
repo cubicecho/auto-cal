@@ -2,6 +2,7 @@ import { users } from '@auto-cal/db/schema';
 import { z } from 'zod';
 import { signMagicToken, signSessionToken, verifyToken } from '../../auth.ts';
 import { magicLinkExposed } from '../../config.ts';
+import { badUserInput } from '../../errors.ts';
 import type { MutationMap } from './types.ts';
 
 export const authMutations: MutationMap<
@@ -22,7 +23,11 @@ export const authMutations: MutationMap<
 
   verifyMagicLink: async (_parent, args, context) => {
     const payload = await verifyToken(args.token);
-    if (!payload?.email) throw new Error('Invalid or expired magic link');
+    // Coded, not bare: this is the message the login screen shows, and
+    // `formatError` replaces uncoded ones with "Internal server error" in
+    // production. BAD_USER_INPUT rather than UNAUTHENTICATED — the client
+    // reads the latter as session expiry and drops the stored token.
+    if (!payload?.email) throw badUserInput('Invalid or expired magic link');
 
     let user = await context.db.query.users.findFirst({
       where: { email: payload.email },

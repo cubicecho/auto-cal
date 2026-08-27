@@ -1,8 +1,9 @@
 import { todos } from '@auto-cal/db/schema';
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
-import { requireOwner, requireUser } from '../../errors.ts';
+import { requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { CreateTodoInput, UpdateTodoInput } from '../validators.ts';
+import { loadOwned } from './load.ts';
 import { publishTodoEvent } from './subscriptions.ts';
 import type { FieldMap, MutationMap } from './types.ts';
 
@@ -18,19 +19,12 @@ export const todoMutations: MutationMap<
     const input = CreateTodoInput.parse(args.input);
 
     // Validate list ownership before insert
-    requireOwner(
-      await context.db.query.todoLists.findFirst({
-        where: { id: input.listId },
-      }),
-      'TodoList',
-      input.listId,
-      userId,
-    );
+    await loadOwned(context, 'todoLists', input.listId, userId);
 
     const [todo] = await context.db
       .insert(todos)
       .values({
-        userId: userId,
+        userId,
         listId: input.listId,
         title: input.title,
         description: input.description,
@@ -51,24 +45,10 @@ export const todoMutations: MutationMap<
   myUpdateTodo: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateTodoInput.parse(args.input);
-    requireOwner(
-      await context.db.query.todos.findFirst({
-        where: { id: input.id },
-      }),
-      'Todo',
-      input.id,
-      userId,
-    );
+    await loadOwned(context, 'todos', input.id, userId);
 
     if (input.listId !== undefined) {
-      requireOwner(
-        await context.db.query.todoLists.findFirst({
-          where: { id: input.listId },
-        }),
-        'TodoList',
-        input.listId,
-        userId,
-      );
+      await loadOwned(context, 'todoLists', input.listId, userId);
     }
 
     const [updated] = await context.db
@@ -110,14 +90,7 @@ export const todoMutations: MutationMap<
 
   myCompleteTodo: async (_parent, args, context) => {
     const userId = requireUser(context);
-    requireOwner(
-      await context.db.query.todos.findFirst({
-        where: { id: args.id },
-      }),
-      'Todo',
-      args.id,
-      userId,
-    );
+    await loadOwned(context, 'todos', args.id, userId);
     const completedAt = args.completedAt
       ? new Date(args.completedAt)
       : new Date();
@@ -142,14 +115,7 @@ export const todoMutations: MutationMap<
 
   myDeleteTodo: async (_parent, args, context) => {
     const userId = requireUser(context);
-    requireOwner(
-      await context.db.query.todos.findFirst({
-        where: { id: args.id },
-      }),
-      'Todo',
-      args.id,
-      userId,
-    );
+    await loadOwned(context, 'todos', args.id, userId);
     await context.db.delete(todos).where(eq(todos.id, args.id));
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishTodoEvent(userId, { type: 'deleted', deletedId: args.id });
