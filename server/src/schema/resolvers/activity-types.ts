@@ -13,7 +13,7 @@ import {
   UpdateActivityTypeInput,
 } from '../validators.ts';
 import { publishDataChanged } from './subscriptions.ts';
-import type { MutationMap, QueryMap } from './types.ts';
+import type { FieldMap, MutationMap, QueryMap } from './types.ts';
 
 export const activityTypeQueries: QueryMap<
   'myActivityTypes' | 'myActivityTypeStats'
@@ -158,4 +158,20 @@ export const activityTypeMutations: MutationMap<
     publishDataChanged(userId, 'activityType', [args.id]);
     return true;
   },
+};
+
+/**
+ * The activity-type tree. Neither link is a Drizzle relation drizzle-graphql
+ * can generate a resolver for: `parent` is a self-reference the SDL declares,
+ * and `children` is its inverse.
+ */
+export const activityTypeFields: FieldMap<
+  'ActivityType',
+  'parent' | 'children'
+> = {
+  parent: (parent, _args, context) =>
+    parent.parentId ? context.loaders.activityType.load(parent.parentId) : null,
+
+  children: (parent, _args, context) =>
+    context.loaders.activityTypeByParent.load(parent.id),
 };

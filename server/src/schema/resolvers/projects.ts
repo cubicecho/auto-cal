@@ -16,7 +16,7 @@ import {
   UpdateProjectNoteInput,
 } from '../validators.ts';
 import { publishDataChanged, publishTodoListEvent } from './subscriptions.ts';
-import type { MutationMap, QueryMap } from './types.ts';
+import type { FieldMap, MutationMap, QueryMap } from './types.ts';
 
 const DEFAULT_ACTIVITY_COLOR = '#6366f1';
 
@@ -297,5 +297,20 @@ export const projectMutations: MutationMap<
       );
     publishDataChanged(userId, 'project', [existing.projectId]);
     return true;
+  },
+};
+
+export const projectFields: FieldMap<'Project', 'notes' | 'list'> = {
+  // Overrides the generated relation resolver: notes must come back in
+  // position order (myReorderProjectNotes), which the generated lazy batch
+  // loader does not apply.
+  notes: (parent, _args, context) =>
+    context.loaders.projectNotes.load(parent.id),
+
+  // Custom SDL field. A project has at most one list, but the FK lives on
+  // `todoLists`, so the loader batches by project and this takes the head.
+  list: async (parent, _args, context) => {
+    const lists = await context.loaders.todoListsByProject.load(parent.id);
+    return lists[0] ?? null;
   },
 };

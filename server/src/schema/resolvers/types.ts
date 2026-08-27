@@ -22,6 +22,7 @@
 import type {
   MutationResolvers,
   QueryResolvers,
+  Resolvers,
   SubscriptionResolvers,
 } from '../../__generated__/resolvers.ts';
 
@@ -36,3 +37,18 @@ export type MutationMap<K extends keyof MutationResolvers> = Required<
 export type SubscriptionMap<K extends keyof SubscriptionResolvers> = Required<
   Pick<SubscriptionResolvers, K>
 >;
+
+/**
+ * The same thing for a field on an object type — `FieldMap<'Todo',
+ * 'activityType'>`.
+ *
+ * The parent argument comes from `codegen.server.ts`'s `mappers`, so it is the
+ * Drizzle row the resolver above actually returned (`TodoRow`, not the GraphQL
+ * `Todo`). That is the part hand-written parent shapes like
+ * `parent: { listId: string }` were approximating: correct until the column is
+ * renamed, and unchecked either way.
+ */
+export type FieldMap<
+  T extends keyof Resolvers,
+  K extends keyof NonNullable<Resolvers[T]>,
+> = Required<Pick<NonNullable<Resolvers[T]>, K>>;

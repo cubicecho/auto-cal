@@ -5,7 +5,7 @@ import { requireOwner, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { CreateTodoInput, UpdateTodoInput } from '../validators.ts';
 import { publishTodoEvent } from './subscriptions.ts';
-import type { MutationMap, QueryMap } from './types.ts';
+import type { FieldMap, MutationMap, QueryMap } from './types.ts';
 
 function buildTodoOrderBy(
   orderBy?: TodoOrderBy,
@@ -207,5 +207,15 @@ export const todoMutations: MutationMap<
       publishTodoEvent(userId, { type: 'deleted', deletedId: todo.id });
     }
     return deleted;
+  },
+};
+
+export const todoFields: FieldMap<'Todo', 'activityType'> = {
+  // A derived hop (todo → list → activityType), not a Drizzle relation:
+  // `todos` has no `activityTypeId` column, it inherits its list's.
+  activityType: async (parent, _args, context) => {
+    const list = await context.loaders.todoList.load(parent.listId);
+    if (!list) return null;
+    return context.loaders.activityType.load(list.activityTypeId);
   },
 };

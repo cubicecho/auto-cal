@@ -8,6 +8,7 @@ import {
 } from 'graphql';
 import type { Context } from '../../context.ts';
 import {
+  activityTypeFields,
   activityTypeMutations,
   activityTypeQueries,
 } from './activity-types.ts';
@@ -16,13 +17,13 @@ import { authMutations } from './auth.ts';
 import { habitMutations, habitQueries } from './habits.ts';
 import { importMutations } from './import.ts';
 import { profileMutations, profileQueries } from './profile.ts';
-import { projectMutations, projectQueries } from './projects.ts';
+import { projectFields, projectMutations, projectQueries } from './projects.ts';
 import { scheduleMutations, scheduleQueries } from './schedule.ts';
 import { statsQueries } from './stats.ts';
 import { subscriptionResolvers } from './subscriptions.ts';
 import { timeBlockMutations, timeBlockQueries } from './time-blocks.ts';
 import { todoListMutations, todoListQueries } from './todo-lists.ts';
-import { todoMutations, todoQueries } from './todos.ts';
+import { todoFields, todoMutations, todoQueries } from './todos.ts';
 
 const extensionSDL = `
   type UserProfile {
@@ -308,9 +309,9 @@ const extensionSDL = `
     deletedId: ID
   }
 
-  # Entities without a typed, payload-carrying event stream. Pages that render
-  # these (or their derived stats/detail) refetch on any matching signal — the
-  # ids are informational, letting a listener narrow its response if it wants.
+  # Entities without a typed, payload-carrying event stream. The client maps
+  # each one to the root fields it invalidates (see useLiveUpdates) — the ids
+  # are informational, letting a listener narrow its response if it wants.
   enum DataEntity {
     habit
     activityType
@@ -553,70 +554,22 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   // only what that machinery can't: custom SDL fields, derived hops, and one
   // to-many relation that needs a specific ordering.
 
-  // Activity-type tree links.
-  const activityTypeType = extended.getType(
-    'ActivityType',
-  ) as GraphQLObjectType;
-  const activityTypeFields = activityTypeType.getFields();
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  activityTypeFields.parent!.resolve = (
-    parent: { parentId: string | null },
-    _args: unknown,
-    context: Context,
-  ) =>
-    parent.parentId ? context.loaders.activityType.load(parent.parentId) : null;
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  activityTypeFields.children!.resolve = (
-    parent: { id: string },
-    _args: unknown,
-    context: Context,
-  ) => context.loaders.activityTypeByParent.load(parent.id);
-
-  // Project relation fields.
-  const projectType = extended.getType('Project') as GraphQLObjectType;
-  const projectFields = projectType.getFields();
-  // Overrides the generated relation resolver: notes must come back in
-  // position order (myReorderProjectNotes), which the generated lazy batch
-  // loader does not apply.
-  // biome-ignore lint/style/noNonNullAssertion: auto-generated from projects.notes relation
-  projectFields.notes!.resolve = (
-    parent: { id: string },
-    _args: unknown,
-    context: Context,
-  ) => context.loaders.projectNotes.load(parent.id);
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  projectFields.list!.resolve = async (
-    parent: { id: string },
-    _args: unknown,
-    context: Context,
-  ) => {
-    const lists = await context.loaders.todoListsByProject.load(parent.id);
-    return lists[0] ?? null;
-  };
+  attach(extended.getType('ActivityType') as GraphQLObjectType, {
+    ...activityTypeFields,
+  });
+  attach(extended.getType('Project') as GraphQLObjectType, {
+    ...projectFields,
+  });
+  attach(extended.getType('Todo') as GraphQLObjectType, { ...todoFields });
 
   // The token hash must never leave the server. myApiKeys/myCreateApiKey
   // return raw DB rows, so the field itself has to go, not just its value.
-  // The matching input surfaces are stripped by `stripKeyHash` below — deleting
-  // the output field alone leaves `keyHash` filterable and orderable.
+  // The matching input surfaces are stripped by `finalizeSchema` below —
+  // deleting the output field alone leaves `keyHash` filterable and orderable.
   const apiKeyType = extended.getType('ApiKey') as GraphQLObjectType;
   const apiKeyFields = apiKeyType.getFields();
   // biome-ignore lint/performance/noDelete: assigning undefined would leave a dangling key that breaks printSchema; the key must be removed
   delete apiKeyFields.keyHash;
-
-  const todoType = extended.getType('Todo') as GraphQLObjectType;
-  const todoFields = todoType.getFields();
-
-  // Derived hop (todo → list → activityType) — not a Drizzle relation.
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  todoFields.activityType!.resolve = async (
-    parent: { listId: string },
-    _args: unknown,
-    context: Context,
-  ) => {
-    const list = await context.loaders.todoList.load(parent.listId);
-    if (!list) return null;
-    return context.loaders.activityType.load(list.activityTypeId);
-  };
 
   return finalizeSchema(extended);
 }
