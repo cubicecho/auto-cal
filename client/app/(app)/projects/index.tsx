@@ -1,7 +1,6 @@
 import { graphql } from '@/__generated__/index.js';
 import { ProjectList } from '@/components/domain/project/ProjectList';
 import { Page } from '@/components/ui/page';
-import { useDataChanged } from '@/hooks/useDataChanged';
 import { useQuery } from '@apollo/client/react';
 import { useRouter } from 'expo-router';
 
@@ -15,11 +14,8 @@ const GET_PROJECTS_PAGE = graphql(`
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { data, refetch } = useQuery(GET_PROJECTS_PAGE, {
+  const { data } = useQuery(GET_PROJECTS_PAGE, {
     fetchPolicy: 'cache-and-network',
-  });
-  useDataChanged('project', () => {
-    refetch();
   });
 
   return (

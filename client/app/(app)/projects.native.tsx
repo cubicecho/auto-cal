@@ -1,5 +1,4 @@
 import { graphql } from '@/__generated__/index.js';
-import { useDataChanged } from '@/hooks/useDataChanged';
 import { invalidate } from '@/lib/cache';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -198,15 +197,8 @@ function ProjectRow({ project }: { project: Project }) {
 
 export default function ProjectsScreen() {
   const [modalOpen, setModalOpen] = useState(false);
-  const { data, loading, refetch } = useQuery(GET_PROJECTS, {
+  const { data, loading } = useQuery(GET_PROJECTS, {
     fetchPolicy: 'cache-and-network',
-  });
-  useDataChanged('project', () => {
-    refetch();
-  });
-  // Rows show the backing activity type's name/color.
-  useDataChanged('activityType', () => {
-    refetch();
   });
 
   const projects = data?.myProjects ?? [];

@@ -7,8 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Page } from '@/components/ui/page';
 import { QueryState } from '@/components/ui/query-state';
 import { segmentedItemClass } from '@/components/ui/segmented';
-import { useDataChanged } from '@/hooks/useDataChanged';
-import { useTodosUpdated } from '@/hooks/useTodosUpdated';
 import { useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
@@ -388,33 +386,20 @@ export default function StatsPage() {
   const [range, setRange] = useState<DateRangeKey>('month');
   const variables = useMemo(() => getDateRange(range), [range]);
 
-  const {
-    data,
-    loading,
-    error,
-    refetch: refetchStats,
-  } = useQuery(GET_MY_STATS, {
+  // Both scores are derived from habits, todos, and activity types; a change
+  // to any of those evicts these fields (they are in `DERIVED`), so the live
+  // subscriber in the app layout is what keeps this page current.
+  const { data, loading, error } = useQuery(GET_MY_STATS, {
     variables,
     fetchPolicy: 'cache-and-network',
   });
-  const {
-    data: activityData,
-    loading: activityLoading,
-    refetch: refetchActivityStats,
-  } = useQuery(GET_ACTIVITY_TYPE_STATS_WITH_RANGE, {
-    variables,
-    fetchPolicy: 'cache-and-network',
-  });
-
-  // Every score here is derived from habits, todos, and activity types —
-  // refetch both aggregate queries whenever any of those change anywhere.
-  const refetchAll = () => {
-    refetchStats().catch(console.error);
-    refetchActivityStats().catch(console.error);
-  };
-  useTodosUpdated(refetchAll);
-  useDataChanged('habit', refetchAll);
-  useDataChanged('activityType', refetchAll);
+  const { data: activityData, loading: activityLoading } = useQuery(
+    GET_ACTIVITY_TYPE_STATS_WITH_RANGE,
+    {
+      variables,
+      fetchPolicy: 'cache-and-network',
+    },
+  );
 
   const stats: StatsData | undefined = data?.myStats;
   const isLoading = loading || activityLoading;

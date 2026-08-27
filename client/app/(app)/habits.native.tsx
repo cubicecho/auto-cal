@@ -1,7 +1,6 @@
 import type { Habit_HabitListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { HABIT_LIST_FRAGMENT } from '@/components/domain/habit/HabitList';
-import { useDataChanged } from '@/hooks/useDataChanged';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -300,11 +299,8 @@ export default function HabitsScreen() {
   const router = useRouter();
   const [modalHabit, setModalHabit] = useState<Habit | 'new' | null>(null);
 
-  const { data, loading, refetch } = useQuery(GET_MY_HABITS, {
+  const { data, loading } = useQuery(GET_MY_HABITS, {
     fetchPolicy: 'cache-and-network',
-  });
-  useDataChanged('habit', () => {
-    refetch();
   });
 
   const habits = data?.myHabits ?? [];

@@ -1,5 +1,6 @@
 import { segmentedItemClass } from '@/components/ui/segmented';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useLiveUpdates } from '@/hooks/useLiveUpdates';
 import { cn } from '@/lib/utils';
 import { storage } from '@/storage';
 import {
@@ -154,6 +155,8 @@ function NativeLayout() {
 
 export default function AppLayout() {
   const pathname = usePathname();
+  // One subscriber for the whole app; pages read the cache it keeps current.
+  useLiveUpdates();
   const onboardingDone = storage.getItem('onboarding_done');
 
   if (!onboardingDone && !pathname.startsWith('/onboarding')) {

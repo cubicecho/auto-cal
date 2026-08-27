@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/card';
 import { DetailHeader, EditButton } from '@/components/ui/detail-header';
 import { QueryState } from '@/components/ui/query-state';
-import { useDataChanged } from '@/hooks/useDataChanged';
 import { useQuery } from '@apollo/client/react';
 import { useMemo } from 'react';
 
@@ -65,12 +64,8 @@ interface HabitDetailProps {
 }
 
 export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
-  const { data, loading, error, refetch } = useQuery(GET_HABIT_DETAIL, {
+  const { data, loading, error } = useQuery(GET_HABIT_DETAIL, {
     variables: { habitId: habit.id, periods: 8 },
-  });
-  // Completion history/rates here shift on any habit change (this or another tab).
-  useDataChanged('habit', () => {
-    refetch();
   });
 
   const detail = data?.myHabitDetail;
