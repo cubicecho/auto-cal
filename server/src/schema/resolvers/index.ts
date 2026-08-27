@@ -7,31 +7,26 @@ import {
   parse,
 } from 'graphql';
 import type { Context } from '../../context.ts';
+import { scopeRootFields } from '../scope.ts';
 import {
   activityTypeFields,
   activityTypeMutations,
   activityTypeQueries,
 } from './activity-types.ts';
-import { apiKeyMutations, apiKeyQueries } from './api-keys.ts';
+import { apiKeyMutations } from './api-keys.ts';
 import { authMutations } from './auth.ts';
 import { habitMutations, habitQueries } from './habits.ts';
 import { importMutations } from './import.ts';
-import { profileMutations, profileQueries } from './profile.ts';
-import { projectFields, projectMutations, projectQueries } from './projects.ts';
+import { profileMutations } from './profile.ts';
+import { projectFields, projectMutations } from './projects.ts';
 import { scheduleMutations, scheduleQueries } from './schedule.ts';
 import { statsQueries } from './stats.ts';
 import { subscriptionResolvers } from './subscriptions.ts';
-import { timeBlockMutations, timeBlockQueries } from './time-blocks.ts';
-import { todoListMutations, todoListQueries } from './todo-lists.ts';
-import { todoFields, todoMutations, todoQueries } from './todos.ts';
+import { timeBlockMutations } from './time-blocks.ts';
+import { todoListMutations } from './todo-lists.ts';
+import { todoFields, todoMutations } from './todos.ts';
 
 const extensionSDL = `
-  type UserProfile {
-    id: ID!
-    email: String!
-    timezone: String!
-  }
-
   type ActivityTypeStats {
     activityTypeId: String!
     activityTypeName: String!
@@ -358,21 +353,16 @@ const extensionSDL = `
     children: [ActivityType!]!
   }
 
+  # myProfile / myActivityTypes / myTodoLists / myTodos / myHabits /
+  # myTimeBlocks / myApiKeys / myProjects / myProject are generated queries,
+  # renamed and scoped to the caller by \`scopeRootFields\` (../scope.ts). Only
+  # the queries that compute something beyond a filter are declared here.
   extend type Query {
-    myProfile: UserProfile
-    myActivityTypes: [ActivityType!]!
-    myTodoLists: [TodoList!]!
-    myTodos(listId: ID, completed: Boolean, orderBy: TodoOrderBy): [Todo!]!
-    myHabits(activityTypeId: ID): [Habit!]!
-    myTimeBlocks(activityTypeId: ID, containsDay: Int): [TimeBlock!]!
     myActivityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
     myHabitStats(habitId: ID, startDate: String, endDate: String): [HabitStats!]!
     myHabitDetail(habitId: ID!, periods: Int): HabitDetail!
     myStats(startDate: String, endDate: String): StatsOverview!
     mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!
-    myApiKeys: [ApiKey!]!
-    myProjects(includeArchived: Boolean): [Project!]!
-    myProject(id: ID!): Project
   }
 
   # Declared, not extended: build-config disables every generated mutation, so
@@ -425,8 +415,8 @@ const extensionSDL = `
 `;
 
 /**
- * Root fields that may be reached without the `my` prefix. Everything else on
- * `Query`/`Mutation` is generated, unscoped, and removed by `finalizeSchema`.
+ * Mutations reachable without authentication, and so without the `my` prefix.
+ * Every other mutation must be `my`-prefixed or `finalizeSchema` removes it.
  */
 export const PUBLIC_MUTATIONS = new Set([
   'requestMagicLink',
@@ -434,7 +424,7 @@ export const PUBLIC_MUTATIONS = new Set([
 ]);
 
 /**
- * Last pass over the schema: drop unscoped root fields and the `keyHash`
+ * Last pass over the schema: drop unscoped mutations and the `keyHash`
  * input surfaces, then garbage-collect whatever that leaves unreferenced.
  *
  * **Unscoped root fields.** drizzle-graphql generates a `<table>`/`<table>Single`
@@ -442,7 +432,10 @@ export const PUBLIC_MUTATIONS = new Set([
  * at runtime with a throwing resolver, but that left them in the SDL — shipped
  * to introspection and to client codegen as autocompletable operations that
  * always fail. Removing the field makes the same query fail validation instead,
- * one layer earlier and without advertising it.
+ * one layer earlier and without advertising it. Queries are handled earlier now,
+ * by `scopeRootFields`, which either scopes a generated field and renames it to
+ * its `my*` form or removes it; the check here is a backstop asserting that pass
+ * and `extensionSDL` between them left nothing unscoped behind.
  *
  * **`keyHash`.** Deleting the output field (see `applyCustomResolvers`) stops
  * the hash being selected, but drizzle-graphql derives `ApiKeyFilters`,
@@ -457,15 +450,23 @@ export const PUBLIC_MUTATIONS = new Set([
  * (generated relation resolvers included) are carried across intact.
  */
 function finalizeSchema(schema: GraphQLSchema): GraphQLSchema {
-  const isScoped = (fieldName: string) =>
-    fieldName.startsWith('my') || PUBLIC_MUTATIONS.has(fieldName);
   const isApiKeyInput = (typeName: string) => typeName.startsWith('ApiKey');
 
   const mapped = mapSchema(schema, {
-    [MapperKind.QUERY_ROOT_FIELD]: (_field, fieldName) =>
-      isScoped(fieldName) ? undefined : null,
+    // Queries have no public exemption: `PUBLIC_MUTATIONS` is not consulted
+    // here, so a query borrowing one of those names still fails the assertion.
+    [MapperKind.QUERY_ROOT_FIELD]: (_field, fieldName) => {
+      if (!fieldName.startsWith('my')) {
+        throw new Error(
+          `Query.${fieldName} is not scoped to the caller — every query must be \`my\`-prefixed`,
+        );
+      }
+      return undefined;
+    },
     [MapperKind.MUTATION_ROOT_FIELD]: (_field, fieldName) =>
-      isScoped(fieldName) ? undefined : null,
+      fieldName.startsWith('my') || PUBLIC_MUTATIONS.has(fieldName)
+        ? undefined
+        : null,
     [MapperKind.INPUT_OBJECT_FIELD]: (_field, fieldName, typeName) =>
       fieldName === 'keyHash' && isApiKeyInput(typeName) ? null : undefined,
     [MapperKind.ENUM_VALUE]: (_value, typeName, _schema, valueName) =>
@@ -512,7 +513,10 @@ function attach(
 }
 
 export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
-  const extended = extendSchema(schema, parse(extensionSDL));
+  // Scope first: this renames the generated `todos`/`project`/... queries to
+  // their `my*` form and wraps each resolver with the caller's filter, so the
+  // extension below adds only the queries that do real work beyond scoping.
+  const extended = extendSchema(scopeRootFields(schema), parse(extensionSDL));
 
   const queryType = extended.getType('Query') as GraphQLObjectType;
   const mutationType = extended.getType('Mutation') as GraphQLObjectType;
@@ -521,16 +525,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   ) as GraphQLObjectType;
 
   attach(queryType, {
-    ...profileQueries,
     ...activityTypeQueries,
-    ...todoListQueries,
-    ...todoQueries,
     ...habitQueries,
-    ...timeBlockQueries,
     ...statsQueries,
     ...scheduleQueries,
-    ...projectQueries,
-    ...apiKeyQueries,
   });
   attach(mutationType, {
     ...profileMutations,
@@ -554,13 +552,12 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   // only what that machinery can't: custom SDL fields, derived hops, and one
   // to-many relation that needs a specific ordering.
 
-  attach(extended.getType('ActivityType') as GraphQLObjectType, {
-    ...activityTypeFields,
-  });
-  attach(extended.getType('Project') as GraphQLObjectType, {
-    ...projectFields,
-  });
-  attach(extended.getType('Todo') as GraphQLObjectType, { ...todoFields });
+  attach(
+    extended.getType('ActivityType') as GraphQLObjectType,
+    activityTypeFields,
+  );
+  attach(extended.getType('Project') as GraphQLObjectType, projectFields);
+  attach(extended.getType('Todo') as GraphQLObjectType, todoFields);
 
   // The token hash must never leave the server. myApiKeys/myCreateApiKey
   // return raw DB rows, so the field itself has to go, not just its value.

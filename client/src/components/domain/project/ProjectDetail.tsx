@@ -9,11 +9,11 @@ import { TodoListCard } from '@/components/domain/todo-list/TodoListCard';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DetailHeader, EditButton } from '@/components/ui/detail-header';
+import { Archive } from '@/components/ui/icons';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { StatusChip } from '@/components/ui/status-chip';
 import { invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
-import { Archive } from 'lucide-react';
 import { useState } from 'react';
 import { ProjectNotesEditor } from './ProjectNotesEditor';
 
@@ -50,6 +50,7 @@ type Todo = Todo_TodoListFragment;
 
 type ProjectDetailProps = {
   project: Project;
+  /** Already scoped to `project.list` by the caller's query. */
   todos: Todo[];
   onBack: () => void;
   onEdit: (project: Project) => void;
@@ -67,14 +68,11 @@ export function ProjectDetail({
     ArchiveProjectMutation,
     ArchiveProjectMutationVariables
   >(ARCHIVE_PROJECT, {
-    // The status change drops it out of `myProjects` unless the caller asked
-    // for archived ones, so this is a membership change, not just a patch.
+    // The status change drops it out of any `myProjects` that filters archived
+    // ones out, so this is a membership change, not just a patch. Evicting the
+    // root field covers every argument variant.
     update: (cache) => invalidate(cache, 'myProjects'),
   });
-
-  const listTodos = project.list
-    ? todos.filter((t) => t.list?.id === project.list?.id)
-    : [];
 
   async function handleArchive() {
     await archiveProject({ variables: { id: project.id } });
@@ -102,7 +100,7 @@ export function ProjectDetail({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setArchiveOpen(true)}
+                onPress={() => setArchiveOpen(true)}
               >
                 <Archive className="mr-1.5 h-3.5 w-3.5" />
                 Archive
@@ -123,7 +121,7 @@ export function ProjectDetail({
         <div className="min-w-0">
           <SectionHeading className="mb-2">Tasks</SectionHeading>
           {project.list ? (
-            <TodoListCard list={project.list} todos={listTodos} />
+            <TodoListCard list={project.list} todos={todos} />
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
               This project has no todo list.

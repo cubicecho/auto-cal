@@ -1,10 +1,10 @@
 import type { Project_ProjectListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { FolderKanban, Plus } from '@/components/ui/icons';
 import { CardGrid, EmptyState, PageHeader } from '@/components/ui/page';
 import { Switch } from '@/components/ui/switch';
 import { useListSection } from '@/hooks/useListSection';
-import { FolderKanban, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { ProjectCard } from './ProjectCard';
 import { ProjectForm } from './ProjectForm';
@@ -61,7 +61,7 @@ export function ProjectList({ items, onSelect }: ProjectListProps) {
               />
               Show archived
             </label>
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" onPress={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               New Project
             </Button>
@@ -75,7 +75,7 @@ export function ProjectList({ items, onSelect }: ProjectListProps) {
           title="No projects yet"
           description="Create a project to group notes, tasks, and dedicated time"
           action={
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" onPress={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               New project
             </Button>

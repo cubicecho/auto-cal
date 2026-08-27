@@ -55,6 +55,15 @@ export function priorityLabel(priority: number): string {
   return 'Low';
 }
 
+/**
+ * The message to show for a rejected mutation. Apollo rejects with an Error
+ * carrying the server's message ("Cannot delete a list that still contains
+ * todos"), which is worth showing verbatim; anything else falls back.
+ */
+export function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
 /** Formats a minute count as "1hr 30min" / "45min" / "2hr". */
 export function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);

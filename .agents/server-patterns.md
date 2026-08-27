@@ -98,7 +98,7 @@ Only two mutations bypass the `my*` scoping requirement and are accessible witho
 const PUBLIC_MUTATIONS = new Set(['requestMagicLink', 'verifyMagicLink']);
 ```
 
-Any new public endpoint (e.g. a webhook or health check) must be added to this set in `server/src/schema/resolvers/index.ts` — `finalizeSchema` removes root fields it does not recognise.
+Any new public endpoint (e.g. a webhook or health check) must be added to this set in `server/src/schema/resolvers/index.ts` — `finalizeSchema` removes mutations it does not recognise.
 
 ## Schema Pipeline
 
@@ -108,8 +108,10 @@ import { buildSchemaConfig } from './build-config.ts';
 
 const { schema: drizzleSchema } = buildSchema(db, buildSchemaConfig);
 
-// applyCustomResolvers ends with finalizeSchema, which removes every root
-// field not prefixed "my" or listed in PUBLIC_MUTATIONS.
+// applyCustomResolvers starts with scopeRootFields (which renames the
+// generated queries to their my* form, scopes them to the caller, and drops
+// the rest) and ends with finalizeSchema (which removes every mutation not
+// prefixed "my" or listed in PUBLIC_MUTATIONS).
 export const schema = applyCustomResolvers(drizzleSchema);
 ```
 
@@ -117,23 +119,55 @@ export const schema = applyCustomResolvers(drizzleSchema);
 
 Disabling all four means drizzle-graphql emits no `Mutation` type at all. That is deliberate: every write goes through a hand-written `my*` resolver, so the ~50 generated mutation fields existed only to be stripped again, while still reaching client codegen (~400 lines of dead SDL). The consequence is that `extensionSDL` must **declare** `type Mutation` instead of extending it, and wire it as a root operation explicitly.
 
+### `scopeRootFields`
+
+`applyCustomResolvers` opens with `scopeRootFields(schema)` (`server/src/schema/scope.ts`) — a `mapSchema` pass over `MapperKind.QUERY_ROOT_FIELD` that decides what happens to each of the 20 generated root queries.
+
+A `QUERY_ROOT_FIELD` mapper may return `[newName, fieldConfig]`, which is the whole mechanism: it renames the field *and* rewraps the resolver already attached to it, in one pass. Nine fields are exposed under their `my*` name with a wrapper that AND-s a caller predicate onto `args.where` and supplies a default `orderBy`; the other eleven return `null` and are deleted.
+
+```typescript
+export const QUERY_SCOPE: Record<string, ScopedField> = {
+  user:  { as: 'myProfile', scope: (userId) => ({ id: { eq: userId } }) },
+  todos: { as: 'myTodos',   scope: (userId) => ({ userId: { eq: userId } }),
+           defaultOrderBy: { priority: desc(0), createdAt: desc(1) } },
+  // …
+};
+```
+
+The rules are deliberately not uniform: `users` has no `userId` column (the caller *is* the row, so it scopes by `id`), and `apiKeys` folds `revokedAt: { isNull: true }` into its scope so a caller-supplied `where` cannot resurrect a revoked key.
+
+Three things to keep in mind when touching this file:
+
+1. **AND-compose, never spread.** `{ ...scope, ...args.where }` puts both on the same keys, so `where: { userId: { eq: <them> } }` replaces the scope outright. `{ AND: [scope, args.where] }` keeps them as separate operands, which can only narrow. (`OR`/`NOT` do not widen under either composition — generated filters AND sibling fields with `OR` branches — but that is the dependency's semantics, not something to depend on.)
+2. **Every generated field must be named.** A field in neither `QUERY_SCOPE` nor `UNEXPOSED` throws at boot, so adding a Drizzle table cannot quietly produce a hidden query. `UNEXPOSED` holds the eleven that are deliberately not served: the single-row variants (redundant with the list form plus a `where`), `users`, and the parent-owned leaves `projectNotes`/`habitCompletions` — all reachable, correctly scoped, by traversing a relation.
+3. **Do not prune here.** `extensionSDL` references generated input types that are unreferenced at this point in the pipeline. `finalizeSchema` prunes last.
+
+Relation traversal is structurally safe without any help from this pass: the generated relation loader ANDs the foreign-key predicate with the caller's filter, so a nested `where` narrows within the parent and can never escape it. That matters most for `myProfile`, which is a graph entry point onto every relation the `users` table has. `server/test/schema/resolvers/scope.test.ts` pins both that and the AND-composition, because the behaviour lives in a bumpable dependency.
+
 ### `finalizeSchema`
 
-`applyCustomResolvers` returns `finalizeSchema(extended)` — a single `mapSchema` pass followed by `pruneSchema`. It does three things, and must run **last**, because `mapSchema` rebuilds the schema and any `field.resolve = ...` assignment made afterwards would land on a discarded copy.
+`applyCustomResolvers` returns `finalizeSchema(extended)` — a single `mapSchema` pass followed by `pruneSchema`. It must run **last**, because `mapSchema` rebuilds the schema and any `field.resolve = ...` assignment made afterwards would land on a discarded copy.
 
-1. **Removes unscoped root fields.** drizzle-graphql generates a `<table>`/`<table>Single` query per table, none of them caller-scoped. There is no feature flag to suppress them (unlike the CRUD mutations), so they are dropped here — 80 of 94 root Query fields. They previously survived with a throwing resolver attached, which left them in the SDL, in introspection, and in client codegen as autocompletable operations that always failed at runtime. Removing the field moves the failure to validation.
-2. **Strips `keyHash` input surfaces** — `ApiKeyFilters`, `ApiKeyOrderBy`, `ApiKeyDistinctColumn`. See the ApiKey section below.
-3. **Prunes.** The removed root fields were the only reference to a chunk of generated input types. `pruneSchema` collects them. It does not gut the SDL — generated relation fields still carry `*Filters`/`*OrderBy` args, so the bulk of the input types stay.
+1. **Asserts the query surface.** Every `Query` field must be `my*`-prefixed by this point. `scopeRootFields` handled the generated ones; this catches a hand-written field added to `extensionSDL` under the wrong name.
+2. **Removes unscoped mutations.** Anything not prefixed `my` and not in `PUBLIC_MUTATIONS` is dropped. Removed, not given a throwing resolver — that would leave it in the SDL, in introspection, and in client codegen as an autocompletable operation that always failed at runtime. Removing the field moves the failure to validation.
+3. **Strips `keyHash` input surfaces** — `ApiKeyFilters`, `ApiKeyOrderBy`, `ApiKeyDistinctColumn`. See the ApiKey section below.
+4. **Prunes.** The root fields `scopeRootFields` removed were the only reference to a chunk of generated input types. `pruneSchema` collects them. It does not gut the SDL — generated relation fields still carry `*Filters`/`*OrderBy` args, so the bulk of the input types stay.
 
-Adding a public (non-`my`) root field means adding its name to `PUBLIC_MUTATIONS` in `resolvers/index.ts`, or it will be removed. `server/test/schema/resolvers/index.test.ts` asserts both root types hold nothing else.
+Adding a public (non-`my`) mutation means adding its name to `PUBLIC_MUTATIONS` in `resolvers/index.ts`, or it will be removed. `server/test/schema/resolvers/index.test.ts` asserts both root types hold nothing else.
 
 ## Custom Resolver Pattern (extendSchema)
+
+Almost everything hand-written here is a mutation. A query belongs in
+`extensionSDL` only when it computes something the generated resolvers cannot —
+today that is `myActivityTypeStats`, `myHabitStats`, `myHabitDetail`, `myStats`,
+and `mySchedule`. A query that only needs "the caller's rows, filtered" is an
+entry in `QUERY_SCOPE`, not a resolver.
 
 ```typescript
 // server/src/schema/resolvers.ts
 const extensionSDL = `
   extend type Query {
-    myTodos(activityTypeId: ID, completed: Boolean): [Todo!]!
+    mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!
   }
   # Declared, not extended — build-config disables every generated mutation,
   # so there is no Mutation type to extend.
@@ -157,13 +191,6 @@ const extensionSDL = `
 `;
 
 // server/src/schema/resolvers/todos.ts
-export const todoQueries: QueryMap<'myTodos'> = {
-  myTodos: async (_parent, args, context) => {
-    const userId = requireUser(context);
-    return context.db.query.todos.findMany({ where: { userId } });
-  },
-};
-
 export const todoMutations: MutationMap<'myCreateTodo'> = {
   myCreateTodo: async (_parent, args, context) => {
     const userId = requireUser(context);
@@ -176,11 +203,13 @@ export const todoMutations: MutationMap<'myCreateTodo'> = {
 
 // server/src/schema/resolvers/index.ts
 export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
-  const extended = extendSchema(schema, parse(extensionSDL));
+  // scopeRootFields first: it renames and scopes the generated queries, and
+  // must not prune, because extensionSDL references generated input types.
+  const extended = extendSchema(scopeRootFields(schema), parse(extensionSDL));
   const queryType = extended.getType('Query') as GraphQLObjectType;
   const mutationType = extended.getType('Mutation') as GraphQLObjectType;
 
-  attach(queryType, { ...todoQueries, ...habitQueries /* … */ });
+  attach(queryType, { ...scheduleQueries, ...statsQueries /* … */ });
   attach(mutationType, { ...todoMutations, ...habitMutations /* … */ });
 
   return finalizeSchema(extended);

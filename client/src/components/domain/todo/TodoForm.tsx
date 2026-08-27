@@ -13,11 +13,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
+import { Check } from '@/components/ui/icons';
 import { useAppForm } from '@/hooks/form-hook';
+import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { DURATION_OPTIONS, PRIORITY_OPTIONS } from '@/lib/form-constants';
 import { useMutation } from '@apollo/client/react';
-import { Check } from 'lucide-react';
-import { useEffect } from 'react';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -72,26 +73,6 @@ const COMPLETE_TODO = graphql(`
     }
   }
 `);
-
-// ─── Constants ─────────────────────────────────────────────────────────────
-
-const PRIORITY_OPTIONS = [
-  { label: 'Low', value: '0' },
-  { label: 'Medium', value: '25' },
-  { label: 'High', value: '50' },
-  { label: 'Urgent', value: '100' },
-] as const;
-
-const DURATION_OPTIONS = [
-  { label: '15 minutes', value: '15' },
-  { label: '30 minutes', value: '30' },
-  { label: '45 minutes', value: '45' },
-  { label: '1 hour', value: '60' },
-  { label: '1.5 hours', value: '90' },
-  { label: '2 hours', value: '120' },
-  { label: '3 hours', value: '180' },
-  { label: '4+ hours', value: '480' },
-] as const;
 
 // ─── Validation Schema ──────────────────────────────────────────────────────
 
@@ -203,13 +184,7 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
     },
   });
 
-  // Reset to the selected todo's values whenever the dialog opens or a
-  // different todo is edited — defaultValues only apply on mount and this form
-  // instance is reused across create/edit targets.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on todo?.id — we reset when a different item is selected, not on every field change; form.reset and defaultValues are derived from the current render
-  useEffect(() => {
-    if (open) form.reset(defaultValues);
-  }, [open, todo?.id]);
+  useResetOnOpen(open, todo?.id, () => form.reset(defaultValues));
 
   // Snapshot the list's defaults into the priority/duration fields when the
   // user picks a list (only if they haven't customized those fields yet).
@@ -318,10 +293,9 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
             secondary={
               isEdit && !todo?.completedAt ? (
                 <Button
-                  type="button"
                   variant="outline"
                   disabled={completing}
-                  onClick={async () => {
+                  onPress={async () => {
                     await completeTodo({ variables: { id: todo?.id } });
                     onOpenChange(false);
                   }}

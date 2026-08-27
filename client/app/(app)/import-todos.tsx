@@ -9,9 +9,17 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ColorDot } from '@/components/ui/color-dot';
+import {
+  ArrowLeft,
+  CircleCheck,
+  ListChecks,
+  TriangleAlert,
+  Upload,
+} from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Page } from '@/components/ui/page';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { ACTIVITY_COLORS } from '@/lib/form-constants';
 import {
   GoogleTasksParseError,
   type ParsedList,
@@ -20,13 +28,6 @@ import {
 import { cn } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { useRouter } from 'expo-router';
-import {
-  AlertTriangle,
-  ArrowLeft,
-  CheckCircle2,
-  ListChecks,
-  Upload,
-} from 'lucide-react';
 import { useRef, useState } from 'react';
 
 const CREATE_ACTIVITY_TYPE_IMPORT = graphql(`
@@ -47,21 +48,6 @@ const IMPORT_TODOS = graphql(`
     }
   }
 `);
-
-// Distinct default colors handed to new activity types so imported lists are
-// visually separable out of the box.
-const PALETTE = [
-  '#6366f1',
-  '#ec4899',
-  '#f59e0b',
-  '#10b981',
-  '#3b82f6',
-  '#8b5cf6',
-  '#ef4444',
-  '#14b8a6',
-  '#f97316',
-  '#0ea5e9',
-] as const;
 
 const DEFAULT_LIST_DURATION = 30;
 
@@ -111,7 +97,7 @@ export default function ImportTodosPage() {
           lists.map((list, i) => ({
             mode: 'new',
             name: list.name,
-            color: PALETTE[i % PALETTE.length] as string,
+            color: ACTIVITY_COLORS[i % ACTIVITY_COLORS.length] as string,
           })),
         );
       } catch (err) {
@@ -258,7 +244,7 @@ export default function ImportTodosPage() {
               {parsed.length} list{parsed.length === 1 ? '' : 's'} found. Choose
               an activity type for each.
             </p>
-            <Button variant="ghost" size="sm" onClick={reset}>
+            <Button variant="ghost" size="sm" onPress={reset}>
               Choose another file
             </Button>
           </div>
@@ -276,17 +262,17 @@ export default function ImportTodosPage() {
 
           {error && (
             <p className="mt-4 flex items-center gap-1.5 text-sm text-destructive">
-              <AlertTriangle className="h-4 w-4" />
+              <TriangleAlert className="h-4 w-4" />
               {error}
             </p>
           )}
 
           <div className="mt-6 flex items-center justify-end gap-2">
-            <Button variant="outline" onClick={() => router.push('/settings')}>
+            <Button variant="outline" onPress={() => router.push('/settings')}>
               Cancel
             </Button>
             <Button
-              onClick={handleImport}
+              onPress={handleImport}
               disabled={importing || importable.length === 0}
             >
               {importing
@@ -340,7 +326,7 @@ export default function ImportTodosPage() {
           />
           {error && (
             <p className="mt-4 flex items-center gap-1.5 text-sm text-destructive">
-              <AlertTriangle className="h-4 w-4" />
+              <TriangleAlert className="h-4 w-4" />
               {error}
             </p>
           )}
@@ -380,10 +366,14 @@ function ListAssignmentCard({
               size="sm"
               variant={assignment.mode === mode ? 'default' : 'ghost'}
               className="h-7 flex-1 text-xs capitalize"
-              onClick={() => {
+              onPress={() => {
                 if (mode === assignment.mode) return;
                 if (mode === 'new')
-                  onChange({ mode: 'new', name: list.name, color: PALETTE[0] });
+                  onChange({
+                    mode: 'new',
+                    name: list.name,
+                    color: ACTIVITY_COLORS[0],
+                  });
                 else if (mode === 'existing')
                   onChange({ mode: 'existing', activityTypeId: '' });
                 else onChange({ mode: 'skip' });
@@ -403,12 +393,10 @@ function ListAssignmentCard({
             <Input
               value={assignment.name}
               placeholder="Activity type name"
-              onChange={(e) =>
-                onChange({ ...assignment, name: e.target.value })
-              }
+              onChangeText={(text) => onChange({ ...assignment, name: text })}
             />
             <div className="flex flex-wrap gap-1.5">
-              {PALETTE.map((color) => (
+              {ACTIVITY_COLORS.map((color) => (
                 <button
                   key={color}
                   type="button"
@@ -458,7 +446,7 @@ function ImportSuccess({
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-5 w-5 text-green-600" />
+          <CircleCheck className="h-5 w-5 text-green-600" />
           <CardTitle>Import complete</CardTitle>
         </div>
         <CardDescription>
@@ -469,11 +457,11 @@ function ImportSuccess({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex gap-2">
-        <Button onClick={onDone}>
+        <Button onPress={onDone}>
           <ListChecks className="mr-2 h-4 w-4" />
           View todos
         </Button>
-        <Button variant="outline" onClick={onAgain}>
+        <Button variant="outline" onPress={onAgain}>
           Import another file
         </Button>
       </CardContent>

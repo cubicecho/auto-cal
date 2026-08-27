@@ -7,9 +7,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Key, Plus } from '@/components/ui/icons';
 import { invalidate } from '@/lib/cache';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { Key, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { CreateApiKeyDialog } from './CreateApiKeyDialog';
 
@@ -123,7 +123,7 @@ export function ApiKeyManager() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setDialogOpen(true)}
+              onPress={() => setDialogOpen(true)}
             >
               <Plus className="h-4 w-4 mr-1" />
               Generate API Key
@@ -194,7 +194,7 @@ export function ApiKeyManager() {
                       size="sm"
                       variant="destructive"
                       disabled={revoking}
-                      onClick={() => handleRevoke(key.id)}
+                      onPress={() => handleRevoke(key.id)}
                     >
                       Revoke
                     </Button>

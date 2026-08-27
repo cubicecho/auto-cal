@@ -4,22 +4,18 @@ import type {
   GetActivityTypesForOnboardingQuery,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
-import { Button } from '@/components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  CreatedList,
+  OnboardingStep,
+} from '@/components/domain/onboarding/OnboardingStep';
 import { ColorDot } from '@/components/ui/color-dot';
 import { FieldWrapper, Form } from '@/components/ui/form';
+import { Plus } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { DEFAULT_ACTIVITY_COLOR } from '@/lib/form-constants';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { ArrowRight, Plus } from 'lucide-react';
 import { z } from 'zod';
 
 const GET_MY_ACTIVITY_TYPES = graphql(`
@@ -69,7 +65,7 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
   });
 
   const form = useAppForm({
-    defaultValues: { name: '', color: '#6366f1' } as FormValues,
+    defaultValues: { name: '', color: DEFAULT_ACTIVITY_COLOR } as FormValues,
     validators: { onChange: schema },
     onSubmit: async ({ value, formApi }) => {
       await createActivityType({
@@ -80,95 +76,70 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create your activity types</CardTitle>
-        <CardDescription>
-          Activity types categorize everything — your todos, habits, and time
-          blocks. Create one for each area of your life (e.g. Work, Exercise,
-          Learning).
-        </CardDescription>
-      </CardHeader>
+    <OnboardingStep
+      title="Create your activity types"
+      description="Activity types categorize everything — your todos, habits, and time blocks. Create one for each area of your life (e.g. Work, Exercise, Learning)."
+      onNext={onNext}
+      nextDisabled={activityTypes.length === 0}
+    >
+      <form.AppForm>
+        <Form className="space-y-4">
+          {/* Name */}
+          <form.AppField name="name">
+            {(field) => (
+              <field.InputField
+                label="Name"
+                placeholder="e.g. Work, Exercise, Learning"
+              />
+            )}
+          </form.AppField>
 
-      <CardContent className="space-y-6">
-        {/* Inline form */}
-        <form.AppForm>
-          <Form className="space-y-4">
-            {/* Name */}
-            <form.AppField name="name">
-              {(field) => (
-                <field.InputField
-                  label="Name"
-                  placeholder="e.g. Work, Exercise, Learning"
-                />
-              )}
-            </form.AppField>
+          {/* Color */}
+          <form.AppField name="color">
+            {(field) => (
+              <FieldWrapper
+                label="Color"
+                control={
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      className="h-10 w-16 cursor-pointer rounded border border-input bg-background p-1"
+                    />
+                    <Input
+                      placeholder={DEFAULT_ACTIVITY_COLOR}
+                      value={field.state.value}
+                      onChangeText={(text) => field.handleChange(text)}
+                      onBlur={field.handleBlur}
+                      className="font-mono"
+                    />
+                  </div>
+                }
+              />
+            )}
+          </form.AppField>
 
-            {/* Color */}
-            <form.AppField name="color">
-              {(field) => (
-                <FieldWrapper
-                  label="Color"
-                  control={
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        className="h-10 w-16 cursor-pointer rounded border border-input bg-background p-1"
-                      />
-                      <Input
-                        placeholder="#6366f1"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        className="font-mono"
-                      />
-                    </div>
-                  }
-                />
-              )}
-            </form.AppField>
+          <form.SubmitButton
+            icon={<Plus className="mr-1 h-4 w-4" />}
+            createLabel="Add activity type"
+            savingLabel="Adding…"
+          />
+        </Form>
+      </form.AppForm>
 
-            <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting]}>
-              {([canSubmit, isSubmitting]) => (
-                <Button type="submit" disabled={!canSubmit || !!isSubmitting}>
-                  <Plus className="mr-1 h-4 w-4" />
-                  {isSubmitting ? 'Adding…' : 'Add activity type'}
-                </Button>
-              )}
-            </form.Subscribe>
-          </Form>
-        </form.AppForm>
-
-        {/* Created list */}
-        {activityTypes.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">
-              Created ({activityTypes.length})
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {activityTypes.map((at) => (
-                <span
-                  key={at.id}
-                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium"
-                >
-                  <ColorDot color={at.color} size="sm" />
-                  {at.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-
-      <CardFooter className="flex justify-end">
-        <Button onClick={onNext} disabled={activityTypes.length === 0}>
-          Next
-          <ArrowRight className="ml-1 h-4 w-4" />
-        </Button>
-      </CardFooter>
-    </Card>
+      <CreatedList count={activityTypes.length} layout="chips">
+        {activityTypes.map((at) => (
+          <span
+            key={at.id}
+            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium"
+          >
+            <ColorDot color={at.color} size="sm" />
+            {at.name}
+          </span>
+        ))}
+      </CreatedList>
+    </OnboardingStep>
   );
 }

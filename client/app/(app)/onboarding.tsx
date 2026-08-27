@@ -4,11 +4,11 @@ import { StepHabits } from '@/components/domain/onboarding/StepHabits';
 import { StepTimeBlocks } from '@/components/domain/onboarding/StepTimeBlocks';
 import { StepTodos } from '@/components/domain/onboarding/StepTodos';
 import { Button } from '@/components/ui/button';
+import { Check, X } from '@/components/ui/icons';
 import { cn } from '@/lib/utils';
 import { storage } from '@/storage';
 import { useQuery } from '@apollo/client/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 const CHECK_ONBOARDED = graphql(`
@@ -82,7 +82,7 @@ export default function OnboardingPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleSkipAll}
+            onPress={handleSkipAll}
             className="text-muted-foreground"
           >
             <X className="mr-1 h-3 w-3" />

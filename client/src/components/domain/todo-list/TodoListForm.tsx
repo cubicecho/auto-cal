@@ -12,11 +12,14 @@ import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTy
 import { Button } from '@/components/ui/button';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
+import { Trash2 } from '@/components/ui/icons';
 import { useAppForm } from '@/hooks/form-hook';
+import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
+import { DURATION_OPTIONS, PRIORITY_OPTIONS } from '@/lib/form-constants';
+import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
-import { Trash2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { z } from 'zod';
 
 const CREATE_TODO_LIST = graphql(`
@@ -51,23 +54,6 @@ const DELETE_TODO_LIST = graphql(`
   }
 `);
 
-const PRIORITY_OPTIONS = [
-  { label: 'Low', value: '0' },
-  { label: 'Medium', value: '25' },
-  { label: 'High', value: '50' },
-  { label: 'Urgent', value: '100' },
-] as const;
-
-const DURATION_OPTIONS = [
-  { label: '15 minutes', value: '15' },
-  { label: '30 minutes', value: '30' },
-  { label: '45 minutes', value: '45' },
-  { label: '1 hour', value: '60' },
-  { label: '1.5 hours', value: '90' },
-  { label: '2 hours', value: '120' },
-  { label: '3 hours', value: '180' },
-] as const;
-
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   description: z.string().max(2000),
@@ -88,6 +74,7 @@ type TodoListFormProps = {
 
 export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
   const isEdit = list !== undefined;
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [createList] = useMutation<
     CreateTodoListMutation,
@@ -157,22 +144,20 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
     },
   });
 
-  // Reset to the selected list's values whenever the dialog opens or a
-  // different list is edited — defaultValues only apply on mount and this form
-  // instance is reused across create/edit targets.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on list?.id — we reset when a different item is selected, not on every field change; form.reset and defaultValues are derived from the current render
-  useEffect(() => {
-    if (open) form.reset(defaultValues);
-  }, [open, list?.id]);
+  useResetOnOpen(open, list?.id, () => {
+    form.reset(defaultValues);
+    setDeleteError(null);
+  });
 
   async function handleDelete() {
     if (!isEdit) return;
     try {
+      setDeleteError(null);
       await deleteList({ variables: { id: list.id } });
       onOpenChange(false);
     } catch (err) {
-      // Server returns "Cannot delete a list that still contains todos" — surface it.
-      alert(err instanceof Error ? err.message : 'Failed to delete list');
+      // Server returns "Cannot delete a list that still contains todos".
+      setDeleteError(errorMessage(err, 'Failed to delete list'));
     }
   }
 
@@ -246,14 +231,10 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
 
           <FormDialogFooter
             onCancel={() => onOpenChange(false)}
+            error={deleteError}
             secondary={
               isEdit ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDelete}
-                >
+                <Button variant="destructive" size="sm" onPress={handleDelete}>
                   <Trash2 className="mr-1 h-4 w-4" />
                   Delete
                 </Button>

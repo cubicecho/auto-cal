@@ -1,24 +1,10 @@
 import { todoLists } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
-import {
-  forbidden,
-  notFound,
-  requireOwner,
-  requireUser,
-} from '../../errors.ts';
+import { badUserInput, requireUser } from '../../errors.ts';
 import { CreateTodoListInput, UpdateTodoListInput } from '../validators.ts';
+import { loadOwned } from './load.ts';
 import { publishTodoListEvent } from './subscriptions.ts';
-import type { MutationMap, QueryMap } from './types.ts';
-
-export const todoListQueries: QueryMap<'myTodoLists'> = {
-  myTodoLists: async (_parent, _args, context) => {
-    const userId = requireUser(context);
-    return context.db.query.todoLists.findMany({
-      where: { userId: userId },
-      orderBy: { name: 'asc' },
-    });
-  },
-};
+import type { MutationMap } from './types.ts';
 
 export const todoListMutations: MutationMap<
   'myCreateTodoList' | 'myUpdateTodoList' | 'myDeleteTodoList'
@@ -27,21 +13,12 @@ export const todoListMutations: MutationMap<
     const userId = requireUser(context);
     const input = CreateTodoListInput.parse(args.input);
 
-    // Validate activity type belongs to the user
-    const activityType = await context.db.query.activityTypes.findFirst({
-      where: { id: input.activityTypeId },
-    });
-    if (!activityType) {
-      throw notFound('ActivityType', input.activityTypeId);
-    }
-    if (activityType.userId !== userId) {
-      throw forbidden();
-    }
+    await loadOwned(context, 'activityTypes', input.activityTypeId, userId);
 
     const [list] = await context.db
       .insert(todoLists)
       .values({
-        userId: userId,
+        userId,
         name: input.name,
         description: input.description,
         activityTypeId: input.activityTypeId,
@@ -57,24 +34,10 @@ export const todoListMutations: MutationMap<
   myUpdateTodoList: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateTodoListInput.parse(args.input);
-    requireOwner(
-      await context.db.query.todoLists.findFirst({
-        where: { id: input.id },
-      }),
-      'TodoList',
-      input.id,
-      userId,
-    );
+    await loadOwned(context, 'todoLists', input.id, userId);
 
     if (input.activityTypeId !== undefined) {
-      requireOwner(
-        await context.db.query.activityTypes.findFirst({
-          where: { id: input.activityTypeId },
-        }),
-        'ActivityType',
-        input.activityTypeId,
-        userId,
-      );
+      await loadOwned(context, 'activityTypes', input.activityTypeId, userId);
     }
 
     const [updated] = await context.db
@@ -104,22 +67,17 @@ export const todoListMutations: MutationMap<
 
   myDeleteTodoList: async (_parent, args, context) => {
     const userId = requireUser(context);
-    requireOwner(
-      await context.db.query.todoLists.findFirst({
-        where: { id: args.id },
-      }),
-      'TodoList',
-      args.id,
-      userId,
-    );
+    await loadOwned(context, 'todoLists', args.id, userId);
 
     // Block delete when the list still has todos — todos.list_id is RESTRICT.
+    // Coded, not a bare Error: this is the caller's to fix, and `formatError`
+    // replaces uncoded messages with "Internal server error" in production.
     const todoCount = await context.db.query.todos.findMany({
       where: { listId: args.id },
       limit: 1,
     });
     if (todoCount.length > 0) {
-      throw new Error(
+      throw badUserInput(
         'Cannot delete a list that still contains todos. Move or delete its todos first.',
       );
     }

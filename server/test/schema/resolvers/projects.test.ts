@@ -258,7 +258,7 @@ describe('project resolvers', () => {
       expect(result.errors?.[0]?.message).toMatch(/not authenticated/i);
     });
 
-    it('excludes archived projects by default and includes them on request', async () => {
+    it('returns archived projects by default and hides them on request', async () => {
       const { id: userId } = await seedUser(db, 'proj-archive@example.com');
       const active = await createProject(userId, 'Active');
       const toArchive = await createProject(userId, 'Archived');
@@ -271,28 +271,31 @@ describe('project resolvers', () => {
         { id: toArchive.id },
       );
 
-      const defaultResult = await gql(
-        testSchema,
-        db,
-        userId,
-        'query { myProjects { id } }',
-      );
-      const defaultIds = (
-        defaultResult.data?.myProjects as Array<{ id: string }>
-      ).map((p) => p.id);
-      expect(defaultIds).toContain(active.id);
-      expect(defaultIds).not.toContain(toArchive.id);
-
       const allResult = await gql(
         testSchema,
         db,
         userId,
-        'query { myProjects(includeArchived: true) { id status } }',
+        'query { myProjects { id status } }',
       );
       const allIds = (allResult.data?.myProjects as Array<{ id: string }>).map(
         (p) => p.id,
       );
+      expect(allIds).toContain(active.id);
       expect(allIds).toContain(toArchive.id);
+
+      // Hiding archived projects is now the caller's filter, not a server
+      // default — this is the shape the project list screens send.
+      const activeResult = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myProjects(where: { status: { ne: "archived" } }) { id } }',
+      );
+      const activeIds = (
+        activeResult.data?.myProjects as Array<{ id: string }>
+      ).map((p) => p.id);
+      expect(activeIds).toContain(active.id);
+      expect(activeIds).not.toContain(toArchive.id);
     });
 
     it("returns only the current user's projects", async () => {
@@ -316,7 +319,11 @@ describe('project resolvers', () => {
   });
 
   describe('myProject', () => {
-    it('throws Forbidden when the project belongs to another user', async () => {
+    // The scope is a filter now, so another user's project is simply not in the
+    // result set — null, not an error. That is the point: a FORBIDDEN here used
+    // to reach the client's error link, which reads that code as an expired
+    // session and logs the user out for opening someone else's project URL.
+    it('returns null when the project belongs to another user', async () => {
       const { id: userId } = await seedUser(db, 'proj-get-forbid@example.com');
       const { id: otherId } = await seedUser(
         db,
@@ -328,10 +335,11 @@ describe('project resolvers', () => {
         testSchema,
         db,
         userId,
-        'query($id: ID!) { myProject(id: $id) { id } }',
+        'query($id: UUID!) { myProject(where: { id: { eq: $id } }) { id } }',
         { id: theirs.id },
       );
-      expect(result.errors?.[0]?.message).toMatch(/forbidden/i);
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.myProject).toBeNull();
     });
   });
 

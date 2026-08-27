@@ -27,13 +27,19 @@ Custom (the rest — keep tagged as such): `color-bar` `color-dot`
 `form-dialog` `page` `query-state` `section-heading` `segmented`
 `status-chip`, plus:
 - `inline-length-edit` — quick-edit duration chip used on list items
-- `route-error` — error boundary used by route components
+- `route-error` — what the layouts' `ErrorBoundary` exports render; has a
+  `.native.tsx` sibling
+- `toast` — `ToastProvider` + `useToast`, for failures with nowhere else to go
 
 ## Error Handling Conventions
 
-- **Mutation errors** → toast notification
 - **Form validation errors** → inline, beneath the relevant field
-- **Route/render crashes** → `<RouteError>` error boundary (`src/components/ui/route-error.tsx`)
+- **Mutation errors** → at the point of action where there is one:
+  `FormDialogFooter`'s `error` prop in a dialog, or the card itself elsewhere;
+  a toast when the control that failed has no room for a message. See
+  [Mutation Errors](#mutation-errors).
+- **Route/render crashes** → the named `ErrorBoundary` exported from
+  `app/_layout.tsx` and `app/(app)/_layout.tsx`, rendering `<RouteError>`
 
 ## Apollo Client Setup
 
@@ -133,6 +139,29 @@ Completion sets `onboarding_done = '1'` via `storage`. Re-runnable from Settings
 with `?force=true`. The guard in `app/(app)/_layout.tsx` handles the redirect —
 do not replicate this logic elsewhere.
 
+All four steps are the same shape — add something, see what you have added, move
+on — so the chrome lives in `components/domain/onboarding/OnboardingStep.tsx`
+and only the form differs:
+
+```tsx
+<OnboardingStep
+  title="Build habits"
+  description="…"
+  onBack={onBack}          // omitted on step 1
+  onSkip={onSkip}          // only the optional steps
+  onNext={onNext}
+  nextLabel="Finish setup" // step 4; pair with isFinal
+  isFinal                  // leading check instead of a trailing arrow
+  nextDisabled={…}         // the required steps hold until something exists
+>
+```
+
+`CreatedList` renders the "Created (n)" block (nothing at zero) as bordered rows
+or, with `layout="chips"`, wrapping pills; `CreatedRow` is one row of
+dot / title / detail / right-aligned meta. The step's form ends with
+`<form.SubmitButton icon={<Plus …/>} createLabel="Add habit" savingLabel="Adding…" />`
+rather than a hand-rolled `form.Subscribe`.
+
 ## Routes
 
 File-based routes under `client/app/`. `(app)` is a route group — it does not
@@ -193,8 +222,8 @@ import { graphql } from '@/__generated__/index.js';
 import { useMutation, useQuery } from '@apollo/client';
 
 const MY_TODOS = graphql(`
-  query GetMyTodos($completed: Boolean) {
-    myTodos(completed: $completed) {
+  query GetMyTodos($where: TodoFilters) {
+    myTodos(where: $where) {
       id
       title
       priority
@@ -221,11 +250,26 @@ const CREATE_TODO = graphql(`
 `);
 
 // Usage
-const { data, loading } = useQuery(MY_TODOS, { variables: { completed: false } });
+// Most my* queries take the generated `where`/`orderBy` inputs — the server
+// AND-s the caller scope onto them. See graphql-patterns.md.
+const { data, loading } = useQuery(MY_TODOS, {
+  variables: { where: { completedAt: { isNull: true } } },
+});
 const [createTodo] = useMutation(CREATE_TODO, {
   update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
 });
 ```
+
+**Filter in the query, not in JS.** A detail route asks for the one row it
+needs — `myHabits(where: { id: { eq: $id } }, limit: 1)` — rather than fetching
+every habit and `.find()`ing. The scope is AND-ed server-side, so a foreign id
+comes back as `[]`, not an error.
+
+Where the id only becomes known once a parent query resolves, take the second
+round trip (`skip: !listId`) instead of selecting the relation. `invalidate`
+evicts `ROOT_QUERY` fields, and a relation field such as `TodoList.todos` has no
+entry there — creating a todo would never show up. `projects/[projectId].tsx`
+carries the worked example.
 
 ## Fragment Colocation
 
@@ -249,34 +293,99 @@ type TodoItemProps = {
 
 ## Form Constants
 
-Shared constants used across domain forms:
+Every form constant lives in `src/lib/form-constants.ts` — nothing is re-declared
+per file. They were, once: `PRIORITY_OPTIONS` in four files, `DURATION_OPTIONS`
+in three, `DAY_NAMES` in three, and the copies had drifted (TodoListForm's
+duration list was missing the 4+ hour option that TodoForm and HabitForm offered,
+so a list's default estimated length could not be set to what a todo's could).
+
+| Export | Used by |
+|--------|---------|
+| `PRIORITY_OPTIONS` | Todo, habit, and list forms + `StepTodos` — values `'0'`/`'25'`/`'50'`/`'100'`, matching `priorityLabel` in `lib/utils.ts` |
+| `DURATION_OPTIONS` | Todo, habit, and list forms — 15 min → `'480'` ("4+ hours") |
+| `DAY_NAMES` | Day toggle buttons (`'Sun'`…), index = the `daysOfWeek` value |
+| `DAY_NAMES_LONG` | Prose rather than buttons — `TimeBlockItem`'s card description |
+| `WEEKDAYS` / `WEEKEND` | The `[1,2,3,4,5]` / `[0,6]` presets |
+| `DEFAULT_ACTIVITY_COLOR` | `'#6366f1'`, mirroring the server default |
+| `ACTIVITY_COLORS` | Swatch pickers and the cycle `import-todos` assigns from |
+
+Option values are strings because `SelectField` round-trips through the DOM; call
+sites `Number(...)` them on submit. The module imports nothing from React or
+react-native, so the `.native` screens use it too.
+
+Use these in new forms rather than re-declaring. `InlineLengthEdit` allows
+free-form entry (1–1440 min) for quick edits on list items.
+
+## Resetting a Dialog Form
+
+Every form dialog is a single instance reused across create and edit targets, so
+`defaultValues` — which TanStack Form only applies on mount — is stale from the
+second open onward. `src/hooks/useResetOnOpen.ts` holds the one effect that fixes
+it, replacing six hand-written copies that each carried their own dependency-array
+suppression:
 
 ```typescript
-const PRIORITY_OPTIONS = [
-  { label: 'Low',    value: '0'   },
-  { label: 'Medium', value: '25'  },
-  { label: 'High',   value: '50'  },
-  { label: 'Urgent', value: '100' },
-];
-
-const DURATION_OPTIONS = [
-  { label: '15 minutes', value: '15'  },
-  { label: '30 minutes', value: '30'  },
-  { label: '45 minutes', value: '45'  },
-  { label: '1 hour',     value: '60'  },
-  { label: '1.5 hours',  value: '90'  },
-  { label: '2 hours',    value: '120' },
-  { label: '3 hours',    value: '180' },
-  { label: '4+ hours',   value: '480' },
-];
-
-// Time blocks only
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; // index = daysOfWeek value
-const WEEKDAYS = [1, 2, 3, 4, 5];
-const WEEKEND  = [0, 6];
+useResetOnOpen(open, todo?.id, () => form.reset(defaultValues));
 ```
 
-Use these same constants in new forms. `InlineLengthEdit` allows free-form entry (1–1440 min) for quick edits on list items.
+The second argument is the selected entity's id (`undefined` when creating);
+`reset` is deliberately *not* a dependency, since it closes over values derived
+from the current render and would otherwise wipe the form mid-edit.
+
+`ProjectForm` is the one dialog with two form instances — resetting only the edit
+one left a cancelled "New Project" holding its typed-in name — so its callback
+resets both.
+
+## Mutation Errors
+
+A rejected mutation surfaces where the user triggered it, and falls back to a
+toast when that place is a bare icon:
+
+- **In a dialog** — pass `error` to `FormDialogFooter`, which renders it above the
+  buttons. Field validation stays inline beneath its field; this slot is for what
+  only the server knows, such as a delete the database refuses.
+- **In a card** — render the message in the card itself (see `TimeBlockItem`).
+- **Everywhere else** — `useToast()`. The completion checkbox, the inline length
+  editor and drag-to-reschedule have no space of their own, and the optimistic
+  ones are worse than silent: the UI rolls back to where it started, which is
+  indistinguishable from the click never registering.
+
+```tsx
+const toast = useToast();
+// A mutation with its own onError:
+const [pinTodo] = useMutation(PIN_TODO, {
+  onError: (err) => toast(err.message || 'Could not move this todo'),
+});
+// A bare call site:
+updateTodo({ variables }).catch((err) =>
+  toast(errorMessage(err, 'Could not save the length')),
+);
+```
+
+`toast(message, tone?)` takes `'error'` (the default, 6s) or `'success'` (3s).
+`ToastProvider` is mounted once in `app/_layout.tsx`, outside `AuthGuard` so a
+message survives the redirect to `/auth/login`; `useToast` throws without it,
+because a toast that never appears is the bug the module exists to fix. It is
+built on react-native primitives with nativewind classes, so one component
+serves web and native — only the viewport's `position` branches on `Platform`.
+
+`errorMessage(err, fallback)` in `lib/utils.ts` pulls the server's message out of
+the Apollo error ("Cannot delete a list that still contains todos") and falls back
+otherwise. Deletes especially need this: every FK to `activity_types` is
+`onDelete: 'restrict'`, so deleting an in-use activity type always rejects, and
+without a catch it failed silently.
+
+## Error Boundaries
+
+`app/_layout.tsx` and `app/(app)/_layout.tsx` each export a named `ErrorBoundary`
+— expo-router's convention, which mounts it around that segment's tree. Both
+render `RouteError` (`error` ← `error`, `reset` ← `retry`). Without them a render
+crash unmounted the app to a blank page with the error only in the console.
+
+`components/ui/route-error.tsx` renders `<div>`/`<button>`; `route-error.native.tsx`
+is its react-native counterpart, so the shared layouts can mount one component on
+both platforms. Keep both dependency-free — they render after the tree below has
+already thrown.
 
 ## Form Pattern (TanStack Form)
 
@@ -321,12 +430,16 @@ client/src/components/
     dashboard/    — CalendarView, ScheduleView
     onboarding/   — Step*.tsx wizard panels
     CompletionDialog.tsx — shared complete-with-actual-length prompt
+  native/         — RN primitives for the .native.tsx screens (see below)
 
 client/src/
   apollo-client.ts — the single ApolloClient (link split, typePolicies)
   storage.ts       — key-value store; no-ops off web
   lib/cache.ts     — cache invalidation helpers (see above)
-  hooks/           — form-hook (useAppForm), useLiveUpdates, useListSection
+  lib/date.ts      — weekStart (ISO Monday) / isoDate (local YYYY-MM-DD)
+  lib/form-constants.ts — every shared form constant (see above)
+  hooks/           — form-hook (useAppForm), useLiveUpdates, useListSection,
+                     useDarkMode, useSyncTimezone, useResetOnOpen
 ```
 
 ## Shared UI Primitives
@@ -351,6 +464,146 @@ re-implementing the same markup** — every list/detail page is built from them.
 Companion hook: `hooks/useListSection.ts` — owns the create/edit dialog open
 state (`formOpen`, `editing`, `openCreate`, `openEdit`, `handleOpenChange`) that
 every list component needs.
+
+## Cross-Platform Primitives (in progress)
+
+`button.tsx`, `card.tsx`, `input.tsx`, `icons.tsx`, `dialog.tsx`, `label.tsx`
+and `field.tsx` have been converted to react-native primitives and now render on
+both platforms. The rest of `components/ui/` is still web-only. The conversion rules, which every further
+primitive follows:
+
+**File naming inverts.** The old convention was *plain = web, `.native.tsx` =
+native*. A converted primitive is *plain = shared*, with a `.web.tsx` **only**
+where the web behaviour genuinely has no native equivalent — `input`
+(`type="time"`/`type="number"` with `min`/`max` are real DOM input behaviour
+`TextInput` cannot reproduce), `icons`, and `dialog` (radix's focus trap, scroll
+lock and animations, none worth faking on a `Modal` that already owns the
+screen). Both halves export the same names, so call sites never branch.
+
+**The shared contract goes in a third module.** `input-base.ts` exists because
+Metro resolves `./input` to `input.web.tsx` on web — the web file importing the
+shared types from `./input` would import itself. Any `.tsx`/`.web.tsx` pair that
+needs shared types needs a `-base.ts` alongside them; `icons-base.ts` and
+`dialog-base.ts` are the other two. Keep the contract narrower than the web
+library's own props: `dialog-base.ts` declares the four props the call sites
+actually pass rather than re-exporting radix's, which is what makes the pair
+comparable at all.
+
+**Only the plain `.tsx` is typechecked against call sites.** TypeScript resolves
+it and never looks at the platform sibling, so a drifted `.web.tsx` compiles
+cleanly and breaks at runtime. Two things catch that: `client/test/platform-pairs.test.ts`
+compares the exported *names* of every pair, and `npx expo export` — run it for
+**both** `web` and `android` — is the only check on the shapes behind them.
+
+| DOM | Cross-platform |
+|-----|----------------|
+| `onClick` | `onPress` |
+| `onChange={(e) => f(e.target.value)}` | `onChangeText={f}` |
+| `onKeyDown` Enter | `onSubmitEditing` |
+| `type="submit"` | `onPress={() => form.handleSubmit()}` |
+| `title="…"` (hover tooltip) | `aria-label="…"`, or a real `<Tooltip>` |
+| `useRef<HTMLInputElement>` | `useRef<InputHandle>` (`focus`, optional `select`) |
+| `<Button asChild><Link/></Button>` | `<Link asChild><Button/></Link>` |
+
+**Text must be wrapped.** A bare string inside a `<View>` throws on native
+while rendering fine on web, so the two platforms disagree silently. `Button`
+wraps string children in a `<Text>` for you; `CardTitle`/`CardDescription` are
+`<Text>`. Anywhere else, wrap it yourself.
+
+**Text colour does not inherit on native.** Each `cva` variant therefore splits
+in two — container classes and `*TextVariants` classes applied to the `<Text>`.
+The container keeps its `text-*` class so web icons still pick up
+`currentColor`.
+
+**`disabled:` and other pseudo-class variants do not apply** to a `Pressable`
+on either platform. Apply the state directly: `disabled && 'opacity-50'`.
+
+**Give an interactive `Pressable` a `role`.** react-native-web renders one as a
+plain `<div>` otherwise — no tab stop, no Enter/Space, nothing announced. `role`
+is what restores what `<button>` gave for free. Biome's `useSemanticElements`
+fires on it and needs a `biome-ignore`.
+
+### Icons
+
+**Import icons from `@/components/ui/icons`, never from lucide directly.**
+`client/test/icons.test.ts` enforces that — nothing else can, since the two
+implementations are a Metro platform pair and TypeScript only sees the native
+one.
+
+`icons.web.tsx` is a plain re-export of `lucide-react`. `icons.tsx` wraps
+`lucide-react-native` in `cssInterop`, mapping `className` to `width`/`height`/
+`color`, so `<Trash2 className="h-4 w-4" />` means the same thing on both
+platforms.
+
+**Native deep-imports; web uses the barrel.** `lucide-react-native/icons/<kebab-name>`
+per icon, because the barrel re-exports ~1600 modules and Metro does not
+tree-shake. Web keeps the barrel — `lucide-react` ships no `exports` map, and
+the web bundler tree-shakes anyway. Adding an icon means one deep import plus
+one `export const X = icon(XSource)` in `icons.tsx`, and one name in the
+`icons.web.tsx` export list; the test fails if you do only one of the two.
+
+**Icon colour is a native-only problem.** On web an `<svg>` inherits
+`currentColor` from its parent, hover states included. Native has no
+inheritance, so a container that sets its own text colour publishes that class
+through `IconClassContext` (`icons-base.ts`) and every icon below merges it in.
+`icons.web.tsx` ignores the context deliberately — injecting a colour there
+would pin the icon through the container's `hover:text-*`. `Button` is the
+provider today.
+
+Icon *names* are the canonical lucide ones, not the deprecated aliases
+(`CircleAlert` not `AlertCircle`, `TriangleAlert` not `AlertTriangle`,
+`CircleCheck` not `CheckCircle2`, `LoaderCircle` not `Loader2`, `WandSparkles`
+not `Wand2`) — the aliases are dropped upstream on majors.
+
+### Dialog
+
+`dialog.web.tsx` is radix; `dialog.tsx` is a transparent `Modal` with a dimmed
+backdrop and a centred card. `Escape` becomes `onRequestClose` (the Android back
+button); `open === false` renders nothing on either platform, so a dialog's body
+unmounts between openings and the native sheets no longer need the
+render-conditionally trick.
+
+Two native details worth not re-deriving. The backdrop is a `Pressable` laid out
+*underneath* the card rather than wrapping it — `Pressable` has no
+`stopPropagation`, so nesting the card inside would close the dialog on every
+press. And `space-y-*`/`space-x-*` are child-combinator utilities nativewind
+does not implement; use `gap`.
+
+### Label and Field
+
+`label` splits because radix's one job — clicking the label focuses the control
+named by `htmlFor` — has no native counterpart. `label.tsx` accepts `htmlFor`
+and ignores it rather than pretending.
+
+`field.tsx` does **not** split. None of the label/description/error furniture
+did anything a `<div>` did that a `View` cannot, so it is shared with no
+`.web.tsx` at all — the first primitive to convert outright. Not everything
+needs a pair; reach for one only when the web behaviour is genuinely absent on
+native.
+
+One thing was dropped in that conversion: `FieldLabel`'s
+`group-data-[disabled=true]/field:opacity-50`. `data-*` attributes and group
+variants are DOM-only, and nothing was setting that attribute.
+
+**Still to convert:** the remaining radix-backed primitives (`popover`,
+`select`, `tabs`, `tooltip`, `switch`, plus `date-time-input` and
+`CalendarView`) keep a `.web.tsx`. See `.agents/todo.md`.
+
+## Shared Native Primitives
+
+`components/native/` is the RN-primitive equivalent of the not-yet-converted
+half of `components/ui/`, which renders `<div>`/`<button>` and cannot be used
+from a `.native.tsx` screen. Every native list screen is built from it. It is
+meant to be folded into the shared set as the conversion above proceeds.
+
+| Primitive | Purpose |
+|-----------|---------|
+| `list-screen.tsx` — `ListScreen<T>` | `FlatList` + header with a "New …" button + empty state. Pass `items={data?.myX}` **undefined, not `?? []`** — the spinner is gated on `items === undefined`, so an `?? []` default shows "no items" during the first load. `children` render above the list (modals). |
+| `form-modal.tsx` — `FormModal` | Page-sheet `Modal` with a title/Cancel row and a primary submit button. **Render it conditionally** (`{open && <FormModal …>}`) so unmounting discards field state — no manual `setName('')` resets. |
+| `field.tsx` — `FieldLabel`, `TextField` | Labelled `TextInput` with the shared border/padding and placeholder color. `containerClassName` tunes the default `mb-4` wrapper (`cn` lets `mb-0` win). |
+| `activity-type-picker.tsx` — `ActivityTypePicker` | Single-select activity-type chips. Owns its own query, so all four sheets share one cache entry, and it carries the "create one first" empty state. |
+| `row-action.tsx` — `RowAction` | Edit/Archive/Delete pill inside a pressable row. Its `onPress` receives the event because a pill inside a pressable row has to `stopPropagation` on web. |
+| `confirm.ts` — `confirmDestructive` | The `Alert.alert(title, message, [Cancel, destructive])` triple, once. |
 
 ## ShadCN + Tailwind Conventions
 
@@ -391,7 +644,25 @@ export function priorityLabel(priority: number): string {
   if (priority >= 25) return 'Medium';
   return 'Low';
 }
+
+// client/src/lib/date.ts
+weekStart(date)  // Monday of that week — the ISO week the scheduler works in
+isoDate(date)    // local YYYY-MM-DD — the shape every date argument in the API takes
 ```
+
+Every `weekStart:` query variable and every day-grouping key goes through these.
+Do not hand-roll `getDay() === 0 ? -6 : 1 - day` or a bare
+`format(d, 'yyyy-MM-dd')`; the calendar, today, and schedule views have to agree
+on where a week starts.
+
+Two hooks carry cross-screen behaviour that used to be copy-pasted:
+
+- `hooks/useSyncTimezone.ts` — returns the device timezone and pushes it to the
+  profile once per mount. Both schedule screens need it, because the server
+  schedules and renders the iCal feed in the *stored* timezone.
+- `hooks/useDarkMode.ts` — `[dark, setDark]` against `storage`, applied to
+  `documentElement` on web and inert on native. It persists **only** on
+  `setDark`, so reading the OS preference never freezes it into storage.
 
 ## Dashboard Architecture
 

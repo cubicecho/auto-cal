@@ -3,13 +3,16 @@ import { graphql } from '@/__generated__/index.js';
 import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
+import { Check, Plus, TriangleAlert } from '@/components/ui/icons';
 import { SectionHeading } from '@/components/ui/section-heading';
+import { useToast } from '@/components/ui/toast';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { isoDate } from '@/lib/date';
 import { priorityLabel } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import {
@@ -22,7 +25,6 @@ import {
   startOfMonth,
 } from 'date-fns';
 import { Link } from 'expo-router';
-import { AlertTriangle, Check, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 graphql(`
@@ -70,7 +72,7 @@ function groupByDay(
   for (const item of items) {
     if (!item.scheduledStart) continue;
     // Parse as UTC ISO string and format to local "YYYY-MM-DD" for grouping
-    const dayKey = format(new Date(item.scheduledStart), 'yyyy-MM-dd');
+    const dayKey = isoDate(new Date(item.scheduledStart));
     const existing = map.get(dayKey) ?? [];
     existing.push(item);
     map.set(dayKey, existing);
@@ -116,6 +118,7 @@ function viewWindow(
 }
 
 export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
+  const toast = useToast();
   const [todoOpen, setTodoOpen] = useState(false);
 
   const { start: windowStart, end: windowEnd } = useMemo(
@@ -142,7 +145,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
     COMPLETE_HABIT,
     {
       update: (cache) => invalidate(cache, ...DERIVED),
-      onError: (err) => console.error('[completeHabit]', err.message),
+      onError: (err) => toast(err.message || 'Could not complete this habit'),
     },
   );
 
@@ -150,7 +153,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
     COMPLETE_TODO,
     {
       update: (cache) => invalidate(cache, ...DERIVED),
-      onError: (err) => console.error('[completeTodo]', err.message),
+      onError: (err) => toast(err.message || 'Could not complete this todo'),
     },
   );
 
@@ -187,7 +190,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
     <div className="flex flex-col gap-4 overflow-y-auto h-full">
       <TodoForm open={todoOpen} onOpenChange={setTodoOpen} />
 
-      <Button size="sm" className="w-full" onClick={() => setTodoOpen(true)}>
+      <Button size="sm" className="w-full" onPress={() => setTodoOpen(true)}>
         <Plus className="mr-1 h-4 w-4" />
         Add todo
       </Button>
@@ -233,7 +236,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
             variant="overline"
             className="mb-1.5 flex items-center gap-1.5"
           >
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+            <TriangleAlert className="h-3.5 w-3.5 text-amber-500" />
             Unschedulable ({unscheduled.length})
           </SectionHeading>
           <div className="flex flex-col gap-1.5">
@@ -287,7 +290,7 @@ function ScheduleCard({
                     href="/time-blocks"
                     className="text-amber-500 hover:text-amber-600"
                   >
-                    <AlertTriangle className="h-4 w-4" />
+                    <TriangleAlert className="h-4 w-4" />
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent>{unschedulableReason(item)}</TooltipContent>
@@ -301,8 +304,8 @@ function ScheduleCard({
                 size="icon"
                 variant="ghost"
                 className="h-6 w-6 text-muted-foreground hover:text-green-600"
-                title="Mark habit complete"
-                onClick={onComplete}
+                aria-label="Mark habit complete"
+                onPress={onComplete}
               >
                 <Check className="h-3.5 w-3.5" />
               </Button>

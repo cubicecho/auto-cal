@@ -7,9 +7,11 @@ import { useQuery } from '@apollo/client/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 
-const GET_MY_HABITS = graphql(`
-  query GetMyHabits {
-    myHabits {
+// Filtered server-side rather than fetching every habit and `.find()`ing —
+// `myHabits` is AND-ed with the caller's scope, so a foreign id yields [].
+const GET_HABIT_BY_ID = graphql(`
+  query GetHabitById($id: UUID!) {
+    myHabits(where: { id: { eq: $id } }, limit: 1) {
       ...Habit_HabitList
     }
   }
@@ -23,10 +25,11 @@ export default function HabitDetailPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
-  const { data, loading } = useQuery(GET_MY_HABITS, {
+  const { data, loading } = useQuery(GET_HABIT_BY_ID, {
+    variables: { id: habitId },
     fetchPolicy: 'cache-and-network',
   });
-  const habit = data?.myHabits.find((h) => h.id === habitId);
+  const habit = data?.myHabits[0];
 
   return (
     <DetailPage

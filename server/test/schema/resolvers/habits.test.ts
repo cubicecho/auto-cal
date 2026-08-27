@@ -58,7 +58,7 @@ describe('habit resolvers', () => {
         testSchema,
         db,
         userId,
-        'query($id: ID) { myHabits(activityTypeId: $id) { title } }',
+        'query($id: UUID) { myHabits(where: { activityTypeId: { eq: $id } }) { title } }',
         { id: at2.id },
       );
       expect(result.errors).toBeUndefined();

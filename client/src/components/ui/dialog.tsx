@@ -1,113 +1,125 @@
+/**
+ * The native dialog: a transparent `Modal` with a dimmed backdrop and a centred
+ * card, matching what radix renders on web closely enough that the four call
+ * sites need no branching.
+ *
+ * What does not carry over from radix, and is not faked here: the focus trap
+ * and the scroll lock (a `Modal` already owns the screen) and the enter/exit
+ * animations beyond the `fade` the `Modal` does itself. `Escape` becomes
+ * `onRequestClose`, which is the Android back button.
+ *
+ * `open === false` renders nothing at all, so a dialog's body unmounts between
+ * openings exactly as it does on web.
+ */
+import type {
+  DialogProps,
+  DialogSectionProps,
+} from '@/components/ui/dialog-base';
+import { X } from '@/components/ui/icons';
 import { cn } from '@/lib/utils';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
-import type * as React from 'react';
+import { createContext, useContext } from 'react';
+import { Modal, Pressable, Text, View } from 'react-native';
 
-const Dialog = DialogPrimitive.Root;
-const DialogTrigger = DialogPrimitive.Trigger;
-const DialogPortal = DialogPrimitive.Portal;
-const DialogClose = DialogPrimitive.Close;
+/**
+ * Radix wires its `Close` up through the `Root` it is nested in. There is no
+ * equivalent on native, so `Dialog` publishes the closer and `DialogContent`
+ * — which owns both the backdrop and the X — reads it.
+ */
+const DialogCloseContext = createContext<() => void>(() => {});
 
-function DialogOverlay({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+function Dialog({ open, onOpenChange, children }: DialogProps) {
   return (
-    <DialogPrimitive.Overlay
-      className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/80',
-        className,
-      )}
-      {...props}
-    />
+    <Modal
+      visible={open}
+      transparent
+      animationType="fade"
+      onRequestClose={() => onOpenChange(false)}
+    >
+      <DialogCloseContext.Provider value={() => onOpenChange(false)}>
+        {children}
+      </DialogCloseContext.Provider>
+    </Modal>
   );
 }
 
-function DialogContent({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+function DialogContent({ className, children }: DialogSectionProps) {
+  const close = useContext(DialogCloseContext);
   return (
-    <DialogPortal>
-      <DialogOverlay />
-      <DialogPrimitive.Content
+    <View className="flex-1 items-center justify-center bg-black/80 p-6">
+      {/* The backdrop is a sibling laid out underneath rather than a parent of
+          the card, because `Pressable` has no `stopPropagation` — nesting the
+          card inside it would make every press on the card close the dialog. */}
+      <Pressable
+        className="absolute inset-0"
+        onPress={close}
+        role="button"
+        aria-label="Close"
+      />
+      <View
         className={cn(
-          'bg-background text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border p-6 shadow-lg duration-200 sm:rounded-lg',
+          'w-full max-w-lg gap-4 rounded-lg border border-border bg-background p-6',
           className,
         )}
-        {...props}
       >
         {children}
-        <DialogPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none">
+        <Pressable
+          className="absolute right-4 top-4 opacity-70"
+          onPress={close}
+          // biome-ignore lint/a11y/useSemanticElements: this is not a DOM element — a `<button>` has no native counterpart
+          role="button"
+          aria-label="Close"
+        >
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      </DialogPrimitive.Content>
-    </DialogPortal>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
+// `space-y-*` and `space-x-*` are child-combinator utilities nativewind does
+// not implement; `gap` is the cross-platform equivalent and behaves the same
+// for these two rows.
+function DialogHeader({ className, children }: DialogSectionProps) {
+  return <View className={cn('gap-1.5', className)}>{children}</View>;
+}
+
+function DialogFooter({ className, children }: DialogSectionProps) {
   return (
-    <div
+    <View className={cn('flex-row justify-end gap-2', className)}>
+      {children}
+    </View>
+  );
+}
+
+function DialogTitle({ className, children }: DialogSectionProps) {
+  return (
+    <Text
+      // biome-ignore lint/a11y/useSemanticElements: this is not a DOM element — an `<h2>` has no native counterpart
+      role="heading"
+      aria-level={2}
       className={cn(
-        'flex flex-col space-y-1.5 text-center sm:text-left',
+        'text-lg font-semibold leading-none tracking-tight text-foreground',
         className,
       )}
-      {...props}
-    />
+    >
+      {children}
+    </Text>
   );
 }
 
-function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
+function DialogDescription({ className, children }: DialogSectionProps) {
   return (
-    <div
-      className={cn(
-        'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function DialogTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
-  return (
-    <DialogPrimitive.Title
-      className={cn(
-        'text-lg font-semibold leading-none tracking-tight',
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function DialogDescription({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Description>) {
-  return (
-    <DialogPrimitive.Description
-      className={cn('text-muted-foreground text-sm', className)}
-      {...props}
-    />
+    <Text className={cn('text-sm text-muted-foreground', className)}>
+      {children}
+    </Text>
   );
 }
 
 export {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogOverlay,
-  DialogPortal,
   DialogTitle,
-  DialogTrigger,
 };

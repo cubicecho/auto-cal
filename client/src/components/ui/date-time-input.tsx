@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Calendar as CalendarIcon } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import {
   Popover,
@@ -8,7 +9,6 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
 
 interface DateTimeInputProps {
@@ -42,8 +42,8 @@ export function DateTimeInput({
     setOpen(false);
   }
 
-  function handleTimeChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const parts = e.target.value.split(':').map(Number);
+  function handleTimeChange(text: string) {
+    const parts = text.split(':').map(Number);
     const hh = parts[0];
     const mm = parts[1];
     if (hh === undefined || mm === undefined) return;
@@ -77,7 +77,7 @@ export function DateTimeInput({
       <Input
         type="time"
         value={timeStr}
-        onChange={handleTimeChange}
+        onChangeText={handleTimeChange}
         className="w-[120px]"
       />
     </div>

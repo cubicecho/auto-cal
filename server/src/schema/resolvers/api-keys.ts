@@ -1,34 +1,32 @@
 import { apiKeys } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
 import { generateApiKey } from '../../api-keys.ts';
-import { requireOwner, requireUser } from '../../errors.ts';
+import { forbidden, requireUser } from '../../errors.ts';
 import { MyCreateApiKeyInput } from '../validators.ts';
-import type { MutationMap, QueryMap } from './types.ts';
+import { loadOwned } from './load.ts';
+import type { MutationMap } from './types.ts';
 
-export const apiKeyQueries: QueryMap<'myApiKeys'> = {
-  myApiKeys: async (_parent, _args, context) => {
-    const userId = requireUser(context);
-    return context.db.query.apiKeys.findMany({
-      where: { userId: userId, revokedAt: { isNull: true } },
-      orderBy: { createdAt: 'desc' },
-    });
-  },
-};
+/**
+ * A key may not mint or revoke keys — that would let a leaked key extend its
+ * own lifetime past the revocation it was issued under. Coded FORBIDDEN rather
+ * than thrown bare so the message survives `formatError` in production.
+ */
+function rejectApiKeyCaller(context: { apiKey?: unknown }): void {
+  if (context.apiKey) throw forbidden('API keys cannot manage other keys');
+}
 
 export const apiKeyMutations: MutationMap<'myCreateApiKey' | 'myRevokeApiKey'> =
   {
     myCreateApiKey: async (_parent, args, context) => {
       const userId = requireUser(context);
-      if (context.apiKey) {
-        throw new Error('API keys cannot manage other keys');
-      }
+      rejectApiKeyCaller(context);
       const input = MyCreateApiKeyInput.parse(args.input);
       const { token, hash, prefix } = generateApiKey();
 
       const [row] = await context.db
         .insert(apiKeys)
         .values({
-          userId: userId,
+          userId,
           name: input.name,
           keyHash: hash,
           keyPrefix: prefix,
@@ -44,17 +42,8 @@ export const apiKeyMutations: MutationMap<'myCreateApiKey' | 'myRevokeApiKey'> =
 
     myRevokeApiKey: async (_parent, args, context) => {
       const userId = requireUser(context);
-      if (context.apiKey) {
-        throw new Error('API keys cannot manage other keys');
-      }
-      requireOwner(
-        await context.db.query.apiKeys.findFirst({
-          where: { id: args.id },
-        }),
-        'ApiKey',
-        args.id,
-        userId,
-      );
+      rejectApiKeyCaller(context);
+      await loadOwned(context, 'apiKeys', args.id, userId);
 
       await context.db
         .update(apiKeys)

@@ -238,7 +238,7 @@ describe('resolver integration tests', () => {
       testSchema,
       db,
       userId,
-      'query { myTodos(completed: true) { id title } }',
+      'query { myTodos(where: { completedAt: { isNotNull: true } }) { id title } }',
     );
     expect(completedList.errors).toBeUndefined();
     const completedTodos = completedList.data?.myTodos as Array<{
@@ -252,7 +252,7 @@ describe('resolver integration tests', () => {
       testSchema,
       db,
       userId,
-      'query { myTodos(completed: false) { id } }',
+      'query { myTodos(where: { completedAt: { isNull: true } }) { id } }',
     );
     expect(incompleteTodos.errors).toBeUndefined();
     const incompleteList = incompleteTodos.data?.myTodos as Array<{
@@ -290,12 +290,14 @@ describe('error codes', () => {
     expect(result.errors?.[0]?.extensions?.code).toBe('UNAUTHENTICATED');
   });
 
+  // Scoped queries filter rather than throw, so these exercise `requireOwner`
+  // through a mutation — which is where it still runs.
   it('tags a missing row NOT_FOUND', async () => {
     const result = await exec(
       testSchema,
       db,
       userId,
-      'query { myProject(id: "00000000-0000-0000-0000-000000000000") { id } }',
+      'mutation { myArchiveProject(id: "00000000-0000-0000-0000-000000000000") { id } }',
     );
     expect(result.errors?.[0]?.extensions?.code).toBe('NOT_FOUND');
   });
@@ -320,7 +322,7 @@ describe('error codes', () => {
       testSchema,
       db,
       userId,
-      `query { myProject(id: "${projectId}") { id } }`,
+      `mutation { myArchiveProject(id: "${projectId}") { id } }`,
     );
     expect(result.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
   });

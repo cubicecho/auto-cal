@@ -6,12 +6,7 @@ import {
   habits,
 } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
-import {
-  forbidden,
-  notFound,
-  requireOwner,
-  requireUser,
-} from '../../errors.ts';
+import { forbidden, notFound, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { startOfISOWeek } from '../../services/scheduler.ts';
 import {
@@ -19,26 +14,15 @@ import {
   CreateHabitInput,
   UpdateHabitInput,
 } from '../validators.ts';
+import { loadOwned } from './load.ts';
 import { publishDataChanged } from './subscriptions.ts';
 import type { MutationMap, QueryMap } from './types.ts';
 
-export const habitQueries: QueryMap<
-  'myHabits' | 'myHabitStats' | 'myHabitDetail'
-> = {
-  myHabits: async (_parent, args, context) => {
-    const userId = requireUser(context);
-    const where: Record<string, unknown> = { userId: userId };
-    if (args.activityTypeId) where.activityTypeId = args.activityTypeId;
-    return context.db.query.habits.findMany({
-      where,
-      orderBy: { priority: 'desc', createdAt: 'desc' },
-    });
-  },
-
+export const habitQueries: QueryMap<'myHabitStats' | 'myHabitDetail'> = {
   myHabitStats: async (_parent, args, context) => {
     const userId = requireUser(context);
 
-    const habitWhere: Record<string, unknown> = { userId: userId };
+    const habitWhere: Record<string, unknown> = { userId };
     if (args.habitId) habitWhere.id = args.habitId;
     const userHabits: Habit[] = await context.db.query.habits.findMany({
       where: habitWhere,
@@ -80,14 +64,7 @@ export const habitQueries: QueryMap<
   myHabitDetail: async (_parent, args, context) => {
     const userId = requireUser(context);
 
-    const habit = requireOwner(
-      await context.db.query.habits.findFirst({
-        where: { id: args.habitId },
-      }),
-      'Habit',
-      args.habitId,
-      userId,
-    );
+    const habit = await loadOwned(context, 'habits', args.habitId, userId);
 
     const activityType: ActivityType | undefined =
       await context.db.query.activityTypes.findFirst({
@@ -185,7 +162,7 @@ export const habitMutations: MutationMap<
     const [habit] = await context.db
       .insert(habits)
       .values({
-        userId: userId,
+        userId,
         title: input.title,
         description: input.description,
         priority: input.priority,
@@ -211,14 +188,7 @@ export const habitMutations: MutationMap<
 
   myDeleteHabit: async (_parent, args, context) => {
     const userId = requireUser(context);
-    requireOwner(
-      await context.db.query.habits.findFirst({
-        where: { id: args.id },
-      }),
-      'Habit',
-      args.id,
-      userId,
-    );
+    await loadOwned(context, 'habits', args.id, userId);
     await context.db.delete(habits).where(eq(habits.id, args.id));
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishDataChanged(userId, 'habit', [args.id]);
@@ -228,14 +198,7 @@ export const habitMutations: MutationMap<
   myUpdateHabit: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateHabitInput.parse(args.input);
-    requireOwner(
-      await context.db.query.habits.findFirst({
-        where: { id: input.id },
-      }),
-      'Habit',
-      input.id,
-      userId,
-    );
+    await loadOwned(context, 'habits', input.id, userId);
     const [updated] = await context.db
       .update(habits)
       .set({
@@ -290,14 +253,7 @@ export const habitMutations: MutationMap<
   myCompleteHabit: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = CompleteHabitInput.parse(args.input);
-    requireOwner(
-      await context.db.query.habits.findFirst({
-        where: { id: input.habitId },
-      }),
-      'Habit',
-      input.habitId,
-      userId,
-    );
+    await loadOwned(context, 'habits', input.habitId, userId);
     const [completion] = await context.db
       .insert(habitCompletions)
       .values({

@@ -40,10 +40,10 @@ export function ConfirmDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onPress={() => onOpenChange(false)}>
             {cancelLabel}
           </Button>
-          <Button variant="destructive" disabled={loading} onClick={onConfirm}>
+          <Button variant="destructive" disabled={loading} onPress={onConfirm}>
             {confirmLabel}
           </Button>
         </DialogFooter>

@@ -1,22 +1,23 @@
 import { apolloClient } from '@/apollo-client';
+import { RouteError } from '@/components/ui/route-error';
+import { ToastProvider } from '@/components/ui/toast';
+import { useDarkMode } from '@/hooks/useDarkMode';
 import { storage } from '@/storage';
 import { ApolloProvider } from '@apollo/client/react';
+import type { ErrorBoundaryProps } from 'expo-router';
 import { Redirect, Stack, usePathname } from 'expo-router';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
 import '../global.css';
 import '../src/index.css';
 
-function useDarkMode() {
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const stored = storage.getItem('theme');
-    const prefersDark = window.matchMedia(
-      '(prefers-color-scheme: dark)',
-    ).matches;
-    const dark = stored ? stored === 'dark' : prefersDark;
-    document.documentElement.classList.toggle('dark', dark);
-  }, []);
+/**
+ * expo-router mounts a named `ErrorBoundary` export from a route or layout file
+ * around that segment's tree. This one is the outermost: without it a render
+ * crash anywhere unmounts the whole app to a blank white page with the error
+ * only in the console. `retry` re-renders the segment, which is enough to
+ * recover from a transient failure without a full reload.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return <RouteError error={error} reset={retry} />;
 }
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -31,13 +32,17 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  // Applies the stored theme on the /auth screens, which sit outside (app).
   useDarkMode();
 
   return (
     <ApolloProvider client={apolloClient}>
-      <AuthGuard>
-        <Stack screenOptions={{ headerShown: false }} />
-      </AuthGuard>
+      {/* Outside the guard so a toast survives a redirect to /auth/login. */}
+      <ToastProvider>
+        <AuthGuard>
+          <Stack screenOptions={{ headerShown: false }} />
+        </AuthGuard>
+      </ToastProvider>
     </ApolloProvider>
   );
 }

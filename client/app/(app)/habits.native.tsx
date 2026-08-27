@@ -1,21 +1,18 @@
 import type { Habit_HabitListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { HABIT_LIST_FRAGMENT } from '@/components/domain/habit/HabitList';
+import { ActivityTypePicker } from '@/components/native/activity-type-picker';
+import { confirmDestructive } from '@/components/native/confirm';
+import { FieldLabel, TextField } from '@/components/native/field';
+import { FormModal } from '@/components/native/form-modal';
+import { ListScreen } from '@/components/native/list-screen';
+import { RowAction } from '@/components/native/row-action';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Modal,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 // ─── GraphQL ─────────────────────────────────────────────────────────────────
 
@@ -51,12 +48,6 @@ const DELETE_HABIT = graphql(`
   }
 `);
 
-const GET_ACTIVITY_TYPES_FOR_HABITS = graphql(`
-  query GetActivityTypesForHabitsNative {
-    myActivityTypes { id name color }
-  }
-`);
-
 type Habit = Habit_HabitListFragment;
 
 // ─── Habit Form Modal ─────────────────────────────────────────────────────────
@@ -76,9 +67,6 @@ function HabitModal({
   const [frequencyUnit, setFrequencyUnit] = useState<'week' | 'month'>(
     (habit?.frequencyUnit as 'week' | 'month') ?? 'week',
   );
-
-  const { data: atData } = useQuery(GET_ACTIVITY_TYPES_FOR_HABITS);
-  const activityTypes = atData?.myActivityTypes ?? [];
   const [activityTypeId, setActivityTypeId] = useState(
     habit?.activityType?.id ?? '',
   );
@@ -126,95 +114,58 @@ function HabitModal({
   }
 
   return (
-    <Modal
-      visible
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+    <FormModal
+      title={isEdit ? 'Edit Habit' : 'New Habit'}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitDisabled={loading || !title.trim() || !activityTypeId}
+      submitLabel={
+        loading ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Habit'
+      }
     >
-      <View className="flex-1 bg-background p-6">
-        <View className="flex-row items-center justify-between mb-6">
-          <Text className="text-xl font-bold text-foreground">
-            {isEdit ? 'Edit Habit' : 'New Habit'}
-          </Text>
-          <TouchableOpacity onPress={onClose}>
-            <Text className="text-primary text-base">Cancel</Text>
-          </TouchableOpacity>
-        </View>
+      <TextField
+        label="Title"
+        placeholder="e.g. Morning run"
+        value={title}
+        onChangeText={setTitle}
+        autoFocus={!isEdit}
+      />
 
-        <Text className="text-sm font-medium text-foreground mb-1">Title</Text>
-        <TextInput
-          className="border border-border rounded-lg px-3 py-2 mb-4 text-foreground bg-card"
-          placeholder="e.g. Morning run"
-          placeholderTextColor="#9ca3af"
-          value={title}
-          onChangeText={setTitle}
-          autoFocus={!isEdit}
+      <FieldLabel>Frequency</FieldLabel>
+      <View className="flex-row gap-3 mb-4">
+        <TextField
+          containerClassName="mb-0"
+          className="w-20 text-center"
+          keyboardType="number-pad"
+          value={frequencyCount}
+          onChangeText={setFrequencyCount}
         />
-
-        <Text className="text-sm font-medium text-foreground mb-2">
-          Frequency
-        </Text>
-        <View className="flex-row gap-3 mb-4">
-          <TextInput
-            className="border border-border rounded-lg px-3 py-2 bg-card text-foreground w-20 text-center"
-            keyboardType="number-pad"
-            value={frequencyCount}
-            onChangeText={setFrequencyCount}
-          />
-          <View className="flex-row gap-2 flex-1">
-            {(['week', 'month'] as const).map((unit) => (
-              <TouchableOpacity
-                key={unit}
-                onPress={() => setFrequencyUnit(unit)}
-                className={`flex-1 rounded-lg py-2 items-center border ${frequencyUnit === unit ? 'bg-primary border-primary' : 'border-border bg-card'}`}
-              >
-                <Text
-                  className={
-                    frequencyUnit === unit
-                      ? 'text-primary-foreground font-medium'
-                      : 'text-foreground'
-                  }
-                >
-                  per {unit}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <Text className="text-sm font-medium text-foreground mb-2">
-          Activity Type
-        </Text>
-        <View className="flex-row flex-wrap gap-2 mb-6">
-          {activityTypes.map((at) => (
+        <View className="flex-row gap-2 flex-1">
+          {(['week', 'month'] as const).map((unit) => (
             <TouchableOpacity
-              key={at.id}
-              onPress={() => setActivityTypeId(at.id)}
-              className={`rounded-lg px-3 py-2 border ${activityTypeId === at.id ? 'border-primary' : 'border-border'}`}
-              style={{ backgroundColor: hexToDesaturated(at.color) }}
+              key={unit}
+              onPress={() => setFrequencyUnit(unit)}
+              className={`flex-1 rounded-lg py-2 items-center border ${frequencyUnit === unit ? 'bg-primary border-primary' : 'border-border bg-card'}`}
             >
-              <Text className="text-sm text-foreground">{at.name}</Text>
+              <Text
+                className={
+                  frequencyUnit === unit
+                    ? 'text-primary-foreground font-medium'
+                    : 'text-foreground'
+                }
+              >
+                per {unit}
+              </Text>
             </TouchableOpacity>
           ))}
-          {activityTypes.length === 0 && (
-            <Text className="text-sm text-muted-foreground">
-              No activity types — create one first
-            </Text>
-          )}
         </View>
-
-        <TouchableOpacity
-          className="bg-primary rounded-lg py-3 items-center"
-          onPress={handleSubmit}
-          disabled={loading || !title.trim() || !activityTypeId}
-        >
-          <Text className="text-primary-foreground font-semibold">
-            {loading ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Habit'}
-          </Text>
-        </TouchableOpacity>
       </View>
-    </Modal>
+
+      <ActivityTypePicker
+        selectedId={activityTypeId}
+        onSelect={setActivityTypeId}
+      />
+    </FormModal>
   );
 }
 
@@ -237,18 +188,11 @@ function HabitRow({
   });
 
   function handleDelete() {
-    Alert.alert(
-      'Delete habit?',
-      `"${habit.title}" will be permanently deleted.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteHabit({ variables: { id: habit.id } }),
-        },
-      ],
-    );
+    confirmDestructive({
+      title: 'Delete habit?',
+      message: `"${habit.title}" will be permanently deleted.`,
+      onConfirm: () => deleteHabit({ variables: { id: habit.id } }),
+    });
   }
 
   return (
@@ -272,21 +216,14 @@ function HabitRow({
           </Text>
         </View>
         <View className="flex-row gap-2">
-          <TouchableOpacity
+          <RowAction
+            label="Edit"
             onPress={(e) => {
               e.stopPropagation?.();
               onEdit(habit);
             }}
-            className="px-3 py-1 rounded-lg border border-border bg-background/60"
-          >
-            <Text className="text-xs text-foreground">Edit</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleDelete}
-            className="px-3 py-1 rounded-lg border border-destructive/40"
-          >
-            <Text className="text-xs text-destructive">Delete</Text>
-          </TouchableOpacity>
+          />
+          <RowAction label="Delete" onPress={handleDelete} destructive />
         </View>
       </View>
     </TouchableOpacity>
@@ -303,52 +240,27 @@ export default function HabitsScreen() {
     fetchPolicy: 'cache-and-network',
   });
 
-  const habits = data?.myHabits ?? [];
-
   return (
-    <View className="flex-1 bg-background">
-      {loading && !data && (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator />
-        </View>
+    <ListScreen
+      items={data?.myHabits}
+      loading={loading}
+      newLabel="New Habit"
+      onNew={() => setModalHabit('new')}
+      emptyLabel="No habits yet. Create one to get started."
+      renderItem={(item) => (
+        <HabitRow
+          habit={item}
+          onEdit={setModalHabit}
+          onSelect={(h) => router.push(`/habits/${h.id}`)}
+        />
       )}
-
-      <FlatList
-        data={habits}
-        keyExtractor={(item) => item.id}
-        contentContainerClassName="px-4 py-4"
-        ListHeaderComponent={
-          <TouchableOpacity
-            className="bg-primary rounded-xl py-3 items-center mb-4"
-            onPress={() => setModalHabit('new')}
-          >
-            <Text className="text-primary-foreground font-semibold">
-              + New Habit
-            </Text>
-          </TouchableOpacity>
-        }
-        ListEmptyComponent={
-          !loading ? (
-            <Text className="text-center text-muted-foreground mt-8">
-              No habits yet. Create one to get started.
-            </Text>
-          ) : null
-        }
-        renderItem={({ item }) => (
-          <HabitRow
-            habit={item}
-            onEdit={setModalHabit}
-            onSelect={(h) => router.push(`/habits/${h.id}`)}
-          />
-        )}
-      />
-
+    >
       {modalHabit !== null && (
         <HabitModal
           habit={modalHabit === 'new' ? null : modalHabit}
           onClose={() => setModalHabit(null)}
         />
       )}
-    </View>
+    </ListScreen>
   );
 }

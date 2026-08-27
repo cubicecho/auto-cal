@@ -8,9 +8,9 @@ type ActivityTypeStats =
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { ColorBar } from '@/components/ui/color-bar';
+import { Pencil, Plus, Tag } from '@/components/ui/icons';
 import { EmptyState, PageHeader } from '@/components/ui/page';
 import { useListSection } from '@/hooks/useListSection';
-import { Pencil, Plus, Tag } from 'lucide-react';
 import { ActivityTypeForm } from './ActivityTypeForm';
 
 // ─── GraphQL ────────────────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
         title="Activity Types"
         subtitle="Categories for your todos, habits, and time blocks"
         actions={
-          <Button size="sm" onClick={openCreate}>
+          <Button size="sm" onPress={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
             New Activity Type
           </Button>
@@ -57,7 +57,7 @@ export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
           title="No activity types yet"
           description="Activity types categorize your todos, habits, and time blocks"
           action={
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" onPress={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               Add activity type
             </Button>
@@ -88,7 +88,7 @@ export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => openEdit(item)}
+                  onPress={() => openEdit(item)}
                   aria-label={`Edit ${item.name}`}
                 >
                   <Pencil className="h-4 w-4" />

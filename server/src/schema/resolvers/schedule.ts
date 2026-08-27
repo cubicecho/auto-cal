@@ -10,7 +10,7 @@ import {
 } from '@auto-cal/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
-import { requireUser } from '../../errors.ts';
+import { badUserInput, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import {
   type TodoWithActivityType,
@@ -41,7 +41,7 @@ export const scheduleQueries: QueryMap<'mySchedule'> = {
             .parse(args.weekStart);
           const parsed = new Date(`${dateStr}T00:00:00`);
           if (Number.isNaN(parsed.getTime()))
-            throw new Error('Invalid weekStart date');
+            throw badUserInput(`Invalid weekStart date: ${dateStr}`);
           return startOfISOWeekStr(parsed);
         })()
       : startOfISOWeekStr(new Date());
@@ -67,32 +67,32 @@ export const scheduleQueries: QueryMap<'mySchedule'> = {
     ]: [TimeBlock[], Todo[], Todo[], TodoList[], Habit[], ActivityType[]] =
       await Promise.all([
         context.db.query.timeBlocks.findMany({
-          where: { userId: userId },
+          where: { userId },
         }),
         context.db.query.todos.findMany({
           where: {
-            userId: userId,
+            userId,
             completedAt: { isNull: true },
           },
           orderBy: { priority: 'desc' },
         }),
         context.db.query.todos.findMany({
           where: {
-            userId: userId,
+            userId,
             completedAt: { isNotNull: true },
           },
         }),
         context.db.query.todoLists.findMany({
-          where: { userId: userId },
+          where: { userId },
         }),
         context.db.query.habits.findMany({
           where: {
-            userId: userId,
+            userId,
             activityTypeId: { isNotNull: true },
           },
         }),
         context.db.query.activityTypes.findMany({
-          where: { userId: userId },
+          where: { userId },
         }),
       ]);
 

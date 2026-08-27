@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { ArrowLeft, Pencil } from '@/components/ui/icons';
 import type { ReactNode } from 'react';
 
 // The outline "Edit" action shared by the detail views' header.
@@ -12,7 +12,7 @@ export function EditButton({
   label?: string;
 }) {
   return (
-    <Button variant="outline" size="sm" onClick={onClick}>
+    <Button variant="outline" size="sm" onPress={onClick}>
       <Pencil className="mr-1.5 h-3.5 w-3.5" />
       {label}
     </Button>
@@ -51,7 +51,7 @@ export function DetailHeader({
       <Button
         variant="ghost"
         size="icon"
-        onClick={onBack}
+        onPress={onBack}
         aria-label={backLabel}
       >
         <ArrowLeft className="h-4 w-4" />

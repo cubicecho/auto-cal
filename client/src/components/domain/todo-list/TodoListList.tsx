@@ -4,10 +4,10 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { Download, ListTodo, Plus } from '@/components/ui/icons';
 import { CardGrid, EmptyState, PageHeader } from '@/components/ui/page';
 import { Switch } from '@/components/ui/switch';
 import { Link } from 'expo-router';
-import { Download, ListTodo, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { TodoListCard } from './TodoListCard';
 import { TodoListForm } from './TodoListForm';
@@ -71,13 +71,13 @@ export function TodoListList({ lists, todosByListId }: TodoListListProps) {
                 Hide project lists
               </label>
             )}
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/import-todos">
+            <Link href="/import-todos" asChild>
+              <Button variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
                 Import
-              </Link>
-            </Button>
-            <Button size="sm" onClick={() => setCreatingList(true)}>
+              </Button>
+            </Link>
+            <Button size="sm" onPress={() => setCreatingList(true)}>
               <Plus className="mr-2 h-4 w-4" />
               New List
             </Button>
@@ -91,7 +91,7 @@ export function TodoListList({ lists, todosByListId }: TodoListListProps) {
           title="No todo lists yet"
           description="Create one to start adding todos"
           action={
-            <Button size="sm" onClick={() => setCreatingList(true)}>
+            <Button size="sm" onPress={() => setCreatingList(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Create list
             </Button>

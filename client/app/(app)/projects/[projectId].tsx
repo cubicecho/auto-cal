@@ -7,11 +7,26 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 
 const GET_PROJECT_DETAIL = graphql(`
-  query GetProjectDetail($id: ID!) {
-    myProject(id: $id) {
+  query GetProjectDetail($id: UUID!) {
+    myProject(where: { id: { eq: $id } }) {
       ...Project_ProjectDetail
     }
-    myTodos {
+  }
+`);
+
+/**
+ * The project's tasks, fetched in a second round trip because the list id only
+ * becomes known once the project resolves.
+ *
+ * Selecting `list { todos }` on the project would avoid the waterfall, but a
+ * relation field lives on the `TodoList` entity rather than `ROOT_QUERY`, and
+ * `invalidate` reaches only root fields — creating a todo would not show up
+ * here. Fetching every todo the user owns and filtering in JS, which is what
+ * this replaced, was worse than one extra request.
+ */
+const GET_PROJECT_TODOS = graphql(`
+  query GetProjectTodos($listId: UUID!) {
+    myTodos(where: { listId: { eq: $listId } }) {
       ...Todo_TodoList
     }
   }
@@ -27,6 +42,13 @@ export default function ProjectDetailPage() {
     fetchPolicy: 'cache-and-network',
   });
 
+  const listId = data?.myProject?.list?.id;
+  const { data: todoData } = useQuery(GET_PROJECT_TODOS, {
+    variables: { listId: listId ?? '' },
+    skip: !listId,
+    fetchPolicy: 'cache-and-network',
+  });
+
   return (
     <DetailPage
       entity={data?.myProject}
@@ -38,7 +60,7 @@ export default function ProjectDetailPage() {
         <>
           <ProjectDetail
             project={project}
-            todos={data?.myTodos ?? []}
+            todos={todoData?.myTodos ?? []}
             onBack={() => router.push('/projects')}
             onEdit={() => setFormOpen(true)}
           />

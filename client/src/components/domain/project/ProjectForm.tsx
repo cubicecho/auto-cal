@@ -9,9 +9,9 @@ import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTy
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { useAppForm } from '@/hooks/form-hook';
+import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
-import { useEffect } from 'react';
 import { z } from 'zod';
 
 const CREATE_PROJECT = graphql(`
@@ -90,8 +90,10 @@ export function ProjectForm({ project, open, onOpenChange }: ProjectFormProps) {
     update: (cache) => invalidate(cache, ...DERIVED),
   });
 
+  const createDefaultValues = { name: '', parentActivityTypeId: '' };
+
   const createForm = useAppForm({
-    defaultValues: { name: '', parentActivityTypeId: '' },
+    defaultValues: createDefaultValues,
     validators: { onChange: createSchema },
     onSubmit: async ({ value }) => {
       await createProject({
@@ -125,13 +127,13 @@ export function ProjectForm({ project, open, onOpenChange }: ProjectFormProps) {
     },
   });
 
-  // Reset to the selected project's values whenever the dialog opens or a
-  // different project is edited — defaultValues only apply on mount and this
-  // form instance is reused across edit targets.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally keyed on project?.id — we reset when a different item is selected, not on every field change; editForm.reset and editDefaultValues are derived from the current render
-  useEffect(() => {
-    if (open) editForm.reset(editDefaultValues);
-  }, [open, project?.id]);
+  // Both forms, not just the edit one: this dialog is the only place with two
+  // form instances, and resetting only `editForm` left a cancelled "New
+  // Project" holding its typed-in name the next time it opened.
+  useResetOnOpen(open, project?.id, () => {
+    createForm.reset(createDefaultValues);
+    editForm.reset(editDefaultValues);
+  });
 
   return (
     <FormDialog

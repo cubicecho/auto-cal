@@ -2,20 +2,22 @@ import type { ScheduledItem_ScheduleViewFragment } from '@/__generated__/graphql
 import { graphql } from '@/__generated__/index.js';
 import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
-import { Page, PageHeader } from '@/components/ui/page';
-import { DERIVED, invalidate } from '@/lib/cache';
-import { priorityLabel } from '@/lib/utils';
-import { useMutation, useQuery } from '@apollo/client/react';
-import { addDays, format, isToday, parseISO } from 'date-fns';
-import { Link } from 'expo-router';
 import {
-  AlertTriangle,
   Check,
   ChevronLeft,
   ChevronRight,
   Plus,
-} from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+  TriangleAlert,
+} from '@/components/ui/icons';
+import { Page, PageHeader } from '@/components/ui/page';
+import { useSyncTimezone } from '@/hooks/useSyncTimezone';
+import { DERIVED, invalidate } from '@/lib/cache';
+import { isoDate, weekStart } from '@/lib/date';
+import { priorityLabel } from '@/lib/utils';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { addDays, format, isToday, parseISO } from 'date-fns';
+import { Link } from 'expo-router';
+import { useMemo, useState } from 'react';
 
 // Reuses the ScheduledItem_ScheduleView fragment defined in ScheduleView.tsx.
 const MY_TODAY = graphql(`
@@ -24,12 +26,6 @@ const MY_TODAY = graphql(`
       id
       ...ScheduledItem_ScheduleView
     }
-  }
-`);
-
-const UPDATE_PROFILE = graphql(`
-  mutation UpdateProfileFromToday($timezone: String!) {
-    myUpdateProfile(timezone: $timezone)
   }
 `);
 
@@ -53,14 +49,6 @@ const COMPLETE_TODO = graphql(`
   }
 `);
 
-function toMonday(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 export default function TodayPage() {
   const [todoOpen, setTodoOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -68,34 +56,26 @@ export default function TodayPage() {
     d.setHours(0, 0, 0, 0);
     return d;
   });
-  const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const clientTimezone = useSyncTimezone();
   const viewingToday = isToday(selectedDate);
-
-  const [updateProfile] = useMutation(UPDATE_PROFILE);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only effect
-  useEffect(() => {
-    updateProfile({ variables: { timezone: clientTimezone } }).catch(
-      console.error,
-    );
-  }, []);
 
   const { data } = useQuery(MY_TODAY, {
     variables: {
-      weekStart: format(toMonday(selectedDate), 'yyyy-MM-dd'),
+      weekStart: isoDate(weekStart(selectedDate)),
       timezone: clientTimezone,
     },
     fetchPolicy: 'cache-and-network',
   });
 
   const schedule = data?.mySchedule ?? [];
-  const selectedKey = format(selectedDate, 'yyyy-MM-dd');
+  const selectedKey = isoDate(selectedDate);
 
   const { today, unscheduledCount } = useMemo(() => {
     const items = schedule.filter(
       (i) =>
         i.isScheduled &&
         i.scheduledStart &&
-        format(new Date(i.scheduledStart), 'yyyy-MM-dd') === selectedKey,
+        isoDate(new Date(i.scheduledStart)) === selectedKey,
     );
     items.sort(
       (a, b) =>
@@ -159,7 +139,7 @@ export default function TodayPage() {
           title={viewingToday ? 'Today' : format(selectedDate, 'EEEE')}
           subtitle={format(selectedDate, 'EEEE, MMMM d')}
           actions={
-            <Button size="sm" onClick={() => setTodoOpen(true)}>
+            <Button size="sm" onPress={() => setTodoOpen(true)}>
               <Plus className="mr-1 h-4 w-4" />
               Add todo
             </Button>
@@ -170,8 +150,8 @@ export default function TodayPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedDate((d) => addDays(d, -1))}
-            title="Previous day"
+            onPress={() => setSelectedDate((d) => addDays(d, -1))}
+            aria-label="Previous day"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -180,7 +160,7 @@ export default function TodayPage() {
             size="sm"
             disabled={viewingToday}
             className="disabled:opacity-40"
-            onClick={() => {
+            onPress={() => {
               const d = new Date();
               d.setHours(0, 0, 0, 0);
               setSelectedDate(d);
@@ -191,8 +171,8 @@ export default function TodayPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedDate((d) => addDays(d, 1))}
-            title="Next day"
+            onPress={() => setSelectedDate((d) => addDays(d, 1))}
+            aria-label="Next day"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -238,7 +218,7 @@ export default function TodayPage() {
             href="/calendar"
             className="mt-3 flex items-center justify-center gap-1.5 text-xs text-amber-600 hover:text-amber-700 dark:text-amber-500"
           >
-            <AlertTriangle className="h-3.5 w-3.5" />
+            <TriangleAlert className="h-3.5 w-3.5" />
             {unscheduledCount} item{unscheduledCount === 1 ? '' : 's'} couldn’t
             be scheduled — open the calendar
           </Link>
@@ -296,10 +276,10 @@ function TodaySlot({
           size="icon"
           variant="ghost"
           className="h-7 w-7 text-muted-foreground opacity-0 transition-opacity hover:text-green-600 group-hover:opacity-100"
-          title={
+          aria-label={
             item.kind === 'habit' ? 'Mark habit complete' : 'Complete todo'
           }
-          onClick={onComplete}
+          onPress={onComplete}
         >
           <Check className="h-4 w-4" />
         </Button>

@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 
 const GET_PROJECTS_PAGE = graphql(`
   query GetProjectsPage {
-    myProjects(includeArchived: true) {
+    myProjects {
       ...Project_ProjectList
     }
   }

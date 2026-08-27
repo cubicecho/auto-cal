@@ -7,10 +7,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Upload, WandSparkles } from '@/components/ui/icons';
 import { Page, PageHeader } from '@/components/ui/page';
 import { storage } from '@/storage';
 import { Link, useRouter } from 'expo-router';
-import { Upload, Wand2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -33,8 +33,8 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleRunWizard}>
-            <Wand2 className="mr-2 h-4 w-4" />
+          <Button onPress={handleRunWizard}>
+            <WandSparkles className="mr-2 h-4 w-4" />
             Run setup wizard
           </Button>
         </CardContent>
@@ -49,12 +49,12 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button asChild>
-            <Link href="/import-todos">
+          <Link href="/import-todos" asChild>
+            <Button>
               <Upload className="mr-2 h-4 w-4" />
               Import from Google Tasks
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 

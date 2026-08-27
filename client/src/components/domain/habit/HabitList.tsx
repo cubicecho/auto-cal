@@ -1,9 +1,9 @@
 import type { Habit_HabitListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { Plus, RefreshCw } from '@/components/ui/icons';
 import { EmptyState, PageHeader } from '@/components/ui/page';
 import { useListSection } from '@/hooks/useListSection';
-import { Plus, RefreshCw } from 'lucide-react';
 import { HabitForm } from './HabitForm';
 import { HabitItem } from './HabitItem';
 
@@ -49,7 +49,7 @@ export function HabitList({ items, onSelect }: HabitListProps) {
         title="Habits"
         subtitle="Recurring tasks scheduled regularly"
         actions={
-          <Button size="sm" onClick={openCreate}>
+          <Button size="sm" onPress={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
             New Habit
           </Button>
@@ -62,7 +62,7 @@ export function HabitList({ items, onSelect }: HabitListProps) {
           title="No habits yet"
           description="Add a habit to track recurring tasks"
           action={
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" onPress={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               Add habit
             </Button>

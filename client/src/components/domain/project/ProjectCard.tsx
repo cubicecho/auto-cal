@@ -7,8 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Pencil } from '@/components/ui/icons';
 import { StatusChip } from '@/components/ui/status-chip';
-import { Pencil } from 'lucide-react';
 
 type Project = Project_ProjectListFragment;
 
@@ -24,7 +24,7 @@ export function ProjectCard({ project, onSelect, onEdit }: ProjectCardProps) {
       className="flex cursor-pointer flex-col transition-colors"
       accentColor={project.activityType?.color}
       accentLabel={project.activityType?.name}
-      onClick={() => onSelect(project)}
+      onPress={() => onSelect(project)}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
@@ -42,7 +42,7 @@ export function ProjectCard({ project, onSelect, onEdit }: ProjectCardProps) {
               size="icon"
               variant="ghost"
               className="h-7 w-7"
-              onClick={(e) => {
+              onPress={(e) => {
                 e.stopPropagation();
                 onEdit(project);
               }}

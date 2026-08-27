@@ -8,10 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Check, Copy } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useMutation } from '@apollo/client/react';
-import { Check, Copy } from 'lucide-react';
 import { useState } from 'react';
 
 const MY_CREATE_API_KEY = graphql(`
@@ -87,8 +87,10 @@ export function CreateApiKeyDialog({
     setScopeError('');
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  // Optional event: Enter in the field raises the DOM submit, while the
+  // Button is a Pressable and calls this directly.
+  async function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault();
     let hasError = false;
     if (!name.trim()) {
       setNameError('Name is required');
@@ -193,8 +195,8 @@ export function CreateApiKeyDialog({
                   id="api-key-name"
                   placeholder="e.g. Home Assistant"
                   value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
+                  onChangeText={(text) => {
+                    setName(text);
                     setNameError('');
                   }}
                   maxLength={60}
@@ -242,14 +244,15 @@ export function CreateApiKeyDialog({
               </div>
             </div>
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleClose(false)}
-              >
+              <Button variant="outline" onPress={() => handleClose(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button
+                disabled={loading}
+                onPress={() => {
+                  void handleSubmit();
+                }}
+              >
                 {loading ? 'Generating…' : 'Generate Key'}
               </Button>
             </DialogFooter>
@@ -275,7 +278,7 @@ export function CreateApiKeyDialog({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
+                  onPress={() =>
                     state.phase === 'reveal' && handleCopy(state.token)
                   }
                 >
@@ -311,7 +314,7 @@ export function CreateApiKeyDialog({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleCopyUrl(url)}
+                        onPress={() => handleCopyUrl(url)}
                       >
                         {copiedUrl === url ? (
                           <Check className="h-4 w-4 text-green-600" />
@@ -325,7 +328,7 @@ export function CreateApiKeyDialog({
               )}
             </div>
             <DialogFooter>
-              <Button onClick={() => handleClose(false)}>Done</Button>
+              <Button onPress={() => handleClose(false)}>Done</Button>
             </DialogFooter>
           </>
         )}

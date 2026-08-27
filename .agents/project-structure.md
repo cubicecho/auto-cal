@@ -62,19 +62,24 @@ server/src/
 │   └── scheduler-writeback.ts # DB-backed wrapper, fire-and-forget
 ├── schema/
 │   ├── index.ts              # buildSchema → applyCustomResolvers
+│   ├── build-config.ts       # shared buildSchema config (CRUD mutations off)
+│   ├── scope.ts              # QUERY_SCOPE / UNEXPOSED + scopeRootFields
 │   ├── validators.ts         # Zod validators for resolver inputs
 │   ├── validators.test.ts
 │   └── resolvers/
 │       ├── index.ts          # extensionSDL + attach()es the typed maps
-│       ├── types.ts          # QueryMap / MutationMap / SubscriptionMap
+│       ├── types.ts          # QueryMap / MutationMap / SubscriptionMap / FieldMap
 │       ├── todo-lists.ts
 │       ├── todos.ts
 │       ├── habits.ts
 │       ├── time-blocks.ts
 │       ├── activity-types.ts
+│       ├── projects.ts
+│       ├── api-keys.ts
 │       ├── schedule.ts
 │       ├── stats.ts
 │       ├── profile.ts
+│       ├── subscriptions.ts
 │       ├── import.ts         # myImportTodos — bulk Google Tasks import (transactional)
 │       └── auth.ts
 └── __generated__/            # Server schema + resolver types (codegen output)
@@ -270,23 +275,33 @@ Conventions: all PKs use `uuid`+`defaultRandom`; user-owned tables cascade-delet
 
 ## 4. GraphQL Schema (high level)
 
-The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`, then extended in `server/src/schema/resolvers/index.ts` (`extensionSDL`) and locked down by `finalizeSchema()` (the last step of `applyCustomResolvers`), which removes every root field that is not `my*` or in `PUBLIC_MUTATIONS` so only those appear in the SDL at all. Full SDL details in `graphql-patterns.md` and `server-patterns.md`.
+The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`, then scoped by `scopeRootFields()` (which renames the generated root queries to their `my*` form, filters each to the caller, and deletes the rest), extended in `server/src/schema/resolvers/index.ts` (`extensionSDL`), and locked down by `finalizeSchema()` (the last step of `applyCustomResolvers`), which removes every mutation that is not `my*` or in `PUBLIC_MUTATIONS` so only those appear in the SDL at all. Full SDL details in `graphql-patterns.md` and `server-patterns.md`.
 
 ### Queries (`my*` scoped)
 
+Nine come from `QUERY_SCOPE` in `server/src/schema/scope.ts` — generated resolvers, renamed and scoped, taking the generated `where` / `orderBy` / `limit` / `offset` / `after` / `distinct` arguments:
+
 | Query | Notes |
 |-------|-------|
-| `myProfile` | Returns `UserProfile` (id, email, timezone) |
-| `myActivityTypes` | All activity types for the user |
-| `myTodoLists` | All todo lists for the user |
-| `myTodos(listId, completed, orderBy)` | Filterable; orderBy via `TodoOrderBy` |
-| `myHabits(activityTypeId)` | |
-| `myTimeBlocks(activityTypeId, containsDay)` | |
+| `myProfile` | Single `User` (id, email, timezone); scoped by `id`, not `userId` |
+| `myActivityTypes` | Default order: name asc |
+| `myTodoLists` | Default order: name asc |
+| `myTodos` | Default order: priority desc, createdAt desc |
+| `myHabits` | Default order: priority desc, createdAt desc |
+| `myTimeBlocks` | Default order: startTime asc |
+| `myProjects` | Default order: createdAt desc; pass `where: { status: { ne: "archived" } }` to hide archived |
+| `myProject` | Single `Project`; `null` for a foreign or missing id, never `FORBIDDEN` |
+| `myApiKeys` | Revoked keys are excluded by the scope itself |
+
+Five are hand-written because they compute rather than filter:
+
+| Query | Notes |
+|-------|-------|
 | `mySchedule(weekStart, timezone)` | Live-recomputed schedule for the week (see `scheduling.md`) |
 | `myStats(startDate, endDate)` | Composite + per-habit + todo summary |
 | `myHabitDetail(habitId, periods)` | Per-period rates for a habit |
-| `activityTypeStats(startDate, endDate)` | |
-| `habitStats(habitId, startDate, endDate)` | |
+| `myActivityTypeStats(startDate, endDate)` | |
+| `myHabitStats(habitId, startDate, endDate)` | |
 
 ### Mutations (`my*` scoped)
 
@@ -295,9 +310,13 @@ The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`
 | Profile | `myUpdateProfile` |
 | Activity types | `myCreateActivityType`, `myUpdateActivityType`, `myDeleteActivityType` |
 | Todo lists | `myCreateTodoList`, `myUpdateTodoList`, `myDeleteTodoList` |
-| Todos | `myCreateTodo`, `myUpdateTodo`, `myCompleteTodo`, `myDeleteTodo` |
-| Habits | `myCreateHabit`, `myUpdateHabit`, `myDeleteHabit`, `myCompleteHabit` |
+| Todos | `myCreateTodo`, `myUpdateTodo`, `myCompleteTodo`, `myDeleteTodo`, `myDeleteTodos` |
+| Habits | `myCreateHabit`, `myUpdateHabit`, `myDeleteHabit`, `myCompleteHabit`, `myUncompleteHabit` |
 | Time blocks | `myCreateTimeBlock`, `myUpdateTimeBlock`, `myDeleteTimeBlock` |
+| Projects | `myCreateProject`, `myUpdateProject`, `myArchiveProject` |
+| Project notes | `myCreateProjectNote`, `myUpdateProjectNote`, `myReorderProjectNotes`, `myDeleteProjectNote` |
+| API keys | `myCreateApiKey`, `myRevokeApiKey` (both throw when called *with* an API key) |
+| Import | `myImportTodos` |
 | Schedule | `myReschedule` (only mutation that **awaits** the writeback) |
 
 ### Public mutations (no auth)
@@ -309,7 +328,7 @@ The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`
 
 ### Custom types
 
-`ScheduledItem`, `StatsOverview`, `HabitStatSummary`, `TodoStatSummary`, `HabitDetail`, `HabitPeriod`, `ActivityTypeStats`, `HabitStats`, `UserProfile`, `RequestMagicLinkResult`, `VerifyMagicLinkResult`. See `extensionSDL` for the source-of-truth definitions.
+`ScheduledItem`, `StatsOverview`, `HabitStatSummary`, `TodoStatSummary`, `HabitDetail`, `HabitPeriod`, `ActivityTypeStats`, `HabitStats`, `RequestMagicLinkResult`, `VerifyMagicLinkResult`. See `extensionSDL` for the source-of-truth definitions.
 
 ### Field resolvers
 

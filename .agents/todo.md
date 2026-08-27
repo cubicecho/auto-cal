@@ -139,3 +139,54 @@ Existing vitest suites:
 
 **Acceptance:** A real Postgres deployment runs the full app without surprises; PGLite remains the no-config dev default.
 
+
+---
+
+### #17 — Converge the web and native component trees
+**Status:** Spike landed, and icons are done. `components/ui/button.tsx`,
+`card.tsx`, `input.tsx` and `icons.tsx` are react-native primitives now and
+render on both platforms; `input.web.tsx` and `icons.web.tsx` are the `.web.tsx`
+overrides. Conversion rules are written up under "Cross-Platform Primitives" in
+`.agents/client-patterns.md`.
+
+Today web and native have opposite architectures: `client/app/` holds a `.tsx`
+web screen and a `.native.tsx` native one for most routes, the native screens are
+built from a parallel `components/native/` set, and 19 `*Native` GraphQL
+operations duplicate their web counterparts.
+
+**What's left, in order:**
+1. Convert the remaining pure primitives in `components/ui/`. The radix-backed
+   ones (`popover`, `select`, `tabs`, `tooltip`, `switch`, plus
+   `date-time-input` and `CalendarView`) keep a `.web.tsx`. `dialog`, `label`
+   and `field` are done; `field` needed no `.web.tsx` at all.
+2. ~~Icons.~~ **Done.** `components/ui/icons{,-base,.web}.tsx` wraps
+   `lucide-react` / `lucide-react-native` behind one module; all 36 call sites
+   import from it. Only add an icon in both files, and never import lucide
+   directly — `client/test/icons.test.ts` enforces both.
+3. Fold `components/native/`'s six components into the shared set. Four of the
+   six were blocked on step 1, not on each other:
+
+   | native | web counterpart | state |
+   |---|---|---|
+   | `form-modal.tsx` | `ui/form-dialog.tsx` | unblocked — `dialog` is converted |
+   | `confirm.ts` | `ui/confirm-dialog.tsx` | unblocked, but the shapes differ: one is an imperative `Alert.alert`, the other a rendered component. Unifying means a `useConfirm()` provider mounted in `(app)/_layout.tsx` |
+   | `field.tsx` | `ui/form.tsx` `InputField` + `ui/field.tsx` | unblocked — `label` and `field` are converted |
+   | `row-action.tsx` | `Button variant="outline"` | unblocked, wants a destructive-outline variant |
+   | `list-screen.tsx` | `ui/page.tsx` + `CardGrid` | unblocked, but a design call — `FlatList` vs. the web grid |
+   | `activity-type-picker.tsx` | the web filter chips | unblocked; it owns its own query, so it moves to `components/domain/activity-type/` |
+4. Convert the native routes one at a time, deleting the `*Native` operations as
+   each web screen starts serving both platforms.
+5. **Extract fragments out of DOM components.** Native screens import e.g.
+   `TODO_LIST_FRAGMENT` from `TodoItem`, which pulls the whole DOM tree into the
+   native bundle (currently 7.8MB).
+6. Fix the `habits` / `projects` route shadowing last.
+
+**Watch out for:** `View` is `display: flex; flex-direction: column` where a
+`<div>` was `display: block`, so converting a container can move things on web.
+TypeScript resolves the plain `.tsx`, so a `.web.tsx` that has drifted from its
+shared contract still compiles. `client/test/platform-pairs.test.ts` catches a
+missing *export*; the bundle is the only check on the shapes behind them, so run
+`npx expo export` for both platforms after touching a pair.
+
+**Acceptance:** One screen file per route, one component set, no `*Native`
+operations; `npx expo export` succeeds for both `web` and `android`.

@@ -6,17 +6,24 @@ import {
 } from '@/components/domain/CompletionDialog';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+  Check,
+  Pencil,
+  Trash2,
+  TriangleAlert,
+  Undo2,
+} from '@/components/ui/icons';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
+import { useToast } from '@/components/ui/toast';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
-import { priorityLabel } from '@/lib/utils';
+import { errorMessage, priorityLabel } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Link } from 'expo-router';
-import { AlertTriangle, Check, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 
 // Colocated here so /todo-lists doesn't depend on a deleted parent list component.
@@ -75,6 +82,7 @@ type TodoItemProps = {
 };
 
 export function TodoItem({ todo, onEdit }: TodoItemProps) {
+  const toast = useToast();
   const isCompleted = todo.completedAt !== null;
   const [completionTarget, setCompletionTarget] =
     useState<CompletionDialogTarget | null>(null);
@@ -100,7 +108,9 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
   });
 
   function handleSaveLength(estimatedLength: number) {
-    updateTodo({ variables: { input: { id: todo.id, estimatedLength } } });
+    updateTodo({
+      variables: { input: { id: todo.id, estimatedLength } },
+    }).catch((err) => toast(errorMessage(err, 'Could not save the length')));
   }
 
   return (
@@ -113,7 +123,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
         <Button
           size="icon"
           variant="ghost"
-          onClick={() =>
+          onPress={() =>
             setCompletionTarget({
               kind: 'todo',
               id: todo.id,
@@ -132,7 +142,11 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
               size="icon"
               variant="ghost"
               disabled={uncompleting}
-              onClick={() => uncompleteTodo({ variables: { id: todo.id } })}
+              onPress={() =>
+                uncompleteTodo({ variables: { id: todo.id } }).catch((err) =>
+                  toast(errorMessage(err, 'Could not reopen this todo')),
+                )
+              }
               aria-label={`Mark ${todo.title} as incomplete`}
               className="h-6 w-6 shrink-0 text-muted-foreground hover:text-amber-600"
             >
@@ -171,7 +185,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
                   href="/time-blocks"
                   className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
                 >
-                  <AlertTriangle className="h-3 w-3" />
+                  <TriangleAlert className="h-3 w-3" />
                   Unschedulable
                 </Link>
               </TooltipTrigger>
@@ -187,7 +201,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
       <Button
         size="icon"
         variant="ghost"
-        onClick={() => onEdit(todo)}
+        onPress={() => onEdit(todo)}
         aria-label={`Edit ${todo.title}`}
         className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
       >
@@ -197,7 +211,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
       <Button
         size="icon"
         variant="ghost"
-        onClick={() => setDeleteOpen(true)}
+        onPress={() => setDeleteOpen(true)}
         aria-label={`Delete ${todo.title}`}
         className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
       >
@@ -214,9 +228,11 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
         confirmLabel="Delete"
         loading={deleting}
         onConfirm={() =>
-          deleteTodo({ variables: { id: todo.id } }).then(() =>
-            setDeleteOpen(false),
-          )
+          deleteTodo({ variables: { id: todo.id } })
+            .then(() => setDeleteOpen(false))
+            .catch((err) =>
+              toast(errorMessage(err, 'Could not delete this todo')),
+            )
         }
       />
 

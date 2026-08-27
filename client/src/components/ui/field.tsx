@@ -1,9 +1,31 @@
+/**
+ * Field chrome — the label/description/error furniture around a control.
+ *
+ * Shared, with no `.web.tsx`: none of it does anything a `<div>` did that a
+ * `View` cannot. The one thing lost in the conversion is the
+ * `group-data-[disabled=true]/field:` variant `FieldLabel` used to carry —
+ * `data-*` attributes and group variants are DOM-only, and nothing set that
+ * attribute anyway.
+ */
 import { Label } from '@/components/ui/label';
+import type { LabelProps } from '@/components/ui/label-base';
 import { cn } from '@/lib/utils';
 import { type VariantProps, cva } from 'class-variance-authority';
-import type * as React from 'react';
+import type { ReactNode } from 'react';
+import { Text, View } from 'react-native';
 
-const fieldVariants = cva('group/field flex w-full gap-2', {
+type SectionProps = {
+  /**
+   * `ui/form.tsx` wires `aria-describedby` from the control to the description
+   * and the error, so both need to carry one. React Native takes `id` as a
+   * cross-platform prop and react-native-web renders it as the DOM attribute.
+   */
+  id?: string | undefined;
+  className?: string | undefined;
+  children?: ReactNode;
+};
+
+const fieldVariants = cva('w-full gap-2', {
   variants: {
     orientation: {
       vertical: 'flex-col',
@@ -16,68 +38,46 @@ const fieldVariants = cva('group/field flex w-full gap-2', {
 function Field({
   className,
   orientation = 'vertical',
-  ...props
-}: React.ComponentProps<'div'> & VariantProps<typeof fieldVariants>) {
-  return (
-    <div
-      role="group"
-      data-slot="field"
-      data-orientation={orientation}
-      className={cn(fieldVariants({ orientation }), className)}
-      {...props}
-    />
-  );
-}
-
-function FieldLabel({
-  className,
-  ...props
-}: React.ComponentProps<typeof Label>) {
-  return (
-    <Label
-      data-slot="field-label"
-      className={cn('group-data-[disabled=true]/field:opacity-50', className)}
-      {...props}
-    />
-  );
-}
-
-function FieldDescription({ className, ...props }: React.ComponentProps<'p'>) {
-  return (
-    <p
-      data-slot="field-description"
-      className={cn('text-muted-foreground text-sm', className)}
-      {...props}
-    />
-  );
-}
-
-function FieldError({
-  className,
   children,
-  ...props
-}: React.ComponentProps<'div'>) {
-  if (!children) return null;
+}: SectionProps & VariantProps<typeof fieldVariants>) {
   return (
-    <div
-      role="alert"
-      data-slot="field-error"
-      className={cn('text-destructive text-sm font-medium', className)}
-      {...props}
+    <View
+      // biome-ignore lint/a11y/useSemanticElements: this is not a DOM element — a `<fieldset>` has no native counterpart
+      role="group"
+      className={cn(fieldVariants({ orientation }), className)}
     >
       {children}
-    </div>
+    </View>
   );
 }
 
-function FieldGroup({ className, ...props }: React.ComponentProps<'div'>) {
+function FieldLabel({ className, ...props }: LabelProps) {
+  return <Label className={className} {...props} />;
+}
+
+function FieldDescription({ id, className, children }: SectionProps) {
   return (
-    <div
-      data-slot="field-group"
-      className={cn('flex flex-col gap-4', className)}
-      {...props}
-    />
+    <Text id={id} className={cn('text-muted-foreground text-sm', className)}>
+      {children}
+    </Text>
   );
+}
+
+function FieldError({ id, className, children }: SectionProps) {
+  if (!children) return null;
+  return (
+    <Text
+      id={id}
+      role="alert"
+      className={cn('text-destructive text-sm font-medium', className)}
+    >
+      {children}
+    </Text>
+  );
+}
+
+function FieldGroup({ className, children }: SectionProps) {
+  return <View className={cn('flex-col gap-4', className)}>{children}</View>;
 }
 
 export { Field, FieldLabel, FieldDescription, FieldError, FieldGroup };

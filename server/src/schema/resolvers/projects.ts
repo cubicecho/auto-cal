@@ -1,4 +1,4 @@
-import type { Project, ProjectNote, TodoList } from '@auto-cal/db';
+import type { ProjectNote, TodoList } from '@auto-cal/db';
 import {
   activityTypes,
   projectNotes,
@@ -6,7 +6,7 @@ import {
   todoLists,
 } from '@auto-cal/db/schema';
 import { and, eq } from 'drizzle-orm';
-import { requireOwner, requireUser } from '../../errors.ts';
+import { badUserInput, requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import {
   CreateProjectInput,
@@ -15,35 +15,11 @@ import {
   UpdateProjectInput,
   UpdateProjectNoteInput,
 } from '../validators.ts';
+import { loadOwned } from './load.ts';
 import { publishDataChanged, publishTodoListEvent } from './subscriptions.ts';
-import type { FieldMap, MutationMap, QueryMap } from './types.ts';
+import type { FieldMap, MutationMap } from './types.ts';
 
 const DEFAULT_ACTIVITY_COLOR = '#6366f1';
-
-export const projectQueries: QueryMap<'myProjects' | 'myProject'> = {
-  myProjects: async (_parent, args, context) => {
-    const userId = requireUser(context);
-    const rows = await context.db.query.projects.findMany({
-      where: { userId: userId },
-      orderBy: { createdAt: 'desc' },
-    });
-    if (args.includeArchived) return rows;
-    return rows.filter((p: Project) => p.status !== 'archived');
-  },
-
-  myProject: async (_parent, args, context) => {
-    const userId = requireUser(context);
-    const project = requireOwner(
-      await context.db.query.projects.findFirst({
-        where: { id: args.id },
-      }),
-      'Project',
-      args.id,
-      userId,
-    );
-    return project;
-  },
-};
 
 export const projectMutations: MutationMap<
   | 'myCreateProject'
@@ -63,11 +39,9 @@ export const projectMutations: MutationMap<
     // grouped with their parent).
     let color = input.color ?? DEFAULT_ACTIVITY_COLOR;
     if (input.parentActivityTypeId) {
-      const parent = requireOwner(
-        await context.db.query.activityTypes.findFirst({
-          where: { id: input.parentActivityTypeId },
-        }),
-        'ActivityType',
+      const parent = await loadOwned(
+        context,
+        'activityTypes',
         input.parentActivityTypeId,
         userId,
       );
@@ -130,14 +104,7 @@ export const projectMutations: MutationMap<
   myUpdateProject: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateProjectInput.parse(args.input);
-    requireOwner(
-      await context.db.query.projects.findFirst({
-        where: { id: input.id },
-      }),
-      'Project',
-      input.id,
-      userId,
-    );
+    await loadOwned(context, 'projects', input.id, userId);
 
     const [updated] = await context.db
       .update(projects)
@@ -155,14 +122,7 @@ export const projectMutations: MutationMap<
 
   myArchiveProject: async (_parent, args, context) => {
     const userId = requireUser(context);
-    requireOwner(
-      await context.db.query.projects.findFirst({
-        where: { id: args.id },
-      }),
-      'Project',
-      args.id,
-      userId,
-    );
+    await loadOwned(context, 'projects', args.id, userId);
 
     const [updated] = await context.db
       .update(projects)
@@ -178,14 +138,7 @@ export const projectMutations: MutationMap<
   myCreateProjectNote: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = CreateProjectNoteInput.parse(args.input);
-    requireOwner(
-      await context.db.query.projects.findFirst({
-        where: { id: input.projectId },
-      }),
-      'Project',
-      input.projectId,
-      userId,
-    );
+    await loadOwned(context, 'projects', input.projectId, userId);
 
     // Append to the end of the note list.
     const siblings = await context.db.query.projectNotes.findMany({
@@ -200,7 +153,7 @@ export const projectMutations: MutationMap<
     const [note] = await context.db
       .insert(projectNotes)
       .values({
-        userId: userId,
+        userId,
         projectId: input.projectId,
         title: input.title,
         content: input.content,
@@ -215,14 +168,7 @@ export const projectMutations: MutationMap<
   myUpdateProjectNote: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = UpdateProjectNoteInput.parse(args.input);
-    const existing = requireOwner(
-      await context.db.query.projectNotes.findFirst({
-        where: { id: input.id },
-      }),
-      'ProjectNote',
-      input.id,
-      userId,
-    );
+    const existing = await loadOwned(context, 'projectNotes', input.id, userId);
 
     const [updated] = await context.db
       .update(projectNotes)
@@ -241,14 +187,7 @@ export const projectMutations: MutationMap<
   myReorderProjectNotes: async (_parent, args, context) => {
     const userId = requireUser(context);
     const input = ReorderProjectNotesInput.parse(args.input);
-    requireOwner(
-      await context.db.query.projects.findFirst({
-        where: { id: input.projectId },
-      }),
-      'Project',
-      input.projectId,
-      userId,
-    );
+    await loadOwned(context, 'projects', input.projectId, userId);
 
     // Every id must belong to this project — reject a mismatched set outright.
     const existing = await context.db.query.projectNotes.findMany({
@@ -259,7 +198,7 @@ export const projectMutations: MutationMap<
       input.noteIds.length !== existingIds.size ||
       !input.noteIds.every((id) => existingIds.has(id))
     ) {
-      throw new Error('noteIds must list exactly the notes in this project');
+      throw badUserInput('noteIds must list exactly the notes in this project');
     }
 
     await context.db.transaction(async (tx: typeof context.db) => {
@@ -282,14 +221,7 @@ export const projectMutations: MutationMap<
 
   myDeleteProjectNote: async (_parent, args, context) => {
     const userId = requireUser(context);
-    const existing = requireOwner(
-      await context.db.query.projectNotes.findFirst({
-        where: { id: args.id },
-      }),
-      'ProjectNote',
-      args.id,
-      userId,
-    );
+    const existing = await loadOwned(context, 'projectNotes', args.id, userId);
     await context.db
       .delete(projectNotes)
       .where(

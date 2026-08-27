@@ -24,8 +24,11 @@ export default function LoginPage() {
     },
   });
 
-  function handleSubmit(e: SubmitEvent) {
-    e.preventDefault();
+  // Takes an optional event because two things submit this form: the DOM
+  // submit event (Enter in the field) and the Button's onPress, which is a
+  // Pressable and raises no submit event of its own.
+  function handleSubmit(e?: SubmitEvent) {
+    e?.preventDefault();
     requestLink({ variables: { email } });
   }
 
@@ -116,7 +119,7 @@ function LoginForm({
   loading: boolean;
   error: Error | undefined;
   onEmailChange: (email: string) => void;
-  onSubmit: (e: SubmitEvent) => void;
+  onSubmit: (e?: SubmitEvent) => void;
 }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
@@ -139,7 +142,7 @@ function LoginForm({
               {error.message.replace('Unexpected error value: ', '')}
             </p>
           )}
-          <Button type="submit" disabled={loading}>
+          <Button disabled={loading} onPress={() => onSubmit()}>
             {loading ? 'Sending…' : 'Send magic link'}
           </Button>
         </form>
