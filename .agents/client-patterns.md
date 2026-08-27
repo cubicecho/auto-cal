@@ -29,13 +29,15 @@ Custom (the rest — keep tagged as such): `color-bar` `color-dot`
 - `inline-length-edit` — quick-edit duration chip used on list items
 - `route-error` — what the layouts' `ErrorBoundary` exports render; has a
   `.native.tsx` sibling
+- `toast` — `ToastProvider` + `useToast`, for failures with nowhere else to go
 
 ## Error Handling Conventions
 
 - **Form validation errors** → inline, beneath the relevant field
-- **Mutation errors** → inline too, at the point of action: `FormDialogFooter`'s
-  `error` prop in a dialog, or the card itself elsewhere. See
-  [Mutation Errors](#mutation-errors) — there is no toast.
+- **Mutation errors** → at the point of action where there is one:
+  `FormDialogFooter`'s `error` prop in a dialog, or the card itself elsewhere;
+  a toast when the control that failed has no room for a message. See
+  [Mutation Errors](#mutation-errors).
 - **Route/render crashes** → the named `ErrorBoundary` exported from
   `app/_layout.tsx` and `app/(app)/_layout.tsx`, rendering `<RouteError>`
 
@@ -137,6 +139,29 @@ Completion sets `onboarding_done = '1'` via `storage`. Re-runnable from Settings
 with `?force=true`. The guard in `app/(app)/_layout.tsx` handles the redirect —
 do not replicate this logic elsewhere.
 
+All four steps are the same shape — add something, see what you have added, move
+on — so the chrome lives in `components/domain/onboarding/OnboardingStep.tsx`
+and only the form differs:
+
+```tsx
+<OnboardingStep
+  title="Build habits"
+  description="…"
+  onBack={onBack}          // omitted on step 1
+  onSkip={onSkip}          // only the optional steps
+  onNext={onNext}
+  nextLabel="Finish setup" // step 4; pair with isFinal
+  isFinal                  // leading check instead of a trailing arrow
+  nextDisabled={…}         // the required steps hold until something exists
+>
+```
+
+`CreatedList` renders the "Created (n)" block (nothing at zero) as bordered rows
+or, with `layout="chips"`, wrapping pills; `CreatedRow` is one row of
+dot / title / detail / right-aligned meta. The step's form ends with
+`<form.SubmitButton icon={<Plus …/>} createLabel="Add habit" savingLabel="Adding…" />`
+rather than a hand-rolled `form.Subscribe`.
+
 ## Routes
 
 File-based routes under `client/app/`. `(app)` is a route group — it does not
@@ -235,6 +260,17 @@ const [createTodo] = useMutation(CREATE_TODO, {
 });
 ```
 
+**Filter in the query, not in JS.** A detail route asks for the one row it
+needs — `myHabits(where: { id: { eq: $id } }, limit: 1)` — rather than fetching
+every habit and `.find()`ing. The scope is AND-ed server-side, so a foreign id
+comes back as `[]`, not an error.
+
+Where the id only becomes known once a parent query resolves, take the second
+round trip (`skip: !listId`) instead of selecting the relation. `invalidate`
+evicts `ROOT_QUERY` fields, and a relation field such as `TodoList.todos` has no
+entry there — creating a todo would never show up. `projects/[projectId].tsx`
+carries the worked example.
+
 ## Fragment Colocation
 
 ```typescript
@@ -302,12 +338,36 @@ resets both.
 
 ## Mutation Errors
 
-There is no toast. A rejected mutation surfaces where the user triggered it:
+A rejected mutation surfaces where the user triggered it, and falls back to a
+toast when that place is a bare icon:
 
 - **In a dialog** — pass `error` to `FormDialogFooter`, which renders it above the
   buttons. Field validation stays inline beneath its field; this slot is for what
   only the server knows, such as a delete the database refuses.
 - **In a card** — render the message in the card itself (see `TimeBlockItem`).
+- **Everywhere else** — `useToast()`. The completion checkbox, the inline length
+  editor and drag-to-reschedule have no space of their own, and the optimistic
+  ones are worse than silent: the UI rolls back to where it started, which is
+  indistinguishable from the click never registering.
+
+```tsx
+const toast = useToast();
+// A mutation with its own onError:
+const [pinTodo] = useMutation(PIN_TODO, {
+  onError: (err) => toast(err.message || 'Could not move this todo'),
+});
+// A bare call site:
+updateTodo({ variables }).catch((err) =>
+  toast(errorMessage(err, 'Could not save the length')),
+);
+```
+
+`toast(message, tone?)` takes `'error'` (the default, 6s) or `'success'` (3s).
+`ToastProvider` is mounted once in `app/_layout.tsx`, outside `AuthGuard` so a
+message survives the redirect to `/auth/login`; `useToast` throws without it,
+because a toast that never appears is the bug the module exists to fix. It is
+built on react-native primitives with nativewind classes, so one component
+serves web and native — only the viewport's `position` branches on `Platform`.
 
 `errorMessage(err, fallback)` in `lib/utils.ts` pulls the server's message out of
 the Apollo error ("Cannot delete a list that still contains todos") and falls back

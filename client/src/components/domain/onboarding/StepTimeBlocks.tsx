@@ -5,23 +5,19 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
-import { Button } from '@/components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { ColorDot } from '@/components/ui/color-dot';
+  CreatedList,
+  CreatedRow,
+  OnboardingStep,
+} from '@/components/domain/onboarding/OnboardingStep';
+import { Button } from '@/components/ui/button';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { DAY_NAMES, WEEKDAYS, WEEKEND } from '@/lib/form-constants';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { z } from 'zod';
 
 const GET_TIME_BLOCKS = graphql(`
@@ -105,159 +101,123 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Set up your weekly time blocks</CardTitle>
-        <CardDescription>
-          Time blocks are recurring slots in your week where the scheduler
-          places todos and habits. Add one for each regular commitment.
-        </CardDescription>
-      </CardHeader>
+    <OnboardingStep
+      title="Set up your weekly time blocks"
+      description="Time blocks are recurring slots in your week where the scheduler places todos and habits. Add one for each regular commitment."
+      onBack={onBack}
+      onNext={onNext}
+      nextDisabled={timeBlocks.length === 0}
+    >
+      <form.AppForm>
+        <Form className="space-y-4">
+          {/* Activity type */}
+          <form.AppField name="activityTypeId">
+            {(field) => (
+              <FieldWrapper
+                label="Activity type"
+                control={
+                  <ActivityTypeSelect
+                    value={field.state.value || undefined}
+                    onValueChange={(v) => field.handleChange(v ?? '')}
+                    onBlur={field.handleBlur}
+                  />
+                }
+              />
+            )}
+          </form.AppField>
 
-      <CardContent className="space-y-6">
-        <form.AppForm>
-          <Form className="space-y-4">
-            {/* Activity type */}
-            <form.AppField name="activityTypeId">
-              {(field) => (
-                <FieldWrapper
-                  label="Activity type"
-                  control={
-                    <ActivityTypeSelect
-                      value={field.state.value || undefined}
-                      onValueChange={(v) => field.handleChange(v ?? '')}
-                      onBlur={field.handleBlur}
-                    />
-                  }
-                />
-              )}
-            </form.AppField>
-
-            {/* Days of week */}
-            <form.AppField name="daysOfWeek">
-              {(field) => (
-                <FieldWrapper
-                  label="Days"
-                  control={
-                    <div className="space-y-2">
-                      <div className="flex gap-1">
-                        {DAY_NAMES.map((name, i) => {
-                          const selected = field.state.value.includes(i);
-                          return (
-                            <button
-                              key={name}
-                              type="button"
-                              onClick={() =>
-                                field.handleChange(
-                                  selected
-                                    ? field.state.value.filter((d) => d !== i)
-                                    : [...field.state.value, i].sort(
-                                        (a, b) => a - b,
-                                      ),
-                                )
-                              }
-                              className={cn(
-                                'flex-1 rounded py-1.5 text-xs font-medium transition-colors border',
+          {/* Days of week */}
+          <form.AppField name="daysOfWeek">
+            {(field) => (
+              <FieldWrapper
+                label="Days"
+                control={
+                  <div className="space-y-2">
+                    <div className="flex gap-1">
+                      {DAY_NAMES.map((name, i) => {
+                        const selected = field.state.value.includes(i);
+                        return (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() =>
+                              field.handleChange(
                                 selected
-                                  ? 'bg-primary text-primary-foreground border-primary'
-                                  : 'bg-background text-muted-foreground border-input hover:border-foreground',
-                              )}
-                            >
-                              {name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => field.handleChange([...WEEKDAYS])}
-                        >
-                          Weekdays
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => field.handleChange([...WEEKEND])}
-                        >
-                          Weekend
-                        </Button>
-                      </div>
+                                  ? field.state.value.filter((d) => d !== i)
+                                  : [...field.state.value, i].sort(
+                                      (a, b) => a - b,
+                                    ),
+                              )
+                            }
+                            className={cn(
+                              'flex-1 rounded py-1.5 text-xs font-medium transition-colors border',
+                              selected
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background text-muted-foreground border-input hover:border-foreground',
+                            )}
+                          >
+                            {name}
+                          </button>
+                        );
+                      })}
                     </div>
-                  }
-                />
-              )}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => field.handleChange([...WEEKDAYS])}
+                      >
+                        Weekdays
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => field.handleChange([...WEEKEND])}
+                      >
+                        Weekend
+                      </Button>
+                    </div>
+                  </div>
+                }
+              />
+            )}
+          </form.AppField>
+
+          {/* Start / End time */}
+          <div className="grid grid-cols-2 gap-4">
+            <form.AppField name="startTime">
+              {(field) => <field.InputField label="Start time" type="time" />}
             </form.AppField>
 
-            {/* Start / End time */}
-            <div className="grid grid-cols-2 gap-4">
-              <form.AppField name="startTime">
-                {(field) => <field.InputField label="Start time" type="time" />}
-              </form.AppField>
-
-              <form.AppField name="endTime">
-                {(field) => <field.InputField label="End time" type="time" />}
-              </form.AppField>
-            </div>
-
-            <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting]}>
-              {([canSubmit, isSubmitting]) => (
-                <Button type="submit" disabled={!canSubmit || !!isSubmitting}>
-                  <Plus className="mr-1 h-4 w-4" />
-                  {isSubmitting ? 'Adding…' : 'Add time block'}
-                </Button>
-              )}
-            </form.Subscribe>
-          </Form>
-        </form.AppForm>
-
-        {/* Created list */}
-        {timeBlocks.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">
-              Created ({timeBlocks.length})
-            </p>
-            <div className="divide-y rounded-md border">
-              {timeBlocks.map((tb) => (
-                <div
-                  key={tb.id}
-                  className="flex items-center gap-3 px-3 py-2 text-sm"
-                >
-                  {tb.activityType && (
-                    <ColorDot color={tb.activityType.color} size="sm" />
-                  )}
-                  <span className="font-medium">
-                    {tb.activityType?.name ?? 'No type'}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {[...tb.daysOfWeek]
-                      .sort((a, b) => a - b)
-                      .map((d) => DAY_NAMES[d])
-                      .join(', ')}
-                  </span>
-                  <span className="ml-auto text-muted-foreground">
-                    {tb.startTime} – {tb.endTime}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <form.AppField name="endTime">
+              {(field) => <field.InputField label="End time" type="time" />}
+            </form.AppField>
           </div>
-        )}
-      </CardContent>
 
-      <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back
-        </Button>
-        <Button onClick={onNext} disabled={timeBlocks.length === 0}>
-          Next
-          <ArrowRight className="ml-1 h-4 w-4" />
-        </Button>
-      </CardFooter>
-    </Card>
+          <form.SubmitButton
+            icon={<Plus className="mr-1 h-4 w-4" />}
+            createLabel="Add time block"
+            savingLabel="Adding…"
+          />
+        </Form>
+      </form.AppForm>
+
+      <CreatedList count={timeBlocks.length}>
+        {timeBlocks.map((tb) => (
+          <CreatedRow
+            key={tb.id}
+            activityType={tb.activityType}
+            title={tb.activityType?.name ?? 'No type'}
+            detail={[...tb.daysOfWeek]
+              .sort((a, b) => a - b)
+              .map((d) => DAY_NAMES[d])
+              .join(', ')}
+            meta={`${tb.startTime} – ${tb.endTime}`}
+          />
+        ))}
+      </CreatedList>
+    </OnboardingStep>
   );
 }

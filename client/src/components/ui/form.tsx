@@ -257,6 +257,8 @@ type SubmitButtonProps = {
   createLabel?: string;
   editLabel?: string;
   savingLabel?: string;
+  /** Leading glyph, e.g. `<Plus className="mr-1 h-4 w-4" />`. */
+  icon?: React.ReactNode;
 } & Omit<React.ComponentProps<typeof Button>, 'type' | 'disabled' | 'children'>;
 
 // Standardizes the submit control across every form dialog: reads canSubmit /
@@ -266,6 +268,7 @@ function SubmitButton({
   createLabel = 'Create',
   editLabel = 'Save changes',
   savingLabel = 'Saving…',
+  icon,
   ...props
 }: SubmitButtonProps) {
   const form = useFormContext();
@@ -274,6 +277,7 @@ function SubmitButton({
 
   return (
     <Button type="submit" disabled={!canSubmit || isSubmitting} {...props}>
+      {icon}
       {isSubmitting ? savingLabel : isEdit ? editLabel : createLabel}
     </Button>
   );
