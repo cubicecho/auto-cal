@@ -11,6 +11,7 @@ import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
+import { Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
@@ -18,7 +19,6 @@ import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { DEFAULT_ACTIVITY_COLOR } from '@/lib/form-constants';
 import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
-import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { z } from 'zod';
 

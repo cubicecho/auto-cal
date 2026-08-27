@@ -10,12 +10,12 @@ import {
 } from '@/components/domain/onboarding/OnboardingStep';
 import { ColorDot } from '@/components/ui/color-dot';
 import { FieldWrapper, Form } from '@/components/ui/form';
+import { Plus } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { DEFAULT_ACTIVITY_COLOR } from '@/lib/form-constants';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { Plus } from 'lucide-react';
 import { z } from 'zod';
 
 const GET_MY_ACTIVITY_TYPES = graphql(`

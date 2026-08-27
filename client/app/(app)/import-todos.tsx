@@ -9,6 +9,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ColorDot } from '@/components/ui/color-dot';
+import {
+  ArrowLeft,
+  CircleCheck,
+  ListChecks,
+  TriangleAlert,
+  Upload,
+} from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Page } from '@/components/ui/page';
 import { DERIVED, invalidate } from '@/lib/cache';
@@ -21,13 +28,6 @@ import {
 import { cn } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { useRouter } from 'expo-router';
-import {
-  AlertTriangle,
-  ArrowLeft,
-  CheckCircle2,
-  ListChecks,
-  Upload,
-} from 'lucide-react';
 import { useRef, useState } from 'react';
 
 const CREATE_ACTIVITY_TYPE_IMPORT = graphql(`
@@ -262,7 +262,7 @@ export default function ImportTodosPage() {
 
           {error && (
             <p className="mt-4 flex items-center gap-1.5 text-sm text-destructive">
-              <AlertTriangle className="h-4 w-4" />
+              <TriangleAlert className="h-4 w-4" />
               {error}
             </p>
           )}
@@ -326,7 +326,7 @@ export default function ImportTodosPage() {
           />
           {error && (
             <p className="mt-4 flex items-center gap-1.5 text-sm text-destructive">
-              <AlertTriangle className="h-4 w-4" />
+              <TriangleAlert className="h-4 w-4" />
               {error}
             </p>
           )}
@@ -446,7 +446,7 @@ function ImportSuccess({
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-5 w-5 text-green-600" />
+          <CircleCheck className="h-5 w-5 text-green-600" />
           <CardTitle>Import complete</CardTitle>
         </div>
         <CardDescription>

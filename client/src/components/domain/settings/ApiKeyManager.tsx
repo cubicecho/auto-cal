@@ -7,9 +7,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Key, Plus } from '@/components/ui/icons';
 import { invalidate } from '@/lib/cache';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { Key, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { CreateApiKeyDialog } from './CreateApiKeyDialog';
 

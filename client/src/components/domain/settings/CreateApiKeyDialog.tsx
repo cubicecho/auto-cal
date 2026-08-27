@@ -8,10 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Check, Copy } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useMutation } from '@apollo/client/react';
-import { Check, Copy } from 'lucide-react';
 import { useState } from 'react';
 
 const MY_CREATE_API_KEY = graphql(`

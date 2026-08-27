@@ -6,6 +6,13 @@ import {
 } from '@/components/domain/CompletionDialog';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+  Check,
+  Pencil,
+  Trash2,
+  TriangleAlert,
+  Undo2,
+} from '@/components/ui/icons';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
 import { useToast } from '@/components/ui/toast';
 import {
@@ -17,7 +24,6 @@ import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { errorMessage, priorityLabel } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Link } from 'expo-router';
-import { AlertTriangle, Check, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 
 // Colocated here so /todo-lists doesn't depend on a deleted parent list component.
@@ -179,7 +185,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
                   href="/time-blocks"
                   className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
                 >
-                  <AlertTriangle className="h-3 w-3" />
+                  <TriangleAlert className="h-3 w-3" />
                   Unschedulable
                 </Link>
               </TooltipTrigger>

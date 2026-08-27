@@ -7,8 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Pencil } from '@/components/ui/icons';
 import { StatusChip } from '@/components/ui/status-chip';
-import { Pencil } from 'lucide-react';
 
 type Project = Project_ProjectListFragment;
 

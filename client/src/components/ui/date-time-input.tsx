@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Calendar as CalendarIcon } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import {
   Popover,
@@ -8,7 +9,6 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
 
 interface DateTimeInputProps {

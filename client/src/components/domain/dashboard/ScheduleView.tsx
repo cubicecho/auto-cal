@@ -3,6 +3,7 @@ import { graphql } from '@/__generated__/index.js';
 import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
+import { Check, Plus, TriangleAlert } from '@/components/ui/icons';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { useToast } from '@/components/ui/toast';
 import {
@@ -24,7 +25,6 @@ import {
   startOfMonth,
 } from 'date-fns';
 import { Link } from 'expo-router';
-import { AlertTriangle, Check, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 graphql(`
@@ -236,7 +236,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
             variant="overline"
             className="mb-1.5 flex items-center gap-1.5"
           >
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+            <TriangleAlert className="h-3.5 w-3.5 text-amber-500" />
             Unschedulable ({unscheduled.length})
           </SectionHeading>
           <div className="flex flex-col gap-1.5">
@@ -290,7 +290,7 @@ function ScheduleCard({
                     href="/time-blocks"
                     className="text-amber-500 hover:text-amber-600"
                   >
-                    <AlertTriangle className="h-4 w-4" />
+                    <TriangleAlert className="h-4 w-4" />
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent>{unschedulableReason(item)}</TooltipContent>

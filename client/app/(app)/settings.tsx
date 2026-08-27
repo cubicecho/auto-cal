@@ -7,10 +7,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Upload, WandSparkles } from '@/components/ui/icons';
 import { Page, PageHeader } from '@/components/ui/page';
 import { storage } from '@/storage';
 import { Link, useRouter } from 'expo-router';
-import { Upload, Wand2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <Button onPress={handleRunWizard}>
-            <Wand2 className="mr-2 h-4 w-4" />
+            <WandSparkles className="mr-2 h-4 w-4" />
             Run setup wizard
           </Button>
         </CardContent>

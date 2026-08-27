@@ -8,12 +8,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Pencil } from '@/components/ui/icons';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
 import { useToast } from '@/components/ui/toast';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
-import { Pencil } from 'lucide-react';
 
 const UPDATE_HABIT_LENGTH = graphql(`
   mutation UpdateHabitEstimatedLength($input: UpdateHabitArgs!) {

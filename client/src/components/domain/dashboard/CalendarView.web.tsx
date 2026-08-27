@@ -3,6 +3,7 @@ import type {
   TimeBlock_CalendarViewFragment,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
+import { Check, LoaderCircle } from '@/components/ui/icons';
 import { useToast } from '@/components/ui/toast';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { weekStart } from '@/lib/date';
@@ -17,7 +18,6 @@ import {
   startOfDay,
 } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
-import { Check, Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useMemo } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
@@ -275,7 +275,7 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
           onClick={handleClick}
         >
           {completing ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
+            <LoaderCircle className="h-3 w-3 animate-spin" />
           ) : (
             <Check className="h-3 w-3" />
           )}

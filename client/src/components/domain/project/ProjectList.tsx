@@ -1,10 +1,10 @@
 import type { Project_ProjectListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { FolderKanban, Plus } from '@/components/ui/icons';
 import { CardGrid, EmptyState, PageHeader } from '@/components/ui/page';
 import { Switch } from '@/components/ui/switch';
 import { useListSection } from '@/hooks/useListSection';
-import { FolderKanban, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { ProjectCard } from './ProjectCard';
 import { ProjectForm } from './ProjectForm';

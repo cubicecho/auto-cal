@@ -2,6 +2,13 @@ import type { ScheduledItem_ScheduleViewFragment } from '@/__generated__/graphql
 import { graphql } from '@/__generated__/index.js';
 import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  TriangleAlert,
+} from '@/components/ui/icons';
 import { Page, PageHeader } from '@/components/ui/page';
 import { useSyncTimezone } from '@/hooks/useSyncTimezone';
 import { DERIVED, invalidate } from '@/lib/cache';
@@ -10,13 +17,6 @@ import { priorityLabel } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { addDays, format, isToday, parseISO } from 'date-fns';
 import { Link } from 'expo-router';
-import {
-  AlertTriangle,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-} from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 // Reuses the ScheduledItem_ScheduleView fragment defined in ScheduleView.tsx.
@@ -218,7 +218,7 @@ export default function TodayPage() {
             href="/calendar"
             className="mt-3 flex items-center justify-center gap-1.5 text-xs text-amber-600 hover:text-amber-700 dark:text-amber-500"
           >
-            <AlertTriangle className="h-3.5 w-3.5" />
+            <TriangleAlert className="h-3.5 w-3.5" />
             {unscheduledCount} item{unscheduledCount === 1 ? '' : 's'} couldn’t
             be scheduled — open the calendar
           </Link>

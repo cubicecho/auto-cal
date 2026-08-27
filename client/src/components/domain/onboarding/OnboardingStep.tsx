@@ -16,7 +16,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ColorDot } from '@/components/ui/color-dot';
-import { ArrowLeft, ArrowRight, CheckCircle2, SkipForward } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CircleCheck,
+  SkipForward,
+} from '@/components/ui/icons';
 import type { ReactNode } from 'react';
 
 type OnboardingStepProps = {
@@ -73,7 +78,7 @@ export function OnboardingStep({
             </Button>
           ) : null}
           <Button onPress={onNext} disabled={nextDisabled}>
-            {isFinal ? <CheckCircle2 className="mr-1 h-4 w-4" /> : null}
+            {isFinal ? <CircleCheck className="mr-1 h-4 w-4" /> : null}
             {nextLabel}
             {isFinal ? null : <ArrowRight className="ml-1 h-4 w-4" />}
           </Button>

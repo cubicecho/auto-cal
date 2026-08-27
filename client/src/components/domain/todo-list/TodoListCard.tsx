@@ -14,11 +14,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { FolderKanban, ListX, Pencil, Plus } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { formatDuration } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
-import { FolderKanban, ListX, Pencil, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { TodoListForm } from './TodoListForm';
 

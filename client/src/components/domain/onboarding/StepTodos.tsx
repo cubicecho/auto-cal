@@ -10,6 +10,7 @@ import {
 } from '@/components/domain/onboarding/OnboardingStep';
 import { TodoListSelect } from '@/components/domain/todo-list/TodoListSelect';
 import { FieldWrapper, Form } from '@/components/ui/form';
+import { Plus } from '@/components/ui/icons';
 import {
   Select,
   SelectContent,
@@ -21,7 +22,6 @@ import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { PRIORITY_OPTIONS } from '@/lib/form-constants';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { Plus } from 'lucide-react';
 import { z } from 'zod';
 
 const GET_TODOS = graphql(`

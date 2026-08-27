@@ -19,6 +19,7 @@
  * in `ui/form.tsx` calls `form.handleSubmit()` on press instead; the `<form>`
  * element is still there on web, so Enter-to-submit is unaffected.
  */
+import { IconClassContext } from '@/components/ui/icons-base';
 import { cn } from '@/lib/utils';
 import { type VariantProps, cva } from 'class-variance-authority';
 import * as React from 'react';
@@ -97,13 +98,18 @@ const Button = React.forwardRef<
     )}
     {...props}
   >
-    {React.Children.map(children, (child) =>
-      typeof child === 'string' || typeof child === 'number' ? (
-        <Text className={buttonTextVariants({ variant })}>{child}</Text>
-      ) : (
-        child
-      ),
-    )}
+    {/* Icons inside a button take the variant's text colour. On web they
+        already inherit it, so `icons.web.tsx` ignores this; native has no
+        inheritance and this is where the colour comes from. */}
+    <IconClassContext.Provider value={buttonTextVariants({ variant })}>
+      {React.Children.map(children, (child) =>
+        typeof child === 'string' || typeof child === 'number' ? (
+          <Text className={buttonTextVariants({ variant })}>{child}</Text>
+        ) : (
+          child
+        ),
+      )}
+    </IconClassContext.Provider>
   </Pressable>
 ));
 Button.displayName = 'Button';

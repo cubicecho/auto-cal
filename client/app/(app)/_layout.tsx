@@ -1,3 +1,4 @@
+import { Moon, Settings, Sun } from '@/components/ui/icons';
 import { RouteError } from '@/components/ui/route-error';
 import { segmentedItemClass } from '@/components/ui/segmented';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -14,7 +15,6 @@ import {
   usePathname,
   useRouter,
 } from 'expo-router';
-import { Moon, Settings, Sun } from 'lucide-react';
 import { Platform } from 'react-native';
 
 /**

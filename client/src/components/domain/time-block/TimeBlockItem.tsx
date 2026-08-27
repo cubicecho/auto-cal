@@ -7,11 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Pencil, Trash2 } from '@/components/ui/icons';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { DAY_NAMES_LONG } from '@/lib/form-constants';
 import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
-import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 const DELETE_TIME_BLOCK = graphql(`

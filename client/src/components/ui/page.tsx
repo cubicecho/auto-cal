@@ -1,5 +1,5 @@
+import type { IconComponent } from '@/components/ui/icons-base';
 import { cn } from '@/lib/utils';
-import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 type PageProps = {
@@ -91,7 +91,7 @@ export function CardGrid({
 }
 
 type EmptyStateProps = {
-  icon: LucideIcon;
+  icon: IconComponent;
   title: string;
   description?: ReactNode;
   action?: ReactNode;

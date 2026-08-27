@@ -11,10 +11,10 @@ import {
   OnboardingStep,
 } from '@/components/domain/onboarding/OnboardingStep';
 import { FieldWrapper, Form } from '@/components/ui/form';
+import { Plus } from '@/components/ui/icons';
 import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { Plus } from 'lucide-react';
 import { z } from 'zod';
 
 const GET_HABITS = graphql(`

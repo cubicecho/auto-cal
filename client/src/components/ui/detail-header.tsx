@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { ArrowLeft, Pencil } from '@/components/ui/icons';
 import type { ReactNode } from 'react';
 
 // The outline "Edit" action shared by the detail views' header.

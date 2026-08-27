@@ -13,12 +13,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
+import { Check } from '@/components/ui/icons';
 import { useAppForm } from '@/hooks/form-hook';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { DURATION_OPTIONS, PRIORITY_OPTIONS } from '@/lib/form-constants';
 import { useMutation } from '@apollo/client/react';
-import { Check } from 'lucide-react';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────

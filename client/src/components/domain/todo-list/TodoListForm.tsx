@@ -12,13 +12,13 @@ import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTy
 import { Button } from '@/components/ui/button';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
+import { Trash2 } from '@/components/ui/icons';
 import { useAppForm } from '@/hooks/form-hook';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { DURATION_OPTIONS, PRIORITY_OPTIONS } from '@/lib/form-constants';
 import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
-import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { z } from 'zod';
 

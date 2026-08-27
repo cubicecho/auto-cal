@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
+import { CircleAlert } from '@/components/ui/icons';
 
 type RouteErrorProps = {
   error: unknown;
@@ -27,7 +27,7 @@ export function RouteError({ error, reset }: RouteErrorProps) {
   return (
     <div className="flex flex-col items-center gap-4 py-20 text-center">
       <div className="rounded-full bg-destructive/10 p-4">
-        <AlertCircle className="h-7 w-7 text-destructive" />
+        <CircleAlert className="h-7 w-7 text-destructive" />
       </div>
       <div className="max-w-sm">
         <p className="font-semibold">Failed to load</p>

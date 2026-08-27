@@ -2,13 +2,13 @@ import type { ProjectNote_EditorFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ChevronDown, ChevronUp, Plus, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import type { InputHandle } from '@/components/ui/input-base';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { appendToField, evictEntity } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
-import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { MarkdownPreview } from './MarkdownPreview';
 

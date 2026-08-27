@@ -4,10 +4,10 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { Download, ListTodo, Plus } from '@/components/ui/icons';
 import { CardGrid, EmptyState, PageHeader } from '@/components/ui/page';
 import { Switch } from '@/components/ui/switch';
 import { Link } from 'expo-router';
-import { Download, ListTodo, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { TodoListCard } from './TodoListCard';
 import { TodoListForm } from './TodoListForm';

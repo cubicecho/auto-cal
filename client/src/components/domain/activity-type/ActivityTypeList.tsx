@@ -8,9 +8,9 @@ type ActivityTypeStats =
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { ColorBar } from '@/components/ui/color-bar';
+import { Pencil, Plus, Tag } from '@/components/ui/icons';
 import { EmptyState, PageHeader } from '@/components/ui/page';
 import { useListSection } from '@/hooks/useListSection';
-import { Pencil, Plus, Tag } from 'lucide-react';
 import { ActivityTypeForm } from './ActivityTypeForm';
 
 // ─── GraphQL ────────────────────────────────────────────────────────────────

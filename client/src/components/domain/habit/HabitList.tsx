@@ -1,9 +1,9 @@
 import type { Habit_HabitListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { Plus, RefreshCw } from '@/components/ui/icons';
 import { EmptyState, PageHeader } from '@/components/ui/page';
 import { useListSection } from '@/hooks/useListSection';
-import { Plus, RefreshCw } from 'lucide-react';
 import { HabitForm } from './HabitForm';
 import { HabitItem } from './HabitItem';
 
