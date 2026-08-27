@@ -193,8 +193,8 @@ import { graphql } from '@/__generated__/index.js';
 import { useMutation, useQuery } from '@apollo/client';
 
 const MY_TODOS = graphql(`
-  query GetMyTodos($completed: Boolean) {
-    myTodos(completed: $completed) {
+  query GetMyTodos($where: TodoFilters) {
+    myTodos(where: $where) {
       id
       title
       priority
@@ -221,7 +221,11 @@ const CREATE_TODO = graphql(`
 `);
 
 // Usage
-const { data, loading } = useQuery(MY_TODOS, { variables: { completed: false } });
+// Most my* queries take the generated `where`/`orderBy` inputs — the server
+// AND-s the caller scope onto them. See graphql-patterns.md.
+const { data, loading } = useQuery(MY_TODOS, {
+  variables: { where: { completedAt: { isNull: true } } },
+});
 const [createTodo] = useMutation(CREATE_TODO, {
   update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
 });
