@@ -424,8 +424,8 @@ export const PUBLIC_MUTATIONS = new Set([
 ]);
 
 /**
- * Last pass over the schema: drop unscoped mutations and the `keyHash`
- * input surfaces, then garbage-collect whatever that leaves unreferenced.
+ * Last pass over the schema: drop unscoped mutations, then garbage-collect
+ * whatever that leaves unreferenced.
  *
  * **Unscoped root fields.** drizzle-graphql generates a `<table>`/`<table>Single`
  * query per table, none of which filter by the caller. They used to be blocked
@@ -437,21 +437,14 @@ export const PUBLIC_MUTATIONS = new Set([
  * its `my*` form or removes it; the check here is a backstop asserting that pass
  * and `extensionSDL` between them left nothing unscoped behind.
  *
- * **`keyHash`.** Deleting the output field (see `applyCustomResolvers`) stops
- * the hash being selected, but drizzle-graphql derives `ApiKeyFilters`,
- * `ApiKeyOrderBy` and — since v7 — `ApiKeyDistinctColumn` from the same column
- * list, and those are reachable through the live `User.apiKeys` relation. Left
- * in place they are an oracle: `where: { keyHash: { eq: "..." } }` confirms a
- * guess and `orderBy` binary-searches it. Today that only leaks the caller's
- * own hash, because every reachable `User` is the authenticated one — this
- * closes it before some future resolver makes an arbitrary `User` reachable.
+ * `keyHash` is no longer handled here: `exclude.columns` in build-config.ts
+ * keeps the column out of the object type and out of every input derived from
+ * the column list, so there is nothing left to strip after the fact.
  *
  * `mapSchema` rebuilds the schema, so this must run last; field resolvers
  * (generated relation resolvers included) are carried across intact.
  */
 function finalizeSchema(schema: GraphQLSchema): GraphQLSchema {
-  const isApiKeyInput = (typeName: string) => typeName.startsWith('ApiKey');
-
   const mapped = mapSchema(schema, {
     // Queries have no public exemption: `PUBLIC_MUTATIONS` is not consulted
     // here, so a query borrowing one of those names still fails the assertion.
@@ -467,10 +460,6 @@ function finalizeSchema(schema: GraphQLSchema): GraphQLSchema {
       fieldName.startsWith('my') || PUBLIC_MUTATIONS.has(fieldName)
         ? undefined
         : null,
-    [MapperKind.INPUT_OBJECT_FIELD]: (_field, fieldName, typeName) =>
-      fieldName === 'keyHash' && isApiKeyInput(typeName) ? null : undefined,
-    [MapperKind.ENUM_VALUE]: (_value, typeName, _schema, valueName) =>
-      valueName === 'keyHash' && isApiKeyInput(typeName) ? null : undefined,
   });
 
   // The removed root fields were the only reference to a chunk of the
@@ -558,15 +547,6 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   );
   attach(extended.getType('Project') as GraphQLObjectType, projectFields);
   attach(extended.getType('Todo') as GraphQLObjectType, todoFields);
-
-  // The token hash must never leave the server. myApiKeys/myCreateApiKey
-  // return raw DB rows, so the field itself has to go, not just its value.
-  // The matching input surfaces are stripped by `finalizeSchema` below —
-  // deleting the output field alone leaves `keyHash` filterable and orderable.
-  const apiKeyType = extended.getType('ApiKey') as GraphQLObjectType;
-  const apiKeyFields = apiKeyType.getFields();
-  // biome-ignore lint/performance/noDelete: assigning undefined would leave a dangling key that breaks printSchema; the key must be removed
-  delete apiKeyFields.keyHash;
 
   return finalizeSchema(extended);
 }

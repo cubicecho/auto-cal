@@ -36,6 +36,22 @@ export const buildSchemaConfig: BuildSchemaConfig = {
     delete: false,
   },
 
+  // The API key token hash must never leave the server. Excluding the column
+  // keeps it out of every surface derived from the column list at once — the
+  // `ApiKey` object type, `ApiKeyFilters`, `ApiKeyOrderBy` and
+  // `ApiKeyDistinctColumn` — rather than deleting the output field and then
+  // hunting the input types that still mention it. All four are reachable
+  // through the live `User.apiKeys` relation, and a filter or an ordering on
+  // the hash is an oracle even when the field itself cannot be selected:
+  // `where: { keyHash: { eq: "..." } }` confirms a guess and `orderBy` binary
+  // searches it.
+  //
+  // The server still reads and writes the column through Drizzle directly
+  // (auth.ts, ical-route.ts, myCreateApiKey); this is a GraphQL-surface rule.
+  exclude: {
+    columns: { apiKeys: ['keyHash'] },
+  },
+
   // Presentation order, declared once on the server instead of by every caller.
   //
   // These used to be `defaultOrderBy` entries in QUERY_SCOPE, applied by the
