@@ -467,28 +467,33 @@ every list component needs.
 
 ## Cross-Platform Primitives (in progress)
 
-`button.tsx`, `card.tsx`, `input.tsx` and `icons.tsx` have been converted to
-react-native primitives and now render on both platforms. The rest of
-`components/ui/` is still web-only. The conversion rules, which every further
+`button.tsx`, `card.tsx`, `input.tsx`, `icons.tsx` and `dialog.tsx` have been
+converted to react-native primitives and now render on both platforms. The rest
+of `components/ui/` is still web-only. The conversion rules, which every further
 primitive follows:
 
 **File naming inverts.** The old convention was *plain = web, `.native.tsx` =
 native*. A converted primitive is *plain = shared*, with a `.web.tsx` **only**
-where the web behaviour genuinely has no native equivalent. `input` is the one
-case so far: `type="time"`/`type="number"` with `min`/`max` are real DOM input
-behaviour `TextInput` cannot reproduce. Both files export the same `InputProps`,
-so call sites never branch.
+where the web behaviour genuinely has no native equivalent — `input`
+(`type="time"`/`type="number"` with `min`/`max` are real DOM input behaviour
+`TextInput` cannot reproduce), `icons`, and `dialog` (radix's focus trap, scroll
+lock and animations, none worth faking on a `Modal` that already owns the
+screen). Both halves export the same names, so call sites never branch.
 
 **The shared contract goes in a third module.** `input-base.ts` exists because
 Metro resolves `./input` to `input.web.tsx` on web — the web file importing the
 shared types from `./input` would import itself. Any `.tsx`/`.web.tsx` pair that
-needs shared types needs a `-base.ts` alongside them. `icons-base.ts` is the
-second instance.
+needs shared types needs a `-base.ts` alongside them; `icons-base.ts` and
+`dialog-base.ts` are the other two. Keep the contract narrower than the web
+library's own props: `dialog-base.ts` declares the four props the call sites
+actually pass rather than re-exporting radix's, which is what makes the pair
+comparable at all.
 
-**Only `input.tsx` is typechecked against call sites.** TypeScript resolves the
-plain `.tsx`, so `input.web.tsx` is only checked standalone. A drifted `.web.tsx`
-compiles cleanly and breaks at runtime — `npx expo export --platform web` is the
-check that catches it.
+**Only the plain `.tsx` is typechecked against call sites.** TypeScript resolves
+it and never looks at the platform sibling, so a drifted `.web.tsx` compiles
+cleanly and breaks at runtime. Two things catch that: `client/test/platform-pairs.test.ts`
+compares the exported *names* of every pair, and `npx expo export` — run it for
+**both** `web` and `android` — is the only check on the shapes behind them.
 
 | DOM | Cross-platform |
 |-----|----------------|
@@ -550,8 +555,22 @@ Icon *names* are the canonical lucide ones, not the deprecated aliases
 `CircleCheck` not `CheckCircle2`, `LoaderCircle` not `Loader2`, `WandSparkles`
 not `Wand2`) — the aliases are dropped upstream on majors.
 
-**Still to convert:** the eight radix-backed primitives (`dialog`, `popover`,
-`select`, `tabs`, `tooltip`, `switch`, plus `date-time-input` and
+### Dialog
+
+`dialog.web.tsx` is radix; `dialog.tsx` is a transparent `Modal` with a dimmed
+backdrop and a centred card. `Escape` becomes `onRequestClose` (the Android back
+button); `open === false` renders nothing on either platform, so a dialog's body
+unmounts between openings and the native sheets no longer need the
+render-conditionally trick.
+
+Two native details worth not re-deriving. The backdrop is a `Pressable` laid out
+*underneath* the card rather than wrapping it — `Pressable` has no
+`stopPropagation`, so nesting the card inside would close the dialog on every
+press. And `space-y-*`/`space-x-*` are child-combinator utilities nativewind
+does not implement; use `gap`.
+
+**Still to convert:** the remaining radix-backed primitives (`popover`,
+`select`, `tabs`, `tooltip`, `switch`, `label`, plus `date-time-input` and
 `CalendarView`) keep a `.web.tsx`. See `.agents/todo.md`.
 
 ## Shared Native Primitives
