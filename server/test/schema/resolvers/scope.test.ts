@@ -11,6 +11,10 @@
 
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
+  TABLE_SCOPE,
+  assertEveryTableScoped,
+} from '../../../src/schema/scope.ts';
+import {
   type TestDb,
   type TestSchema,
   buildTestSchema,
@@ -201,5 +205,25 @@ describe('root query scoping', () => {
   ])('rejects %s without a caller', async (selection) => {
     const result = await gql(testSchema, db, '', `query { ${selection} }`);
     expect(result.errors?.[0]?.extensions?.code).toBe('UNAUTHENTICATED');
+  });
+
+  // ─── every table carries a scope ───────────────────────────────────────────
+
+  // The scope is per *table*, so a table with no entry is unscoped on every
+  // path that reads it — including relation fields, which no root-field
+  // wrapper sees. build-config.ts runs this check over the real Drizzle schema
+  // at import time; this pins that it actually rejects a gap.
+  describe('assertEveryTableScoped', () => {
+    it('accepts a schema whose tables are all scoped', () => {
+      expect(() =>
+        assertEveryTableScoped(Object.keys(TABLE_SCOPE)),
+      ).not.toThrow();
+    });
+
+    it('names the tables that have no scope', () => {
+      expect(() =>
+        assertEveryTableScoped([...Object.keys(TABLE_SCOPE), 'invoices']),
+      ).toThrow(/invoices/);
+    });
   });
 });

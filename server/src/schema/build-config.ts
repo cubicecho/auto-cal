@@ -1,4 +1,16 @@
+import * as tables from '@auto-cal/db/schema';
 import type { BuildSchemaConfig } from '@vantreeseba/drizzle-graphql';
+import { is } from 'drizzle-orm';
+import { PgTable } from 'drizzle-orm/pg-core';
+import { TABLE_SCOPE, assertEveryTableScoped } from './scope.ts';
+
+// Fails the boot if a Drizzle table has no row scope, so adding one cannot
+// quietly produce a table the API serves unscoped.
+assertEveryTableScoped(
+  Object.entries(tables)
+    .filter(([, value]) => is(value, PgTable))
+    .map(([key]) => key),
+);
 
 // Shared config for every buildSchema call (runtime schema, schema generation,
 // tests) so the generated SDL is identical everywhere.
@@ -36,6 +48,13 @@ export const buildSchemaConfig: BuildSchemaConfig = {
     delete: false,
   },
 
+  // The tenant boundary. Held in scope.ts next to the query-exposure rules, so
+  // "who can see which rows" stays answerable from one file. The library ANDs
+  // each predicate on last, after the caller's `where`, and applies it to every
+  // path that reads the table — including relation fields, which no root-field
+  // wrapper can reach.
+  scope: TABLE_SCOPE,
+
   // The API key token hash must never leave the server. Excluding the column
   // keeps it out of every surface derived from the column list at once — the
   // `ApiKey` object type, `ApiKeyFilters`, `ApiKeyOrderBy` and
@@ -48,6 +67,11 @@ export const buildSchemaConfig: BuildSchemaConfig = {
   //
   // The server still reads and writes the column through Drizzle directly
   // (auth.ts, ical-route.ts, myCreateApiKey); this is a GraphQL-surface rule.
+  //
+  // This prints "excluded column 'apiKeys.keyHash' is NOT NULL with no default,
+  // so generated inserts for 'apiKeys' can never succeed" at build time. It does
+  // not apply here — `features.insert` is off, so there are no generated inserts
+  // — and there is no flag to silence it.
   exclude: {
     columns: { apiKeys: ['keyHash'] },
   },
