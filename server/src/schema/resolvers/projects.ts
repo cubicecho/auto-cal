@@ -1,4 +1,4 @@
-import type { Project, ProjectNote } from '@auto-cal/db';
+import type { Project, ProjectNote, TodoList } from '@auto-cal/db';
 import {
   activityTypes,
   projectNotes,
@@ -15,7 +15,7 @@ import {
   UpdateProjectInput,
   UpdateProjectNoteInput,
 } from '../validators.ts';
-import { publishDataChanged } from './subscriptions.ts';
+import { publishDataChanged, publishTodoListEvent } from './subscriptions.ts';
 import type { MutationMap, QueryMap } from './types.ts';
 
 const DEFAULT_ACTIVITY_COLOR = '#6366f1';
@@ -74,7 +74,7 @@ export const projectMutations: MutationMap<
       if (!input.color) color = parent.color;
     }
 
-    const project = await context.db.transaction(
+    const { project, list } = await context.db.transaction(
       async (tx: typeof context.db) => {
         const [activityType] = await tx
           .insert(activityTypes)
@@ -97,16 +97,21 @@ export const projectMutations: MutationMap<
           .returning();
         if (!created) throw new Error('Failed to create project');
 
+        let list: TodoList | undefined;
         if (input.createList) {
-          await tx.insert(todoLists).values({
-            userId,
-            name: input.name,
-            activityTypeId: activityType.id,
-            projectId: created.id,
-          });
+          [list] = await tx
+            .insert(todoLists)
+            .values({
+              userId,
+              name: input.name,
+              activityTypeId: activityType.id,
+              projectId: created.id,
+            })
+            .returning();
+          if (!list) throw new Error('Failed to create todo list');
         }
 
-        return created;
+        return { project: created, list };
       },
     );
 
@@ -115,6 +120,10 @@ export const projectMutations: MutationMap<
     // Creating a project also mints a backing activity type (and maybe a list).
     publishDataChanged(userId, 'project', [project.id]);
     publishDataChanged(userId, 'activityType', [project.activityTypeId]);
+    // The list is a real `todoLists` row, so it belongs on the typed stream the
+    // todo pages listen to — `dataChanged` has no `todoList` entity, and a
+    // project event tells those pages nothing.
+    if (list) publishTodoListEvent(userId, { type: 'created', entity: list });
     return project;
   },
 

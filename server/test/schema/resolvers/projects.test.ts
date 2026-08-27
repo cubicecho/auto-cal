@@ -1,4 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { pubsub } from '../../../src/pubsub.ts';
+import { TODO_LIST_EVENT } from '../../../src/schema/resolvers/subscriptions.ts';
 import {
   type TestDb,
   type TestSchema,
@@ -8,6 +10,13 @@ import {
   seedActivityType,
   seedUser,
 } from './test-helpers.ts';
+
+/** Shape `publishTodoListEvent` puts on the bus (the type itself is internal). */
+type TodoListEventPayload = {
+  type: string;
+  todoList: { id: string } | null;
+  deletedId: string | null;
+};
 
 describe('project resolvers', () => {
   let db: TestDb;
@@ -101,6 +110,78 @@ describe('project resolvers', () => {
       expect(project.list?.projectId).toBe(project.id);
       // The list points at the dedicated activity type, not the parent.
       expect(project.list?.activityTypeId).toBe(project.activityType.id);
+    });
+
+    it('announces the auto-created list on the todo-list stream', async () => {
+      const { id: userId } = await seedUser(db, 'proj-list-event@example.com');
+      const parent = await seedActivityType(db, userId, 'Work');
+
+      // The list is a real `todoLists` row, and the todo pages learn about
+      // lists from `myTodoListsUpdated` — not from the `project` data-changed
+      // signal. Without this publish the new list only shows up on reload.
+      const events: TodoListEventPayload[] = [];
+      const subId = await pubsub.subscribe(
+        TODO_LIST_EVENT(userId),
+        (event: TodoListEventPayload) => events.push(event),
+      );
+
+      try {
+        const result = await gql(
+          testSchema,
+          db,
+          userId,
+          `mutation($input: CreateProjectArgs!) {
+            myCreateProject(input: $input) { list { id } }
+          }`,
+          { input: { name: 'Announced', parentActivityTypeId: parent.id } },
+        );
+        expect(result.errors).toBeUndefined();
+        const listId = (
+          result.data?.myCreateProject as { list: { id: string } | null }
+        ).list?.id;
+
+        expect(events).toHaveLength(1);
+        expect(events[0]?.type).toBe('created');
+        expect(events[0]?.todoList?.id).toBe(listId);
+      } finally {
+        pubsub.unsubscribe(subId);
+      }
+    });
+
+    it('publishes no todo-list event when createList is false', async () => {
+      const { id: userId } = await seedUser(
+        db,
+        'proj-nolist-event@example.com',
+      );
+      const parent = await seedActivityType(db, userId, 'Work');
+
+      const events: TodoListEventPayload[] = [];
+      const subId = await pubsub.subscribe(
+        TODO_LIST_EVENT(userId),
+        (event: TodoListEventPayload) => events.push(event),
+      );
+
+      try {
+        const result = await gql(
+          testSchema,
+          db,
+          userId,
+          `mutation($input: CreateProjectArgs!) {
+            myCreateProject(input: $input) { id }
+          }`,
+          {
+            input: {
+              name: 'Quiet',
+              parentActivityTypeId: parent.id,
+              createList: false,
+            },
+          },
+        );
+        expect(result.errors).toBeUndefined();
+        expect(events).toEqual([]);
+      } finally {
+        pubsub.unsubscribe(subId);
+      }
     });
 
     it('skips list creation when createList is false', async () => {
