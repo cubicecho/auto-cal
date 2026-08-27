@@ -13,13 +13,7 @@ export type ScopedField = {
   /** Name the field is exposed under. Always `my`-prefixed. */
   as: string;
   scope: ScopeRule;
-  /** Applied when the caller passes no `orderBy`, in the generated input shape. */
-  defaultOrderBy?: Record<string, unknown>;
 };
-
-/** Generated `InnerOrder` shorthand: `{ direction, priority }`. */
-export const desc = (priority: number) => ({ direction: 'desc', priority });
-export const asc = (priority: number) => ({ direction: 'asc', priority });
 
 /**
  * Generated root query fields that are exposed, renamed, and scoped to the
@@ -38,27 +32,22 @@ export const QUERY_SCOPE: Record<string, ScopedField> = {
   activityTypes: {
     as: 'myActivityTypes',
     scope: (userId) => ({ userId: { eq: userId } }),
-    defaultOrderBy: { name: asc(0) },
   },
   todoLists: {
     as: 'myTodoLists',
     scope: (userId) => ({ userId: { eq: userId } }),
-    defaultOrderBy: { name: asc(0) },
   },
   todos: {
     as: 'myTodos',
     scope: (userId) => ({ userId: { eq: userId } }),
-    defaultOrderBy: { priority: desc(0), createdAt: desc(1) },
   },
   habits: {
     as: 'myHabits',
     scope: (userId) => ({ userId: { eq: userId } }),
-    defaultOrderBy: { priority: desc(0), createdAt: desc(1) },
   },
   timeBlocks: {
     as: 'myTimeBlocks',
     scope: (userId) => ({ userId: { eq: userId } }),
-    defaultOrderBy: { startTime: asc(0) },
   },
   apiKeys: {
     as: 'myApiKeys',
@@ -69,12 +58,10 @@ export const QUERY_SCOPE: Record<string, ScopedField> = {
       userId: { eq: userId },
       revokedAt: { isNull: true },
     }),
-    defaultOrderBy: { createdAt: desc(0) },
   },
   projects: {
     as: 'myProjects',
     scope: (userId) => ({ userId: { eq: userId } }),
-    defaultOrderBy: { createdAt: desc(0) },
   },
   project: {
     as: 'myProject',
@@ -134,6 +121,9 @@ export const UNEXPOSED: ReadonlySet<string> = new Set([
  *   execution — and, because {@link UNEXPOSED} must list it explicitly, adding a
  *   Drizzle table fails at boot instead of quietly producing a hidden field.
  *
+ * Default ordering is not applied here — `defaults` in `build-config.ts` holds
+ * it, where it covers relation reads of the same table as well.
+ *
  * Does not prune: the `extensionSDL` applied afterwards references generated
  * input types that are unreferenced at this point. `finalizeSchema` prunes last.
  */
@@ -175,7 +165,6 @@ export function scopeRootFields(schema: GraphQLSchema): GraphQLSchema {
                     ...(args.where ? [args.where] : []),
                   ],
                 },
-                orderBy: args.orderBy ?? rule.defaultOrderBy,
               },
               context,
               info,

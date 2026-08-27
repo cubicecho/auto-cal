@@ -35,4 +35,48 @@ export const buildSchemaConfig: BuildSchemaConfig = {
     updateMany: false,
     delete: false,
   },
+
+  // Presentation order, declared once on the server instead of by every caller.
+  //
+  // These used to be `defaultOrderBy` entries in QUERY_SCOPE, applied by the
+  // root-field wrapper. Moving them here widens where they hold: v8 applies a
+  // table's default to its own queries *and* to every to-many relation field
+  // that targets it, so a table now presents the same way wherever it is
+  // reached from. `projectNotes` is the case that actually needed it — see
+  // `projectFields` in resolvers/projects.ts.
+  //
+  // Only a *missing* `orderBy` is replaced; a caller-supplied one still wins
+  // outright, exactly as before.
+  //
+  // `priority` here is the tiebreak rank, and the HIGHEST number sorts first —
+  // not the position in this object. The QUERY_SCOPE entries these replace read
+  // `{ priority: desc(0), createdAt: desc(1) }`, which meant todos and habits
+  // came back newest-first with the `priority` *column* as a tiebreak that only
+  // fired on identical timestamps, i.e. never. That was not the intent; the
+  // ranks below are corrected, so the priority column now leads.
+  defaults: {
+    activityTypes: { orderBy: { name: 'asc' } },
+    todoLists: { orderBy: { name: 'asc' } },
+    todos: {
+      orderBy: {
+        priority: { direction: 'desc', priority: 1 },
+        createdAt: { direction: 'desc', priority: 0 },
+      },
+    },
+    habits: {
+      orderBy: {
+        priority: { direction: 'desc', priority: 1 },
+        createdAt: { direction: 'desc', priority: 0 },
+      },
+    },
+    timeBlocks: { orderBy: { startTime: 'asc' } },
+    apiKeys: { orderBy: { createdAt: 'desc' } },
+    projects: { orderBy: { createdAt: 'desc' } },
+    projectNotes: {
+      orderBy: {
+        position: { direction: 'asc', priority: 1 },
+        createdAt: { direction: 'asc', priority: 0 },
+      },
+    },
+  },
 };

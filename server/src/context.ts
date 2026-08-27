@@ -1,10 +1,4 @@
-import type {
-  ActivityType,
-  ApiKeyScope,
-  DB,
-  ProjectNote,
-  TodoList,
-} from '@auto-cal/db';
+import type { ActivityType, ApiKeyScope, DB, TodoList } from '@auto-cal/db';
 import DataLoader from 'dataloader';
 
 export interface Context {
@@ -30,20 +24,6 @@ export function createLoaders(db: DB) {
       })) as TodoList[];
       const byId = new Map(rows.map((r) => [r.id, r]));
       return ids.map((id) => byId.get(id) ?? null);
-    }),
-    // to-many: notes grouped by projectId, ordered by position then creation.
-    projectNotes: new DataLoader<string, ProjectNote[]>(async (projectIds) => {
-      const rows = (await db.query.projectNotes.findMany({
-        where: { projectId: { in: [...projectIds] } },
-        orderBy: { position: 'asc', createdAt: 'asc' },
-      })) as ProjectNote[];
-      const byProject = new Map<string, ProjectNote[]>();
-      for (const row of rows) {
-        const bucket = byProject.get(row.projectId) ?? [];
-        bucket.push(row);
-        byProject.set(row.projectId, bucket);
-      }
-      return projectIds.map((id) => byProject.get(id) ?? []);
     }),
     // to-many: child activity types grouped by parentId.
     activityTypeByParent: new DataLoader<string, ActivityType[]>(
