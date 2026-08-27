@@ -27,13 +27,17 @@ Custom (the rest — keep tagged as such): `color-bar` `color-dot`
 `form-dialog` `page` `query-state` `section-heading` `segmented`
 `status-chip`, plus:
 - `inline-length-edit` — quick-edit duration chip used on list items
-- `route-error` — error boundary used by route components
+- `route-error` — what the layouts' `ErrorBoundary` exports render; has a
+  `.native.tsx` sibling
 
 ## Error Handling Conventions
 
-- **Mutation errors** → toast notification
 - **Form validation errors** → inline, beneath the relevant field
-- **Route/render crashes** → `<RouteError>` error boundary (`src/components/ui/route-error.tsx`)
+- **Mutation errors** → inline too, at the point of action: `FormDialogFooter`'s
+  `error` prop in a dialog, or the card itself elsewhere. See
+  [Mutation Errors](#mutation-errors) — there is no toast.
+- **Route/render crashes** → the named `ErrorBoundary` exported from
+  `app/_layout.tsx` and `app/(app)/_layout.tsx`, rendering `<RouteError>`
 
 ## Apollo Client Setup
 
@@ -253,34 +257,75 @@ type TodoItemProps = {
 
 ## Form Constants
 
-Shared constants used across domain forms:
+Every form constant lives in `src/lib/form-constants.ts` — nothing is re-declared
+per file. They were, once: `PRIORITY_OPTIONS` in four files, `DURATION_OPTIONS`
+in three, `DAY_NAMES` in three, and the copies had drifted (TodoListForm's
+duration list was missing the 4+ hour option that TodoForm and HabitForm offered,
+so a list's default estimated length could not be set to what a todo's could).
+
+| Export | Used by |
+|--------|---------|
+| `PRIORITY_OPTIONS` | Todo, habit, and list forms + `StepTodos` — values `'0'`/`'25'`/`'50'`/`'100'`, matching `priorityLabel` in `lib/utils.ts` |
+| `DURATION_OPTIONS` | Todo, habit, and list forms — 15 min → `'480'` ("4+ hours") |
+| `DAY_NAMES` | Day toggle buttons (`'Sun'`…), index = the `daysOfWeek` value |
+| `DAY_NAMES_LONG` | Prose rather than buttons — `TimeBlockItem`'s card description |
+| `WEEKDAYS` / `WEEKEND` | The `[1,2,3,4,5]` / `[0,6]` presets |
+| `DEFAULT_ACTIVITY_COLOR` | `'#6366f1'`, mirroring the server default |
+| `ACTIVITY_COLORS` | Swatch pickers and the cycle `import-todos` assigns from |
+
+Option values are strings because `SelectField` round-trips through the DOM; call
+sites `Number(...)` them on submit. The module imports nothing from React or
+react-native, so the `.native` screens use it too.
+
+Use these in new forms rather than re-declaring. `InlineLengthEdit` allows
+free-form entry (1–1440 min) for quick edits on list items.
+
+## Resetting a Dialog Form
+
+Every form dialog is a single instance reused across create and edit targets, so
+`defaultValues` — which TanStack Form only applies on mount — is stale from the
+second open onward. `src/hooks/useResetOnOpen.ts` holds the one effect that fixes
+it, replacing six hand-written copies that each carried their own dependency-array
+suppression:
 
 ```typescript
-const PRIORITY_OPTIONS = [
-  { label: 'Low',    value: '0'   },
-  { label: 'Medium', value: '25'  },
-  { label: 'High',   value: '50'  },
-  { label: 'Urgent', value: '100' },
-];
-
-const DURATION_OPTIONS = [
-  { label: '15 minutes', value: '15'  },
-  { label: '30 minutes', value: '30'  },
-  { label: '45 minutes', value: '45'  },
-  { label: '1 hour',     value: '60'  },
-  { label: '1.5 hours',  value: '90'  },
-  { label: '2 hours',    value: '120' },
-  { label: '3 hours',    value: '180' },
-  { label: '4+ hours',   value: '480' },
-];
-
-// Time blocks only
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; // index = daysOfWeek value
-const WEEKDAYS = [1, 2, 3, 4, 5];
-const WEEKEND  = [0, 6];
+useResetOnOpen(open, todo?.id, () => form.reset(defaultValues));
 ```
 
-Use these same constants in new forms. `InlineLengthEdit` allows free-form entry (1–1440 min) for quick edits on list items.
+The second argument is the selected entity's id (`undefined` when creating);
+`reset` is deliberately *not* a dependency, since it closes over values derived
+from the current render and would otherwise wipe the form mid-edit.
+
+`ProjectForm` is the one dialog with two form instances — resetting only the edit
+one left a cancelled "New Project" holding its typed-in name — so its callback
+resets both.
+
+## Mutation Errors
+
+There is no toast. A rejected mutation surfaces where the user triggered it:
+
+- **In a dialog** — pass `error` to `FormDialogFooter`, which renders it above the
+  buttons. Field validation stays inline beneath its field; this slot is for what
+  only the server knows, such as a delete the database refuses.
+- **In a card** — render the message in the card itself (see `TimeBlockItem`).
+
+`errorMessage(err, fallback)` in `lib/utils.ts` pulls the server's message out of
+the Apollo error ("Cannot delete a list that still contains todos") and falls back
+otherwise. Deletes especially need this: every FK to `activity_types` is
+`onDelete: 'restrict'`, so deleting an in-use activity type always rejects, and
+without a catch it failed silently.
+
+## Error Boundaries
+
+`app/_layout.tsx` and `app/(app)/_layout.tsx` each export a named `ErrorBoundary`
+— expo-router's convention, which mounts it around that segment's tree. Both
+render `RouteError` (`error` ← `error`, `reset` ← `retry`). Without them a render
+crash unmounted the app to a blank page with the error only in the console.
+
+`components/ui/route-error.tsx` renders `<div>`/`<button>`; `route-error.native.tsx`
+is its react-native counterpart, so the shared layouts can mount one component on
+both platforms. Keep both dependency-free — they render after the tree below has
+already thrown.
 
 ## Form Pattern (TanStack Form)
 
@@ -332,8 +377,9 @@ client/src/
   storage.ts       — key-value store; no-ops off web
   lib/cache.ts     — cache invalidation helpers (see above)
   lib/date.ts      — weekStart (ISO Monday) / isoDate (local YYYY-MM-DD)
+  lib/form-constants.ts — every shared form constant (see above)
   hooks/           — form-hook (useAppForm), useLiveUpdates, useListSection,
-                     useDarkMode, useSyncTimezone
+                     useDarkMode, useSyncTimezone, useResetOnOpen
 ```
 
 ## Shared UI Primitives

@@ -1,9 +1,11 @@
+import { RouteError } from '@/components/ui/route-error';
 import { segmentedItemClass } from '@/components/ui/segmented';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useLiveUpdates } from '@/hooks/useLiveUpdates';
 import { cn } from '@/lib/utils';
 import { storage } from '@/storage';
+import type { ErrorBoundaryProps } from 'expo-router';
 import {
   Link,
   Redirect,
@@ -14,6 +16,14 @@ import {
 } from 'expo-router';
 import { Moon, Settings, Sun } from 'lucide-react';
 import { Platform } from 'react-native';
+
+/**
+ * Catches a crash inside any signed-in screen before it reaches the root
+ * boundary, so a bad render loses this segment rather than the whole app.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return <RouteError error={error} reset={retry} />;
+}
 
 const NAV_LINKS = [
   { href: '/today', label: 'Today' },
