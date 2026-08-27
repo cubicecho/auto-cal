@@ -50,6 +50,7 @@ type Todo = Todo_TodoListFragment;
 
 type ProjectDetailProps = {
   project: Project;
+  /** Already scoped to `project.list` by the caller's query. */
   todos: Todo[];
   onBack: () => void;
   onEdit: (project: Project) => void;
@@ -72,10 +73,6 @@ export function ProjectDetail({
     // root field covers every argument variant.
     update: (cache) => invalidate(cache, 'myProjects'),
   });
-
-  const listTodos = project.list
-    ? todos.filter((t) => t.list?.id === project.list?.id)
-    : [];
 
   async function handleArchive() {
     await archiveProject({ variables: { id: project.id } });
@@ -124,7 +121,7 @@ export function ProjectDetail({
         <div className="min-w-0">
           <SectionHeading className="mb-2">Tasks</SectionHeading>
           {project.list ? (
-            <TodoListCard list={project.list} todos={listTodos} />
+            <TodoListCard list={project.list} todos={todos} />
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
               This project has no todo list.
