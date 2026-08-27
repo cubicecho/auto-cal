@@ -232,13 +232,11 @@ export const projectMutations: MutationMap<
   },
 };
 
-export const projectFields: FieldMap<'Project', 'notes' | 'list'> = {
-  // Overrides the generated relation resolver: notes must come back in
-  // position order (myReorderProjectNotes), which the generated lazy batch
-  // loader does not apply.
-  notes: (parent, _args, context) =>
-    context.loaders.projectNotes.load(parent.id),
-
+// `notes` is no longer here. It used to override the generated relation
+// resolver for one reason — position order, which myReorderProjectNotes
+// writes — and `defaults.projectNotes` in build-config.ts now applies that
+// to the generated resolver itself, eagerly and lazily alike.
+export const projectFields: FieldMap<'Project', 'list'> = {
   // Custom SDL field. A project has at most one list, but the FK lives on
   // `todoLists`, so the loader batches by project and this takes the head.
   list: async (parent, _args, context) => {

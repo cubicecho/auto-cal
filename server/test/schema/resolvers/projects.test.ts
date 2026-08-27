@@ -405,6 +405,23 @@ describe('project resolvers', () => {
         { input: { projectId: project.id, noteIds: [a.id] } },
       );
       expect(bad.errors?.[0]?.message).toMatch(/exactly/i);
+
+      // The ordering is the whole point of the reorder mutation, so the
+      // relation field has to honour it too — not just the mutation's own
+      // return value. `defaults.projectNotes` in build-config.ts is what
+      // applies it; without that, this reads in insertion order.
+      const read = await gql(
+        testSchema,
+        db,
+        userId,
+        'query($p: UUID!) { myProjects(where: { id: { eq: $p } }) { notes { title } } }',
+        { p: project.id },
+      );
+      expect(read.errors).toBeUndefined();
+      const projects = read.data?.myProjects as Array<{
+        notes: Array<{ title: string }>;
+      }>;
+      expect(projects[0]?.notes.map((n) => n.title)).toEqual(['B', 'A']);
     });
 
     it('updates and deletes a note', async () => {

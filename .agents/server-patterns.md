@@ -109,13 +109,14 @@ import { buildSchemaConfig } from './build-config.ts';
 const { schema: drizzleSchema } = buildSchema(db, buildSchemaConfig);
 
 // applyCustomResolvers starts with scopeRootFields (which renames the
-// generated queries to their my* form, scopes them to the caller, and drops
-// the rest) and ends with finalizeSchema (which removes every mutation not
-// prefixed "my" or listed in PUBLIC_MUTATIONS).
+// generated queries to their my* form, guards them with requireUser, and
+// drops the rest — the row scope itself is in buildSchemaConfig) and ends
+// with finalizeSchema (which removes every mutation not prefixed "my" or
+// listed in PUBLIC_MUTATIONS).
 export const schema = applyCustomResolvers(drizzleSchema);
 ```
 
-`buildSchemaConfig` lives in `server/src/schema/build-config.ts` and is shared by the runtime schema, `generate_schema.ts`, and the tests so the SDL is identical everywhere. It maps type names (`typeNameMapper`, which replaced v3's `prefixes`/`suffixes`/`singularTypes`) and turns off both aggregate features plus **all four generated CRUD mutations** — `insert`, `update`, `updateMany`, `delete`.
+`buildSchemaConfig` lives in `server/src/schema/build-config.ts` and is shared by the runtime schema, `generate_schema.ts`, and the tests so the SDL is identical everywhere. It maps type names (`typeNameMapper`, which replaced v3's `prefixes`/`suffixes`/`singularTypes`), carries the tenant `scope` (`TABLE_SCOPE`, see below), the per-table ordering `defaults`, the `exclude`d `keyHash` column, and turns off both aggregate features plus **all four generated CRUD mutations** — `insert`, `update`, `updateMany`, `delete`.
 
 Disabling all four means drizzle-graphql emits no `Mutation` type at all. That is deliberate: every write goes through a hand-written `my*` resolver, so the ~50 generated mutation fields existed only to be stripped again, while still reaching client codegen (~400 lines of dead SDL). The consequence is that `extensionSDL` must **declare** `type Mutation` instead of extending it, and wire it as a root operation explicitly.
 
@@ -123,26 +124,43 @@ Disabling all four means drizzle-graphql emits no `Mutation` type at all. That i
 
 `applyCustomResolvers` opens with `scopeRootFields(schema)` (`server/src/schema/scope.ts`) — a `mapSchema` pass over `MapperKind.QUERY_ROOT_FIELD` that decides what happens to each of the 20 generated root queries.
 
-A `QUERY_ROOT_FIELD` mapper may return `[newName, fieldConfig]`, which is the whole mechanism: it renames the field *and* rewraps the resolver already attached to it, in one pass. Nine fields are exposed under their `my*` name with a wrapper that AND-s a caller predicate onto `args.where` and supplies a default `orderBy`; the other eleven return `null` and are deleted.
+A `QUERY_ROOT_FIELD` mapper may return `[newName, fieldConfig]`, which is the whole mechanism: it renames the field *and* rewraps the resolver already attached to it, in one pass. Nine fields are exposed under their `my*` name; the other eleven return `null` and are deleted.
+
+The tenant predicate is **not** applied here. It lives in `TABLE_SCOPE` (same file) and is handed to `buildSchema` as `scope`, so the wrapper adds only a `requireUser` guard — an unauthenticated `myTodos` is one UNAUTHENTICATED error at the root rather than whatever the scope hook raises deeper in.
 
 ```typescript
+/** For each table, the predicate every generated read of it is confined to. */
+export const TABLE_SCOPE: ScopeConfig<Context> = {
+  users:  (context) => ({ id: { eq: requireUser(context) } }),
+  todos:  ownedByUser,
+  apiKeys: (context) => ({
+    userId: { eq: requireUser(context) },
+    revokedAt: { isNull: true },
+  }),
+  habitCompletions: (context) => ({
+    habit: { userId: { eq: requireUser(context) } },
+  }),
+  // …
+};
+
+/** Which generated root queries are served, under what name, off what table. */
 export const QUERY_SCOPE: Record<string, ScopedField> = {
-  user:  { as: 'myProfile', scope: (userId) => ({ id: { eq: userId } }) },
-  todos: { as: 'myTodos',   scope: (userId) => ({ userId: { eq: userId } }),
-           defaultOrderBy: { priority: desc(0), createdAt: desc(1) } },
+  user:  { as: 'myProfile', table: 'users' },
+  todos: { as: 'myTodos',   table: 'todos' },
   // …
 };
 ```
 
-The rules are deliberately not uniform: `users` has no `userId` column (the caller *is* the row, so it scopes by `id`), and `apiKeys` folds `revokedAt: { isNull: true }` into its scope so a caller-supplied `where` cannot resurrect a revoked key.
+The rules are deliberately not uniform: `users` has no `userId` column (the caller *is* the row, so it scopes by `id`), `apiKeys` folds `revokedAt: { isNull: true }` in so a caller-supplied `where` cannot resurrect a revoked key, and `habitCompletions`/`projectNotes` own no user column at all and scope through the relation to the parent that does.
 
-Three things to keep in mind when touching this file:
+Four things to keep in mind when touching this file:
 
-1. **AND-compose, never spread.** `{ ...scope, ...args.where }` puts both on the same keys, so `where: { userId: { eq: <them> } }` replaces the scope outright. `{ AND: [scope, args.where] }` keeps them as separate operands, which can only narrow. (`OR`/`NOT` do not widen under either composition — generated filters AND sibling fields with `OR` branches — but that is the dependency's semantics, not something to depend on.)
-2. **Every generated field must be named.** A field in neither `QUERY_SCOPE` nor `UNEXPOSED` throws at boot, so adding a Drizzle table cannot quietly produce a hidden query. `UNEXPOSED` holds the eleven that are deliberately not served: the single-row variants (redundant with the list form plus a `where`), `users`, and the parent-owned leaves `projectNotes`/`habitCompletions` — all reachable, correctly scoped, by traversing a relation.
-3. **Do not prune here.** `extensionSDL` references generated input types that are unreferenced at this point in the pipeline. `finalizeSchema` prunes last.
+1. **Scope per table, not per field.** A root-field wrapper only sees what passes through a root resolver, and a nested relation field never does — that is why the predicate lives in `TABLE_SCOPE`. The library ANDs it on **last, after the caller's `where`**, so a caller filter can only ever narrow it. Do not reintroduce composition in the wrapper; there would then be two places to keep in step.
+2. **Every table must be scoped.** `assertEveryTableScoped` runs from `build-config.ts` over the real Drizzle schema at import time, so adding a table without a scope fails the boot. A `QUERY_SCOPE` entry whose `table` has no scope throws too.
+3. **Every generated field must be named.** A field in neither `QUERY_SCOPE` nor `UNEXPOSED` throws at boot, so adding a Drizzle table cannot quietly produce a hidden query. `UNEXPOSED` holds the eleven that are deliberately not served: the single-row variants (redundant with the list form plus a `where`), `users`, and the parent-owned leaves `projectNotes`/`habitCompletions`.
+4. **Do not prune here.** `extensionSDL` references generated input types that are unreferenced at this point in the pipeline. `finalizeSchema` prunes last.
 
-Relation traversal is structurally safe without any help from this pass: the generated relation loader ANDs the foreign-key predicate with the caller's filter, so a nested `where` narrows within the parent and can never escape it. That matters most for `myProfile`, which is a graph entry point onto every relation the `users` table has. `server/test/schema/resolvers/scope.test.ts` pins both that and the AND-composition, because the behaviour lives in a bumpable dependency.
+Relation traversal has two independent guards: the table scope above, and the generated relation loader ANDing the foreign-key predicate with the caller's filter. That matters most for `myProfile`, a graph entry point onto every relation the `users` table has. `server/test/schema/resolvers/scope.test.ts` pins all of it, because the behaviour lives in a bumpable dependency — when changing it, negative-test by breaking one `TABLE_SCOPE` entry and confirming the suite fails.
 
 ### `finalizeSchema`
 
@@ -150,8 +168,7 @@ Relation traversal is structurally safe without any help from this pass: the gen
 
 1. **Asserts the query surface.** Every `Query` field must be `my*`-prefixed by this point. `scopeRootFields` handled the generated ones; this catches a hand-written field added to `extensionSDL` under the wrong name.
 2. **Removes unscoped mutations.** Anything not prefixed `my` and not in `PUBLIC_MUTATIONS` is dropped. Removed, not given a throwing resolver — that would leave it in the SDL, in introspection, and in client codegen as an autocompletable operation that always failed at runtime. Removing the field moves the failure to validation.
-3. **Strips `keyHash` input surfaces** — `ApiKeyFilters`, `ApiKeyOrderBy`, `ApiKeyDistinctColumn`. See the ApiKey section below.
-4. **Prunes.** The root fields `scopeRootFields` removed were the only reference to a chunk of generated input types. `pruneSchema` collects them. It does not gut the SDL — generated relation fields still carry `*Filters`/`*OrderBy` args, so the bulk of the input types stay.
+3. **Prunes.** The root fields `scopeRootFields` removed were the only reference to a chunk of generated input types. `pruneSchema` collects them. It does not gut the SDL — generated relation fields still carry `*Filters`/`*OrderBy` args, so the bulk of the input types stay.
 
 Adding a public (non-`my`) mutation means adding its name to `PUBLIC_MUTATIONS` in `resolvers/index.ts`, or it will be removed. `server/test/schema/resolvers/index.test.ts` asserts both root types hold nothing else.
 
@@ -252,12 +269,18 @@ maps every table-backed type to its row (`Todo: '@auto-cal/db#Todo as TodoRow'`)
 so `parent.listId` is checked against the actual column set. That is what the
 old hand-written `parent: { listId: string }` shapes were approximating.
 
-Only five fields need one: `ActivityType.parent`/`children` (a self-reference
-the SDL declares, plus its inverse), `Project.list` (custom SDL field),
-`Project.notes` (overrides the generated relation resolver to force position
-order), and `Todo.activityType` (a derived hop through the todo's list —
-`todos` has no `activityTypeId` column). Every other relation field gets a
-generated resolver from drizzle-graphql; do not hand-write one.
+Only four fields need one: `ActivityType.parent`/`children` (a self-reference
+the SDL declares, plus its inverse), `Project.list` (custom SDL field), and
+`Todo.activityType` (a derived hop through the todo's list — `todos` has no
+`activityTypeId` column). Every other relation field gets a generated resolver
+from drizzle-graphql; do not hand-write one.
+
+`Project.notes` used to be a fifth, overriding the generated resolver purely to
+force position order. Ordering is declarative now — `defaults` in
+`build-config.ts` — and it applies to relation fields as well as root queries,
+so reach for that instead of a resolver. Note that in an `orderBy` entry
+`priority` is the tiebreak rank and **the highest number sorts first**, not the
+key's position in the object.
 
 The import of `__generated__/resolvers.ts` in `types.ts` is **type-only** and
 must stay that way. That file is generated *from* the SDL these resolver files
@@ -366,23 +389,19 @@ Personal, per-user, revocable Bearer tokens for headless integrations.
 
 **Token format:** `acal_<base64url(32 random bytes)>` — the `acal_` prefix lets `isApiKey()` distinguish these from JWTs and UUIDs.
 
-**Hash stored, not token:** Only the SHA-256 hex of the full token is persisted in `api_keys.keyHash`. The raw token is returned once to the user on creation and never stored. The `keyHash` field is deleted from the `ApiKey` GraphQL type in `applyCustomResolvers`, so even resolvers that return raw rows cannot leak it.
+**Hash stored, not token:** Only the SHA-256 hex of the full token is persisted in `api_keys.keyHash`. The raw token is returned once to the user on creation and never stored.
 
-Deleting the output field is only half of it. drizzle-graphql derives `ApiKeyFilters`, `ApiKeyOrderBy` and `ApiKeyDistinctColumn` from the same column list, and those are reachable through the live `User.apiKeys` relation — `where: { keyHash: { eq: "..." } }` confirms a guessed hash and `orderBy` binary-searches it, neither of which requires selecting the field. `stripKeyHash` in `schema/resolvers/index.ts` removes it from all three with a single `mapSchema` pass:
+The column is excluded from the generated schema outright, in `build-config.ts`:
 
 ```typescript
-function stripKeyHash(schema: GraphQLSchema): GraphQLSchema {
-  const isApiKeyInput = (typeName: string) => typeName.startsWith('ApiKey');
-  return mapSchema(schema, {
-    [MapperKind.INPUT_OBJECT_FIELD]: (_field, fieldName, typeName) =>
-      fieldName === 'keyHash' && isApiKeyInput(typeName) ? null : undefined,
-    [MapperKind.ENUM_VALUE]: (_value, typeName, _schema, valueName) =>
-      valueName === 'keyHash' && isApiKeyInput(typeName) ? null : undefined,
-  });
-}
+exclude: {
+  columns: { apiKeys: ['keyHash'] },
+},
 ```
 
-`mapSchema` rebuilds the schema rather than mutating it, so this runs **last** in `applyCustomResolvers` — anything that assigns a `resolve` afterwards would be writing to a discarded copy. Field resolvers, generated relation resolvers included, carry across the rebuild intact. Adding another never-expose column means adding it here, not just deleting the output field.
+That covers every surface derived from the column list at once — the `ApiKey` object type, `ApiKeyFilters`, `ApiKeyOrderBy`, `ApiKeyDistinctColumn` — which is what matters, because deleting the output field alone is only half of it. All of those are reachable through the live `User.apiKeys` relation, and `where: { keyHash: { eq: "..." } }` confirms a guessed hash while `orderBy` binary-searches it, neither of which requires selecting the field. Adding another never-expose column means adding it to this list.
+
+The server still reads and writes the column through Drizzle directly (`auth`, `ical-route`, `myCreateApiKey`) — this is a GraphQL-surface rule, not a database one. It logs "excluded column 'apiKeys.keyHash' is NOT NULL with no default" at build time, which does not apply here because `features.insert` is off. The four assertions in `api-keys.test.ts` cover all four surfaces.
 
 **Generation and verification live in `server/src/api-keys.ts`:**
 - `generateApiKey()` — creates a token + hash + 8-char display prefix
@@ -396,7 +415,7 @@ function stripKeyHash(schema: GraphQLSchema): GraphQLSchema {
 
 ## Relation Fields & DataLoaders (N+1 Prevention)
 
-drizzle-graphql v4 attaches a resolver to every Drizzle-relation field: it returns eager data when the parent query pre-fetched it, and otherwise batches sibling loads in the same execution tick into one IN-clause query. Plain rows returned by custom resolvers therefore resolve their relation fields with no extra wiring.
+drizzle-graphql attaches a resolver to every Drizzle-relation field: it returns eager data when the parent query pre-fetched it, and otherwise batches sibling loads in the same execution tick into one IN-clause query. Plain rows returned by custom resolvers therefore resolve their relation fields with no extra wiring.
 
 Per-request DataLoaders (in `context.ts`) are only for fields the generated machinery can't handle — derived hops and custom SDL fields:
 
