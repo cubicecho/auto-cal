@@ -467,9 +467,10 @@ every list component needs.
 
 ## Cross-Platform Primitives (in progress)
 
-`button.tsx`, `card.tsx` and `input.tsx` have been converted to react-native
-primitives and now render on both platforms. The rest of `components/ui/` is
-still web-only. The conversion rules, which every further primitive follows:
+`button.tsx`, `card.tsx`, `input.tsx` and `icons.tsx` have been converted to
+react-native primitives and now render on both platforms. The rest of
+`components/ui/` is still web-only. The conversion rules, which every further
+primitive follows:
 
 **File naming inverts.** The old convention was *plain = web, `.native.tsx` =
 native*. A converted primitive is *plain = shared*, with a `.web.tsx` **only**
@@ -481,7 +482,8 @@ so call sites never branch.
 **The shared contract goes in a third module.** `input-base.ts` exists because
 Metro resolves `./input` to `input.web.tsx` on web — the web file importing the
 shared types from `./input` would import itself. Any `.tsx`/`.web.tsx` pair that
-needs shared types needs a `-base.ts` alongside them.
+needs shared types needs a `-base.ts` alongside them. `icons-base.ts` is the
+second instance.
 
 **Only `input.tsx` is typechecked against call sites.** TypeScript resolves the
 plain `.tsx`, so `input.web.tsx` is only checked standalone. A drifted `.web.tsx`
@@ -516,11 +518,41 @@ plain `<div>` otherwise — no tab stop, no Enter/Space, nothing announced. `rol
 is what restores what `<button>` gave for free. Biome's `useSemanticElements`
 fires on it and needs a `biome-ignore`.
 
+### Icons
+
+**Import icons from `@/components/ui/icons`, never from lucide directly.**
+`client/test/icons.test.ts` enforces that — nothing else can, since the two
+implementations are a Metro platform pair and TypeScript only sees the native
+one.
+
+`icons.web.tsx` is a plain re-export of `lucide-react`. `icons.tsx` wraps
+`lucide-react-native` in `cssInterop`, mapping `className` to `width`/`height`/
+`color`, so `<Trash2 className="h-4 w-4" />` means the same thing on both
+platforms.
+
+**Native deep-imports; web uses the barrel.** `lucide-react-native/icons/<kebab-name>`
+per icon, because the barrel re-exports ~1600 modules and Metro does not
+tree-shake. Web keeps the barrel — `lucide-react` ships no `exports` map, and
+the web bundler tree-shakes anyway. Adding an icon means one deep import plus
+one `export const X = icon(XSource)` in `icons.tsx`, and one name in the
+`icons.web.tsx` export list; the test fails if you do only one of the two.
+
+**Icon colour is a native-only problem.** On web an `<svg>` inherits
+`currentColor` from its parent, hover states included. Native has no
+inheritance, so a container that sets its own text colour publishes that class
+through `IconClassContext` (`icons-base.ts`) and every icon below merges it in.
+`icons.web.tsx` ignores the context deliberately — injecting a colour there
+would pin the icon through the container's `hover:text-*`. `Button` is the
+provider today.
+
+Icon *names* are the canonical lucide ones, not the deprecated aliases
+(`CircleAlert` not `AlertCircle`, `TriangleAlert` not `AlertTriangle`,
+`CircleCheck` not `CheckCircle2`, `LoaderCircle` not `Loader2`, `WandSparkles`
+not `Wand2`) — the aliases are dropped upstream on majors.
+
 **Still to convert:** the eight radix-backed primitives (`dialog`, `popover`,
 `select`, `tabs`, `tooltip`, `switch`, plus `date-time-input` and
-`CalendarView`) keep a `.web.tsx`. `lucide-react` is DOM-only and has no
-installed native counterpart — icons are the open dependency of converting the
-screens themselves. See `.agents/todo.md`.
+`CalendarView`) keep a `.web.tsx`. See `.agents/todo.md`.
 
 ## Shared Native Primitives
 

@@ -143,10 +143,11 @@ Existing vitest suites:
 ---
 
 ### #17 — Converge the web and native component trees
-**Status:** Spike landed. `components/ui/button.tsx`, `card.tsx` and `input.tsx`
-are react-native primitives now and render on both platforms; `input.web.tsx` is
-the first `.web.tsx` override. Conversion rules are written up under
-"Cross-Platform Primitives" in `.agents/client-patterns.md`.
+**Status:** Spike landed, and icons are done. `components/ui/button.tsx`,
+`card.tsx`, `input.tsx` and `icons.tsx` are react-native primitives now and
+render on both platforms; `input.web.tsx` and `icons.web.tsx` are the `.web.tsx`
+overrides. Conversion rules are written up under "Cross-Platform Primitives" in
+`.agents/client-patterns.md`.
 
 Today web and native have opposite architectures: `client/app/` holds a `.tsx`
 web screen and a `.native.tsx` native one for most routes, the native screens are
@@ -157,17 +158,16 @@ operations duplicate their web counterparts.
 1. Convert the remaining pure primitives in `components/ui/`. The eight
    radix-backed ones (`dialog`, `popover`, `select`, `tabs`, `tooltip`,
    `switch`, plus `date-time-input` and `CalendarView`) keep a `.web.tsx`.
-2. **Icons — the blocker for anything above the primitive layer.**
-   `lucide-react` is DOM-only and is imported by 37 files; there is no
-   `lucide-react-native` installed and the native screens currently use no icons
-   at all. Either add it (`react-native-svg` is already a dependency) or wrap
-   the icon set behind one shared module.
+2. ~~Icons.~~ **Done.** `components/ui/icons{,-base,.web}.tsx` wraps
+   `lucide-react` / `lucide-react-native` behind one module; all 36 call sites
+   import from it and `client/test/icons.test.ts` keeps the two platform files
+   in step. Only add an icon in both files, and never import lucide directly.
 3. Fold `components/native/`'s six components into the shared set.
 4. Convert the native routes one at a time, deleting the `*Native` operations as
    each web screen starts serving both platforms.
 5. **Extract fragments out of DOM components.** Native screens import e.g.
    `TODO_LIST_FRAGMENT` from `TodoItem`, which pulls the whole DOM tree into the
-   native bundle (currently 8.5MB).
+   native bundle (currently 7.8MB).
 6. Fix the `habits` / `projects` route shadowing last.
 
 **Watch out for:** `View` is `display: flex; flex-direction: column` where a
