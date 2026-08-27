@@ -4,6 +4,7 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { weekStart } from '@/lib/date';
 import { useMutation } from '@apollo/client/react';
 import {
   addDays,
@@ -13,7 +14,6 @@ import {
   setHours,
   setMinutes,
   startOfDay,
-  startOfWeek,
 } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
 import { Check, Loader2 } from 'lucide-react';
@@ -29,7 +29,7 @@ const locales = { 'en-US': enUS };
 const localizer = dateFnsLocalizer({
   format,
   parse,
-  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
+  startOfWeek: () => weekStart(new Date()),
   getDay,
   locales,
 });
@@ -138,18 +138,17 @@ function expandTimeBlock(
   referenceDate: Date,
 ): CalendarEvent[] {
   if (!block.activityType) return [];
-  // weekStartsOn: 1 = Monday, matching the server's ISO week convention
-  const weekStart = startOfWeek(referenceDate, { weekStartsOn: 1 });
+  const monday = weekStart(referenceDate);
   const { hours: startH, minutes: startM } = parseTime(block.startTime);
   const { hours: endH, minutes: endM } = parseTime(block.endTime);
   const title = block.activityType.name;
   const color = block.activityType.color;
 
   return block.daysOfWeek.map((dayIndex: number) => {
-    // dayIndex: 0=Sun, 1=Mon…6=Sat. weekStart is Monday.
+    // dayIndex: 0=Sun, 1=Mon…6=Sat.
     // offset from Monday: Mon=0, Tue=1…Sat=5, Sun=6
     const offsetFromMonday = dayIndex === 0 ? 6 : dayIndex - 1;
-    const dayDate = addDays(weekStart, offsetFromMonday);
+    const dayDate = addDays(monday, offsetFromMonday);
     const start = setMinutes(setHours(startOfDay(dayDate), startH), startM);
     const end = setMinutes(setHours(startOfDay(dayDate), endH), endM);
     return {

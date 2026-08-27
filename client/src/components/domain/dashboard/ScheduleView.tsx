@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { isoDate } from '@/lib/date';
 import { priorityLabel } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import {
@@ -70,7 +71,7 @@ function groupByDay(
   for (const item of items) {
     if (!item.scheduledStart) continue;
     // Parse as UTC ISO string and format to local "YYYY-MM-DD" for grouping
-    const dayKey = format(new Date(item.scheduledStart), 'yyyy-MM-dd');
+    const dayKey = isoDate(new Date(item.scheduledStart));
     const existing = map.get(dayKey) ?? [];
     existing.push(item);
     map.set(dayKey, existing);

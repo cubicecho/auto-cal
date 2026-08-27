@@ -1,20 +1,17 @@
 import type { TimeBlock_TimeBlockListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { TIME_BLOCK_LIST_FRAGMENT } from '@/components/domain/time-block/TimeBlockList';
+import { ActivityTypePicker } from '@/components/native/activity-type-picker';
+import { confirmDestructive } from '@/components/native/confirm';
+import { FieldLabel, TextField } from '@/components/native/field';
+import { FormModal } from '@/components/native/form-modal';
+import { ListScreen } from '@/components/native/list-screen';
+import { RowAction } from '@/components/native/row-action';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Modal,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 const _tbf = TIME_BLOCK_LIST_FRAGMENT;
 
@@ -23,12 +20,6 @@ const GET_MY_TIME_BLOCKS = graphql(`
     myTimeBlocks {
       ...TimeBlock_TimeBlockList
     }
-  }
-`);
-
-const GET_ACTIVITY_TYPES_FOR_TB = graphql(`
-  query GetActivityTypesForTimeBlocksNative {
-    myActivityTypes { id name color }
   }
 `);
 
@@ -56,9 +47,6 @@ function TimeBlockModal({ onClose }: { onClose: () => void }) {
   const [endTime, setEndTime] = useState('17:00');
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
 
-  const { data: atData } = useQuery(GET_ACTIVITY_TYPES_FOR_TB);
-  const activityTypes = atData?.myActivityTypes ?? [];
-
   const [createTimeBlock, { loading }] = useMutation(CREATE_TIME_BLOCK, {
     update: (cache) => invalidate(cache, 'myTimeBlocks', ...DERIVED),
     onCompleted: onClose,
@@ -82,93 +70,52 @@ function TimeBlockModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal
-      visible
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+    <FormModal
+      title="New Time Block"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitDisabled={loading || !activityTypeId || daysOfWeek.length === 0}
+      submitLabel={loading ? 'Creating…' : 'Create Time Block'}
     >
-      <View className="flex-1 bg-background p-6">
-        <View className="flex-row items-center justify-between mb-6">
-          <Text className="text-xl font-bold text-foreground">
-            New Time Block
-          </Text>
-          <TouchableOpacity onPress={onClose}>
-            <Text className="text-primary text-base">Cancel</Text>
+      <ActivityTypePicker
+        selectedId={activityTypeId}
+        onSelect={setActivityTypeId}
+      />
+
+      <FieldLabel>Days</FieldLabel>
+      <View className="flex-row gap-1 mb-4">
+        {DAY_NAMES.map((name, i) => (
+          <TouchableOpacity
+            key={name}
+            onPress={() => toggleDay(i)}
+            className={`flex-1 rounded-lg py-2 items-center border ${daysOfWeek.includes(i) ? 'bg-primary border-primary' : 'border-border bg-card'}`}
+          >
+            <Text
+              className={`text-xs font-medium ${daysOfWeek.includes(i) ? 'text-primary-foreground' : 'text-foreground'}`}
+            >
+              {name}
+            </Text>
           </TouchableOpacity>
-        </View>
-
-        <Text className="text-sm font-medium text-foreground mb-2">
-          Activity Type
-        </Text>
-        <View className="flex-row flex-wrap gap-2 mb-4">
-          {activityTypes.map((at) => (
-            <TouchableOpacity
-              key={at.id}
-              onPress={() => setActivityTypeId(at.id)}
-              className={`rounded-lg px-3 py-2 border ${activityTypeId === at.id ? 'border-primary' : 'border-border'}`}
-              style={{ backgroundColor: hexToDesaturated(at.color) }}
-            >
-              <Text className="text-sm text-foreground">{at.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text className="text-sm font-medium text-foreground mb-2">Days</Text>
-        <View className="flex-row gap-1 mb-4">
-          {DAY_NAMES.map((name, i) => (
-            <TouchableOpacity
-              key={name}
-              onPress={() => toggleDay(i)}
-              className={`flex-1 rounded-lg py-2 items-center border ${daysOfWeek.includes(i) ? 'bg-primary border-primary' : 'border-border bg-card'}`}
-            >
-              <Text
-                className={`text-xs font-medium ${daysOfWeek.includes(i) ? 'text-primary-foreground' : 'text-foreground'}`}
-              >
-                {name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View className="flex-row gap-4 mb-6">
-          <View className="flex-1">
-            <Text className="text-sm font-medium text-foreground mb-1">
-              Start
-            </Text>
-            <TextInput
-              className="border border-border rounded-lg px-3 py-2 text-foreground bg-card"
-              value={startTime}
-              onChangeText={setStartTime}
-              placeholder="HH:MM"
-              placeholderTextColor="#9ca3af"
-            />
-          </View>
-          <View className="flex-1">
-            <Text className="text-sm font-medium text-foreground mb-1">
-              End
-            </Text>
-            <TextInput
-              className="border border-border rounded-lg px-3 py-2 text-foreground bg-card"
-              value={endTime}
-              onChangeText={setEndTime}
-              placeholder="HH:MM"
-              placeholderTextColor="#9ca3af"
-            />
-          </View>
-        </View>
-
-        <TouchableOpacity
-          className="bg-primary rounded-lg py-3 items-center"
-          onPress={handleSubmit}
-          disabled={loading || !activityTypeId || daysOfWeek.length === 0}
-        >
-          <Text className="text-primary-foreground font-semibold">
-            {loading ? 'Creating…' : 'Create Time Block'}
-          </Text>
-        </TouchableOpacity>
+        ))}
       </View>
-    </Modal>
+
+      <View className="flex-row gap-4">
+        <TextField
+          containerClassName="flex-1"
+          label="Start"
+          value={startTime}
+          onChangeText={setStartTime}
+          placeholder="HH:MM"
+        />
+        <TextField
+          containerClassName="flex-1"
+          label="End"
+          value={endTime}
+          onChangeText={setEndTime}
+          placeholder="HH:MM"
+        />
+      </View>
+    </FormModal>
   );
 }
 
@@ -183,14 +130,11 @@ function TimeBlockRow({ timeBlock }: { timeBlock: TimeBlock }) {
   const days = timeBlock.daysOfWeek.map((d) => DAY_NAMES[d]).join(', ');
 
   function handleDelete() {
-    Alert.alert('Delete time block?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => deleteBlock({ variables: { id: timeBlock.id } }),
-      },
-    ]);
+    confirmDestructive({
+      title: 'Delete time block?',
+      message: 'This cannot be undone.',
+      onConfirm: () => deleteBlock({ variables: { id: timeBlock.id } }),
+    });
   }
 
   return (
@@ -211,12 +155,7 @@ function TimeBlockRow({ timeBlock }: { timeBlock: TimeBlock }) {
             {timeBlock.startTime} – {timeBlock.endTime} · {days}
           </Text>
         </View>
-        <TouchableOpacity
-          onPress={handleDelete}
-          className="px-3 py-1 rounded-lg border border-destructive/40"
-        >
-          <Text className="text-xs text-destructive">Delete</Text>
-        </TouchableOpacity>
+        <RowAction label="Delete" onPress={handleDelete} destructive />
       </View>
     </View>
   );
@@ -227,39 +166,17 @@ export default function TimeBlocksScreen() {
   const { data, loading } = useQuery(GET_MY_TIME_BLOCKS, {
     fetchPolicy: 'cache-and-network',
   });
-  const timeBlocks = data?.myTimeBlocks ?? [];
 
   return (
-    <View className="flex-1 bg-background">
-      {loading && !data && (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator />
-        </View>
-      )}
-      <FlatList
-        data={timeBlocks}
-        keyExtractor={(item) => item.id}
-        contentContainerClassName="px-4 py-4"
-        ListHeaderComponent={
-          <TouchableOpacity
-            className="bg-primary rounded-xl py-3 items-center mb-4"
-            onPress={() => setShowModal(true)}
-          >
-            <Text className="text-primary-foreground font-semibold">
-              + New Time Block
-            </Text>
-          </TouchableOpacity>
-        }
-        ListEmptyComponent={
-          !loading ? (
-            <Text className="text-center text-muted-foreground mt-8">
-              No time blocks yet.
-            </Text>
-          ) : null
-        }
-        renderItem={({ item }) => <TimeBlockRow timeBlock={item} />}
-      />
+    <ListScreen
+      items={data?.myTimeBlocks}
+      loading={loading}
+      newLabel="New Time Block"
+      onNew={() => setShowModal(true)}
+      emptyLabel="No time blocks yet."
+      renderItem={(item) => <TimeBlockRow timeBlock={item} />}
+    >
       {showModal && <TimeBlockModal onClose={() => setShowModal(false)} />}
-    </View>
+    </ListScreen>
   );
 }

@@ -325,12 +325,15 @@ client/src/components/
     dashboard/    — CalendarView, ScheduleView
     onboarding/   — Step*.tsx wizard panels
     CompletionDialog.tsx — shared complete-with-actual-length prompt
+  native/         — RN primitives for the .native.tsx screens (see below)
 
 client/src/
   apollo-client.ts — the single ApolloClient (link split, typePolicies)
   storage.ts       — key-value store; no-ops off web
   lib/cache.ts     — cache invalidation helpers (see above)
-  hooks/           — form-hook (useAppForm), useLiveUpdates, useListSection
+  lib/date.ts      — weekStart (ISO Monday) / isoDate (local YYYY-MM-DD)
+  hooks/           — form-hook (useAppForm), useLiveUpdates, useListSection,
+                     useDarkMode, useSyncTimezone
 ```
 
 ## Shared UI Primitives
@@ -355,6 +358,21 @@ re-implementing the same markup** — every list/detail page is built from them.
 Companion hook: `hooks/useListSection.ts` — owns the create/edit dialog open
 state (`formOpen`, `editing`, `openCreate`, `openEdit`, `handleOpenChange`) that
 every list component needs.
+
+## Shared Native Primitives
+
+`components/ui/` is web-only — it renders `<div>`/`<button>` and cannot be used
+from a `.native.tsx` screen. `components/native/` is the RN-primitive equivalent,
+and every native list screen is built from it.
+
+| Primitive | Purpose |
+|-----------|---------|
+| `list-screen.tsx` — `ListScreen<T>` | `FlatList` + header with a "New …" button + empty state. Pass `items={data?.myX}` **undefined, not `?? []`** — the spinner is gated on `items === undefined`, so an `?? []` default shows "no items" during the first load. `children` render above the list (modals). |
+| `form-modal.tsx` — `FormModal` | Page-sheet `Modal` with a title/Cancel row and a primary submit button. **Render it conditionally** (`{open && <FormModal …>}`) so unmounting discards field state — no manual `setName('')` resets. |
+| `field.tsx` — `FieldLabel`, `TextField` | Labelled `TextInput` with the shared border/padding and placeholder color. `containerClassName` tunes the default `mb-4` wrapper (`cn` lets `mb-0` win). |
+| `activity-type-picker.tsx` — `ActivityTypePicker` | Single-select activity-type chips. Owns its own query, so all four sheets share one cache entry, and it carries the "create one first" empty state. |
+| `row-action.tsx` — `RowAction` | Edit/Archive/Delete pill inside a pressable row. Its `onPress` receives the event because a pill inside a pressable row has to `stopPropagation` on web. |
+| `confirm.ts` — `confirmDestructive` | The `Alert.alert(title, message, [Cancel, destructive])` triple, once. |
 
 ## ShadCN + Tailwind Conventions
 
@@ -395,7 +413,25 @@ export function priorityLabel(priority: number): string {
   if (priority >= 25) return 'Medium';
   return 'Low';
 }
+
+// client/src/lib/date.ts
+weekStart(date)  // Monday of that week — the ISO week the scheduler works in
+isoDate(date)    // local YYYY-MM-DD — the shape every date argument in the API takes
 ```
+
+Every `weekStart:` query variable and every day-grouping key goes through these.
+Do not hand-roll `getDay() === 0 ? -6 : 1 - day` or a bare
+`format(d, 'yyyy-MM-dd')`; the calendar, today, and schedule views have to agree
+on where a week starts.
+
+Two hooks carry cross-screen behaviour that used to be copy-pasted:
+
+- `hooks/useSyncTimezone.ts` — returns the device timezone and pushes it to the
+  profile once per mount. Both schedule screens need it, because the server
+  schedules and renders the iCal feed in the *stored* timezone.
+- `hooks/useDarkMode.ts` — `[dark, setDark]` against `storage`, applied to
+  `documentElement` on web and inert on native. It persists **only** on
+  `setDark`, so reading the OS preference never freezes it into storage.
 
 ## Dashboard Architecture
 

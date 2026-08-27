@@ -3,7 +3,9 @@ import { graphql } from '@/__generated__/index.js';
 import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
 import { Page, PageHeader } from '@/components/ui/page';
+import { useSyncTimezone } from '@/hooks/useSyncTimezone';
 import { DERIVED, invalidate } from '@/lib/cache';
+import { isoDate, weekStart } from '@/lib/date';
 import { priorityLabel } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { addDays, format, isToday, parseISO } from 'date-fns';
@@ -15,7 +17,7 @@ import {
   ChevronRight,
   Plus,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 // Reuses the ScheduledItem_ScheduleView fragment defined in ScheduleView.tsx.
 const MY_TODAY = graphql(`
@@ -24,12 +26,6 @@ const MY_TODAY = graphql(`
       id
       ...ScheduledItem_ScheduleView
     }
-  }
-`);
-
-const UPDATE_PROFILE = graphql(`
-  mutation UpdateProfileFromToday($timezone: String!) {
-    myUpdateProfile(timezone: $timezone)
   }
 `);
 
@@ -53,14 +49,6 @@ const COMPLETE_TODO = graphql(`
   }
 `);
 
-function toMonday(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 export default function TodayPage() {
   const [todoOpen, setTodoOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -68,34 +56,26 @@ export default function TodayPage() {
     d.setHours(0, 0, 0, 0);
     return d;
   });
-  const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const clientTimezone = useSyncTimezone();
   const viewingToday = isToday(selectedDate);
-
-  const [updateProfile] = useMutation(UPDATE_PROFILE);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only effect
-  useEffect(() => {
-    updateProfile({ variables: { timezone: clientTimezone } }).catch(
-      console.error,
-    );
-  }, []);
 
   const { data } = useQuery(MY_TODAY, {
     variables: {
-      weekStart: format(toMonday(selectedDate), 'yyyy-MM-dd'),
+      weekStart: isoDate(weekStart(selectedDate)),
       timezone: clientTimezone,
     },
     fetchPolicy: 'cache-and-network',
   });
 
   const schedule = data?.mySchedule ?? [];
-  const selectedKey = format(selectedDate, 'yyyy-MM-dd');
+  const selectedKey = isoDate(selectedDate);
 
   const { today, unscheduledCount } = useMemo(() => {
     const items = schedule.filter(
       (i) =>
         i.isScheduled &&
         i.scheduledStart &&
-        format(new Date(i.scheduledStart), 'yyyy-MM-dd') === selectedKey,
+        isoDate(new Date(i.scheduledStart)) === selectedKey,
     );
     items.sort(
       (a, b) =>

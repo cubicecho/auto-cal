@@ -1,18 +1,15 @@
 import { graphql } from '@/__generated__/index.js';
+import { ActivityTypePicker } from '@/components/native/activity-type-picker';
+import { confirmDestructive } from '@/components/native/confirm';
+import { TextField } from '@/components/native/field';
+import { FormModal } from '@/components/native/form-modal';
+import { ListScreen } from '@/components/native/list-screen';
+import { RowAction } from '@/components/native/row-action';
 import { invalidate } from '@/lib/cache';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Modal,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Text, View } from 'react-native';
 
 // ─── GraphQL ─────────────────────────────────────────────────────────────────
 
@@ -45,18 +42,10 @@ const ARCHIVE_PROJECT = graphql(`
   }
 `);
 
-const GET_ACTIVITY_TYPES_FOR_PROJECTS = graphql(`
-  query GetActivityTypesForProjectsNative {
-    myActivityTypes { id name color }
-  }
-`);
-
 // ─── Create Project Modal ─────────────────────────────────────────────────────
 
 function ProjectModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('');
-  const { data: atData } = useQuery(GET_ACTIVITY_TYPES_FOR_PROJECTS);
-  const activityTypes = atData?.myActivityTypes ?? [];
   const [parentActivityTypeId, setParentActivityTypeId] = useState('');
 
   const [createProject, { loading }] = useMutation(CREATE_PROJECT, {
@@ -74,62 +63,27 @@ function ProjectModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal
-      visible
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+    <FormModal
+      title="New Project"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitDisabled={loading || !name.trim() || !parentActivityTypeId}
+      submitLabel={loading ? 'Creating…' : 'Create Project'}
     >
-      <View className="flex-1 bg-background p-6">
-        <View className="flex-row items-center justify-between mb-6">
-          <Text className="text-xl font-bold text-foreground">New Project</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Text className="text-primary text-base">Cancel</Text>
-          </TouchableOpacity>
-        </View>
+      <TextField
+        label="Name"
+        placeholder="e.g. Website redesign"
+        value={name}
+        onChangeText={setName}
+        autoFocus
+      />
 
-        <Text className="text-sm font-medium text-foreground mb-1">Name</Text>
-        <TextInput
-          className="border border-border rounded-lg px-3 py-2 mb-4 text-foreground bg-card"
-          placeholder="e.g. Website redesign"
-          placeholderTextColor="#9ca3af"
-          value={name}
-          onChangeText={setName}
-          autoFocus
-        />
-
-        <Text className="text-sm font-medium text-foreground mb-2">
-          Parent activity type
-        </Text>
-        <View className="flex-row flex-wrap gap-2 mb-6">
-          {activityTypes.map((at) => (
-            <TouchableOpacity
-              key={at.id}
-              onPress={() => setParentActivityTypeId(at.id)}
-              className={`rounded-lg px-3 py-2 border ${parentActivityTypeId === at.id ? 'border-primary' : 'border-border'}`}
-              style={{ backgroundColor: hexToDesaturated(at.color) }}
-            >
-              <Text className="text-sm text-foreground">{at.name}</Text>
-            </TouchableOpacity>
-          ))}
-          {activityTypes.length === 0 && (
-            <Text className="text-sm text-muted-foreground">
-              No activity types — create one first
-            </Text>
-          )}
-        </View>
-
-        <TouchableOpacity
-          className="bg-primary rounded-lg py-3 items-center"
-          onPress={handleSubmit}
-          disabled={loading || !name.trim() || !parentActivityTypeId}
-        >
-          <Text className="text-primary-foreground font-semibold">
-            {loading ? 'Creating…' : 'Create Project'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </Modal>
+      <ActivityTypePicker
+        label="Parent activity type"
+        selectedId={parentActivityTypeId}
+        onSelect={setParentActivityTypeId}
+      />
+    </FormModal>
   );
 }
 
@@ -148,18 +102,12 @@ function ProjectRow({ project }: { project: Project }) {
   });
 
   function handleArchive() {
-    Alert.alert(
-      'Archive project?',
-      `"${project.name}" will be hidden from the list. Nothing is deleted.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Archive',
-          style: 'destructive',
-          onPress: () => archiveProject({ variables: { id: project.id } }),
-        },
-      ],
-    );
+    confirmDestructive({
+      title: 'Archive project?',
+      message: `"${project.name}" will be hidden from the list. Nothing is deleted.`,
+      confirmLabel: 'Archive',
+      onConfirm: () => archiveProject({ variables: { id: project.id } }),
+    });
   }
 
   return (
@@ -182,12 +130,7 @@ function ProjectRow({ project }: { project: Project }) {
           </Text>
         </View>
         {project.status !== 'archived' && (
-          <TouchableOpacity
-            onPress={handleArchive}
-            className="px-3 py-1 rounded-lg border border-border bg-background/60"
-          >
-            <Text className="text-xs text-foreground">Archive</Text>
-          </TouchableOpacity>
+          <RowAction label="Archive" onPress={handleArchive} />
         )}
       </View>
     </View>
@@ -202,41 +145,16 @@ export default function ProjectsScreen() {
     fetchPolicy: 'cache-and-network',
   });
 
-  const projects = data?.myProjects ?? [];
-
   return (
-    <View className="flex-1 bg-background">
-      {loading && !data && (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator />
-        </View>
-      )}
-
-      <FlatList
-        data={projects}
-        keyExtractor={(item) => item.id}
-        contentContainerClassName="px-4 py-4"
-        ListHeaderComponent={
-          <TouchableOpacity
-            className="bg-primary rounded-xl py-3 items-center mb-4"
-            onPress={() => setModalOpen(true)}
-          >
-            <Text className="text-primary-foreground font-semibold">
-              + New Project
-            </Text>
-          </TouchableOpacity>
-        }
-        ListEmptyComponent={
-          !loading ? (
-            <Text className="text-center text-muted-foreground mt-8">
-              No projects yet. Create one to get started.
-            </Text>
-          ) : null
-        }
-        renderItem={({ item }) => <ProjectRow project={item} />}
-      />
-
+    <ListScreen
+      items={data?.myProjects}
+      loading={loading}
+      newLabel="New Project"
+      onNew={() => setModalOpen(true)}
+      emptyLabel="No projects yet. Create one to get started."
+      renderItem={(item) => <ProjectRow project={item} />}
+    >
       {modalOpen && <ProjectModal onClose={() => setModalOpen(false)} />}
-    </View>
+    </ListScreen>
   );
 }

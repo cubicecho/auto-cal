@@ -1,6 +1,7 @@
+import { confirmDestructive } from '@/components/native/confirm';
 import { storage } from '@/storage';
 import { useRouter } from 'expo-router';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -11,17 +12,15 @@ export default function SettingsScreen() {
   }
 
   function handleLogout() {
-    Alert.alert('Sign out?', 'You will need to sign in again.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: () => {
-          storage.removeItem('auth_token');
-          router.replace('/auth/login');
-        },
+    confirmDestructive({
+      title: 'Sign out?',
+      message: 'You will need to sign in again.',
+      confirmLabel: 'Sign out',
+      onConfirm: () => {
+        storage.removeItem('auth_token');
+        router.replace('/auth/login');
       },
-    ]);
+    });
   }
 
   return (

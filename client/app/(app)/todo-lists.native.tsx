@@ -5,21 +5,16 @@ import type {
 import { graphql } from '@/__generated__/index.js';
 import { TODO_LIST_LIST_FRAGMENT } from '@/components/domain/todo-list/TodoListList';
 import { TODO_LIST_FRAGMENT } from '@/components/domain/todo/TodoItem';
+import { ActivityTypePicker } from '@/components/native/activity-type-picker';
+import { confirmDestructive } from '@/components/native/confirm';
+import { TextField } from '@/components/native/field';
+import { FormModal } from '@/components/native/form-modal';
+import { ListScreen } from '@/components/native/list-screen';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
 import { hexToDesaturated } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Modal,
-  Pressable,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Pressable, Text, TouchableOpacity, View } from 'react-native';
 
 // ─── GraphQL ─────────────────────────────────────────────────────────────────
 
@@ -76,33 +71,26 @@ type Todo = Todo_TodoListFragment;
 
 // ─── Create List Modal ────────────────────────────────────────────────────────
 
-function CreateListModal({
-  visible,
-  onClose,
-}: {
-  visible: boolean;
-  onClose: () => void;
-}) {
+function CreateListModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [activityTypeId, setActivityTypeId] = useState('');
 
   const [createList, { loading }] = useMutation(CREATE_TODO_LIST, {
     update: (cache) => invalidate(cache, 'myTodoLists'),
-    onCompleted: () => {
-      setName('');
-      setDescription('');
-      onClose();
-    },
+    onCompleted: onClose,
   });
 
   function handleSubmit() {
-    if (!name.trim()) return;
+    // activityTypeId is required server-side (a uuid), which is why the picker
+    // is not optional here — submitting without one fails validation.
+    if (!name.trim() || !activityTypeId) return;
     createList({
       variables: {
         input: {
           name: name.trim(),
           description: description.trim() || undefined,
-          activityTypeId: '',
+          activityTypeId,
           defaultPriority: 0,
           defaultEstimatedLength: 30,
         },
@@ -111,80 +99,50 @@ function CreateListModal({
   }
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+    <FormModal
+      title="New List"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitDisabled={loading || !name.trim() || !activityTypeId}
+      submitLabel={loading ? 'Creating…' : 'Create List'}
     >
-      <View className="flex-1 bg-background p-6">
-        <View className="flex-row items-center justify-between mb-6">
-          <Text className="text-xl font-bold text-foreground">New List</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Text className="text-primary text-base">Cancel</Text>
-          </TouchableOpacity>
-        </View>
+      <TextField
+        label="Name"
+        placeholder="List name"
+        value={name}
+        onChangeText={setName}
+        autoFocus
+      />
 
-        <Text className="text-sm font-medium text-foreground mb-1">Name</Text>
-        <TextInput
-          className="border border-border rounded-lg px-3 py-2 mb-4 text-foreground bg-card"
-          placeholder="List name"
-          placeholderTextColor="#9ca3af"
-          value={name}
-          onChangeText={setName}
-          autoFocus
-        />
+      <TextField
+        label="Description (optional)"
+        placeholder="Description"
+        value={description}
+        onChangeText={setDescription}
+        multiline
+        numberOfLines={3}
+      />
 
-        <Text className="text-sm font-medium text-foreground mb-1">
-          Description (optional)
-        </Text>
-        <TextInput
-          className="border border-border rounded-lg px-3 py-2 mb-6 text-foreground bg-card"
-          placeholder="Description"
-          placeholderTextColor="#9ca3af"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={3}
-        />
-
-        <TouchableOpacity
-          className="bg-primary rounded-lg py-3 items-center"
-          onPress={handleSubmit}
-          disabled={loading || !name.trim()}
-        >
-          <Text className="text-primary-foreground font-semibold">
-            {loading ? 'Creating…' : 'Create List'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </Modal>
+      <ActivityTypePicker
+        selectedId={activityTypeId}
+        onSelect={setActivityTypeId}
+      />
+    </FormModal>
   );
 }
 
 // ─── Add Todo Modal ───────────────────────────────────────────────────────────
 
-function AddTodoModal({
-  list,
-  onClose,
-}: {
-  list: List | null;
-  onClose: () => void;
-}) {
+function AddTodoModal({ list, onClose }: { list: List; onClose: () => void }) {
   const [title, setTitle] = useState('');
 
   const [createTodo, { loading }] = useMutation(CREATE_TODO, {
     update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
-    onCompleted: () => {
-      setTitle('');
-      onClose();
-    },
+    onCompleted: onClose,
   });
 
-  if (!list) return null;
-
   function handleSubmit() {
-    if (!title.trim() || !list) return;
+    if (!title.trim()) return;
     createTodo({
       variables: {
         input: {
@@ -198,43 +156,24 @@ function AddTodoModal({
   }
 
   return (
-    <Modal
-      visible
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+    <FormModal
+      title="Add Todo"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitDisabled={loading || !title.trim()}
+      submitLabel={loading ? 'Adding…' : 'Add Todo'}
     >
-      <View className="flex-1 bg-background p-6">
-        <View className="flex-row items-center justify-between mb-6">
-          <Text className="text-xl font-bold text-foreground">Add Todo</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Text className="text-primary text-base">Cancel</Text>
-          </TouchableOpacity>
-        </View>
-        <Text className="text-sm text-muted-foreground mb-3">
-          In: {list.name}
-        </Text>
+      <Text className="text-sm text-muted-foreground mb-3">
+        In: {list.name}
+      </Text>
 
-        <TextInput
-          className="border border-border rounded-lg px-3 py-2 mb-6 text-foreground bg-card"
-          placeholder="What needs to be done?"
-          placeholderTextColor="#9ca3af"
-          value={title}
-          onChangeText={setTitle}
-          autoFocus
-        />
-
-        <TouchableOpacity
-          className="bg-primary rounded-lg py-3 items-center"
-          onPress={handleSubmit}
-          disabled={loading || !title.trim()}
-        >
-          <Text className="text-primary-foreground font-semibold">
-            {loading ? 'Adding…' : 'Add Todo'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </Modal>
+      <TextField
+        placeholder="What needs to be done?"
+        value={title}
+        onChangeText={setTitle}
+        autoFocus
+      />
+    </FormModal>
   );
 }
 
@@ -254,18 +193,11 @@ function TodoRow({ todo }: { todo: Todo }) {
   });
 
   function handleDelete() {
-    Alert.alert(
-      'Delete todo?',
-      `"${todo.title}" will be permanently deleted.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteTodo({ variables: { id: todo.id } }),
-        },
-      ],
-    );
+    confirmDestructive({
+      title: 'Delete todo?',
+      message: `"${todo.title}" will be permanently deleted.`,
+      onConfirm: () => deleteTodo({ variables: { id: todo.id } }),
+    });
   }
 
   return (
@@ -392,51 +324,30 @@ export default function TodoListsScreen() {
     return map;
   }, [data?.myTodos]);
 
-  const lists = data?.myTodoLists ?? [];
-
   return (
-    <View className="flex-1 bg-background">
-      {loading && !data && (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator />
-        </View>
+    <ListScreen
+      items={data?.myTodoLists}
+      loading={loading}
+      newLabel="New List"
+      onNew={() => setShowCreateList(true)}
+      emptyLabel="No lists yet. Create one to get started."
+      renderItem={(item) => (
+        <ListCard
+          list={item}
+          todos={todosByListId.get(item.id) ?? []}
+          onAddTodo={setAddingToList}
+        />
       )}
-
-      <FlatList
-        data={lists}
-        keyExtractor={(item) => item.id}
-        contentContainerClassName="px-4 py-4"
-        ListHeaderComponent={
-          <TouchableOpacity
-            className="bg-primary rounded-xl py-3 items-center mb-4"
-            onPress={() => setShowCreateList(true)}
-          >
-            <Text className="text-primary-foreground font-semibold">
-              + New List
-            </Text>
-          </TouchableOpacity>
-        }
-        ListEmptyComponent={
-          !loading ? (
-            <Text className="text-center text-muted-foreground mt-8">
-              No lists yet. Create one to get started.
-            </Text>
-          ) : null
-        }
-        renderItem={({ item }) => (
-          <ListCard
-            list={item}
-            todos={todosByListId.get(item.id) ?? []}
-            onAddTodo={setAddingToList}
-          />
-        )}
-      />
-
-      <CreateListModal
-        visible={showCreateList}
-        onClose={() => setShowCreateList(false)}
-      />
-      <AddTodoModal list={addingToList} onClose={() => setAddingToList(null)} />
-    </View>
+    >
+      {showCreateList && (
+        <CreateListModal onClose={() => setShowCreateList(false)} />
+      )}
+      {addingToList && (
+        <AddTodoModal
+          list={addingToList}
+          onClose={() => setAddingToList(null)}
+        />
+      )}
+    </ListScreen>
   );
 }

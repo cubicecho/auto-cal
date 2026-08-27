@@ -1,5 +1,6 @@
 import { segmentedItemClass } from '@/components/ui/segmented';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useDarkMode } from '@/hooks/useDarkMode';
 import { useLiveUpdates } from '@/hooks/useLiveUpdates';
 import { cn } from '@/lib/utils';
 import { storage } from '@/storage';
@@ -12,7 +13,6 @@ import {
   useRouter,
 } from 'expo-router';
 import { Moon, Settings, Sun } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
 const NAV_LINKS = [
@@ -25,25 +25,6 @@ const NAV_LINKS = [
   { href: '/activity-types', label: 'Activity Types' },
   { href: '/stats', label: 'Stats' },
 ] as const;
-
-function getInitialDark(): boolean {
-  if (Platform.OS !== 'web') return false;
-  const stored = storage.getItem('theme');
-  if (stored) return stored === 'dark';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
-}
-
-function useDarkMode() {
-  const [dark, setDark] = useState(getInitialDark);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    document.documentElement.classList.toggle('dark', dark);
-    storage.setItem('theme', dark ? 'dark' : 'light');
-  }, [dark]);
-
-  return [dark, setDark] as const;
-}
 
 function WebLayout() {
   const [dark, setDark] = useDarkMode();
@@ -81,7 +62,7 @@ function WebLayout() {
                   ))}
                   <button
                     type="button"
-                    onClick={() => setDark((d) => !d)}
+                    onClick={() => setDark(!dark)}
                     aria-label={
                       dark ? 'Switch to light mode' : 'Switch to dark mode'
                     }

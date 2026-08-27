@@ -1,23 +1,10 @@
 import { apolloClient } from '@/apollo-client';
+import { useDarkMode } from '@/hooks/useDarkMode';
 import { storage } from '@/storage';
 import { ApolloProvider } from '@apollo/client/react';
 import { Redirect, Stack, usePathname } from 'expo-router';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
 import '../global.css';
 import '../src/index.css';
-
-function useDarkMode() {
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const stored = storage.getItem('theme');
-    const prefersDark = window.matchMedia(
-      '(prefers-color-scheme: dark)',
-    ).matches;
-    const dark = stored ? stored === 'dark' : prefersDark;
-    document.documentElement.classList.toggle('dark', dark);
-  }, []);
-}
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -31,6 +18,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  // Applies the stored theme on the /auth screens, which sit outside (app).
   useDarkMode();
 
   return (
