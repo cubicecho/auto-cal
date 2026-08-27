@@ -7,6 +7,7 @@ import {
   parse,
 } from 'graphql';
 import type { Context } from '../../context.ts';
+import { scopeRootFields } from '../scope.ts';
 import {
   activityTypeFields,
   activityTypeMutations,
@@ -434,7 +435,7 @@ export const PUBLIC_MUTATIONS = new Set([
 ]);
 
 /**
- * Last pass over the schema: drop unscoped root fields and the `keyHash`
+ * Last pass over the schema: drop unscoped mutations and the `keyHash`
  * input surfaces, then garbage-collect whatever that leaves unreferenced.
  *
  * **Unscoped root fields.** drizzle-graphql generates a `<table>`/`<table>Single`
@@ -442,7 +443,10 @@ export const PUBLIC_MUTATIONS = new Set([
  * at runtime with a throwing resolver, but that left them in the SDL — shipped
  * to introspection and to client codegen as autocompletable operations that
  * always fail. Removing the field makes the same query fail validation instead,
- * one layer earlier and without advertising it.
+ * one layer earlier and without advertising it. Queries are handled earlier now,
+ * by `scopeRootFields`, which either scopes a generated field and renames it to
+ * its `my*` form or removes it; the check here is a backstop asserting that pass
+ * and `extensionSDL` between them left nothing unscoped behind.
  *
  * **`keyHash`.** Deleting the output field (see `applyCustomResolvers`) stops
  * the hash being selected, but drizzle-graphql derives `ApiKeyFilters`,
@@ -462,8 +466,14 @@ function finalizeSchema(schema: GraphQLSchema): GraphQLSchema {
   const isApiKeyInput = (typeName: string) => typeName.startsWith('ApiKey');
 
   const mapped = mapSchema(schema, {
-    [MapperKind.QUERY_ROOT_FIELD]: (_field, fieldName) =>
-      isScoped(fieldName) ? undefined : null,
+    [MapperKind.QUERY_ROOT_FIELD]: (_field, fieldName) => {
+      if (!isScoped(fieldName)) {
+        throw new Error(
+          `Query.${fieldName} is not scoped to the caller — every query must be \`my\`-prefixed`,
+        );
+      }
+      return undefined;
+    },
     [MapperKind.MUTATION_ROOT_FIELD]: (_field, fieldName) =>
       isScoped(fieldName) ? undefined : null,
     [MapperKind.INPUT_OBJECT_FIELD]: (_field, fieldName, typeName) =>
@@ -512,7 +522,10 @@ function attach(
 }
 
 export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
-  const extended = extendSchema(schema, parse(extensionSDL));
+  // Scope first: this renames the generated `todos`/`project`/... queries to
+  // their `my*` form and wraps each resolver with the caller's filter, so the
+  // extension below adds only the queries that do real work beyond scoping.
+  const extended = extendSchema(scopeRootFields(schema), parse(extensionSDL));
 
   const queryType = extended.getType('Query') as GraphQLObjectType;
   const mutationType = extended.getType('Mutation') as GraphQLObjectType;
