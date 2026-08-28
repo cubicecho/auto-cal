@@ -58,141 +58,26 @@
   }
 }
 
-/* ─── react-big-calendar theme overrides ─────────────────────────────────── */
-.rbc-calendar-wrapper {
+/* ─── FullCalendar (classic theme) overrides ─────────────────────────────────
+   The theme's palette defines its --fc-classic-* variables at :root. We redefine
+   them on the calendar wrapper so every descendant inherits our design tokens
+   instead — which flip automatically with the app's `.dark` class. (v7 uses
+   hashed class names and has no plain `.fc` element to target directly.) */
+.fc-calendar-wrapper {
+  --fc-classic-background: hsl(var(--background));
+  --fc-classic-foreground: hsl(var(--foreground));
+  --fc-classic-muted-foreground: hsl(var(--muted-foreground));
+  --fc-classic-faint-foreground: hsl(var(--muted-foreground));
+  --fc-classic-faint: hsl(var(--muted));
+  --fc-classic-muted: hsl(var(--muted));
+  --fc-classic-strong: hsl(var(--muted));
+  --fc-classic-border: hsl(var(--border));
+  --fc-classic-strong-border: hsl(var(--border));
+  --fc-classic-primary: hsl(var(--primary));
+  --fc-classic-primary-foreground: hsl(var(--primary-foreground));
+  --fc-classic-highlight: hsl(var(--accent));
+  --fc-classic-today: hsl(var(--accent));
+  --fc-classic-now: hsl(var(--destructive));
+  --fc-classic-ring-color: hsl(var(--ring));
   font-family: inherit;
-}
-
-.rbc-calendar {
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-  border-radius: var(--radius);
-}
-
-.rbc-header {
-  background: hsl(var(--card));
-  color: hsl(var(--card-foreground));
-  border-color: hsl(var(--border));
-  padding: 0.5rem 0.25rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.rbc-time-view,
-.rbc-month-view {
-  border-color: hsl(var(--border));
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.rbc-time-content {
-  border-color: hsl(var(--border));
-}
-
-.rbc-time-slot {
-  border-color: hsl(var(--border));
-}
-
-.rbc-timeslot-group {
-  border-color: hsl(var(--border));
-  min-height: 40px;
-}
-
-.rbc-time-gutter .rbc-timeslot-group {
-  background: hsl(var(--card));
-}
-
-.rbc-time-gutter .rbc-time-slot {
-  color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding-right: 0.5rem;
-  text-align: right;
-}
-
-.rbc-day-bg {
-  background: hsl(var(--background));
-}
-
-.rbc-day-bg + .rbc-day-bg {
-  border-color: hsl(var(--border));
-}
-
-.rbc-today {
-  background: hsl(var(--accent)) !important;
-}
-
-.rbc-off-range-bg {
-  background: hsl(var(--muted));
-}
-
-.rbc-toolbar {
-  margin-bottom: 1rem;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.rbc-toolbar button {
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-  border: 1px solid hsl(var(--border));
-  border-radius: calc(var(--radius) - 2px);
-  padding: 0.375rem 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 150ms, color 150ms;
-}
-
-.rbc-toolbar button:hover {
-  background: hsl(var(--muted));
-}
-
-.rbc-toolbar button.rbc-active {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  border-color: hsl(var(--primary));
-}
-
-.rbc-toolbar button.rbc-active:hover {
-  background: hsl(var(--primary));
-  opacity: 0.9;
-}
-
-.rbc-toolbar-label {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: hsl(var(--foreground));
-}
-
-.rbc-event {
-  border-radius: 4px !important;
-  font-size: 0.8rem !important;
-  font-weight: 500;
-  padding: 2px 6px;
-}
-
-.rbc-event:focus {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
-}
-
-.rbc-current-time-indicator {
-  background: hsl(var(--destructive));
-  height: 2px;
-}
-
-.rbc-label {
-  color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
-}
-
-.rbc-allday-cell {
-  background: hsl(var(--card));
-  border-color: hsl(var(--border));
-}
-
-.rbc-show-more {
-  color: hsl(var(--primary));
-  font-size: 0.75rem;
 }

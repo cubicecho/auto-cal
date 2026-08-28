@@ -3,43 +3,44 @@ import type {
   TimeBlock_CalendarViewFragment,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
+import { ColorDot } from '@/components/ui/color-dot';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Check, LoaderCircle } from '@/components/ui/icons';
 import { useToast } from '@/components/ui/toast';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { weekStart } from '@/lib/date';
+import { priorityLabel } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
+import FullCalendar, {
+  type CalendarRef,
+  type EventClickInfo,
+  type EventDisplayInfo,
+  type EventDropInfo,
+  type EventInput,
+} from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/react/daygrid';
+import interactionPlugin from '@fullcalendar/react/interaction';
+import classicTheme from '@fullcalendar/react/themes/classic';
+import timeGridPlugin from '@fullcalendar/react/timegrid';
 import {
   addDays,
   format,
-  getDay,
-  parse,
+  parseISO,
   setHours,
   setMinutes,
   startOfDay,
 } from 'date-fns';
-import { enUS } from 'date-fns/locale/en-US';
-import type React from 'react';
-import { useMemo } from 'react';
-import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
-import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
-import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-const locales = { 'en-US': enUS };
-
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek: () => weekStart(new Date()),
-  getDay,
-  locales,
-});
-
-// Create DnD-enabled Calendar
-// biome-ignore lint/suspicious/noExplicitAny: react-big-calendar DnD wrapper lacks proper generic types
-const wdnd: any = (withDragAndDrop as any).default ?? withDragAndDrop;
-// biome-ignore lint/suspicious/noExplicitAny: react-big-calendar DnD wrapper lacks proper generic types
-const DnDCalendar = wdnd(Calendar as any) as any;
+import '@fullcalendar/react/skeleton.css';
+import '@fullcalendar/react/themes/classic/theme.css';
+import '@fullcalendar/react/themes/classic/palette.css';
 
 // ─── GraphQL ────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,8 @@ graphql(`
     kind
     id
     title
+    priority
+    estimatedLength
     isScheduled
     isOverdue
     scheduledStart
@@ -91,34 +94,44 @@ const COMPLETE_TODO = graphql(`
   }
 `);
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-interface CalendarEvent {
-  id: string;
-  title: string;
-  start: Date;
-  end: Date;
-  color: string;
-  isTask?: boolean;
-  isPast?: boolean;
-  isCompleted?: boolean;
+const FALLBACK_COLOR = '#64748b';
+
+// Metadata carried on each FullCalendar event via extendedProps.
+interface EventMeta {
+  isTask: boolean;
+  isBackground: boolean;
+  isCompleted: boolean;
   kind?: string;
+  itemId?: string;
+  habitId?: string;
+  // Fields surfaced in the click-to-open detail dialog (tasks only).
+  detailTitle?: string;
+  activityName?: string;
+  activityColor?: string;
+  isOverdue?: boolean;
+  priority?: number;
+  estimatedLength?: number;
+  startISO?: string;
+  endISO?: string;
+  completedAtISO?: string;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+/** Human-readable date + time range for the detail dialog. */
+function formatDetailRange(startISO?: string, endISO?: string): string | null {
+  if (!startISO || !endISO) return null;
+  const start = parseISO(startISO);
+  const end = parseISO(endISO);
+  const sameDay = format(start, 'yyyy-MM-dd') === format(end, 'yyyy-MM-dd');
+  return sameDay
+    ? `${format(start, 'EEE, MMM d')} · ${format(start, 'h:mm a')} – ${format(end, 'h:mm a')}`
+    : `${format(start, 'EEE, MMM d, h:mm a')} – ${format(end, 'EEE, MMM d, h:mm a')}`;
+}
 
 function parseTime(time: string): { hours: number; minutes: number } {
   const [h, m] = time.split(':').map(Number);
   return { hours: h ?? 0, minutes: m ?? 0 };
-}
-
-function darkenColor(hex: string): string {
-  if (!hex.startsWith('#')) return hex;
-  const n = Number.parseInt(hex.replace('#', ''), 16);
-  const r = Math.max(0, (n >> 16) - 40);
-  const g = Math.max(0, ((n >> 8) & 0xff) - 40);
-  const b = Math.max(0, (n & 0xff) - 40);
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
 function desaturateColor(hex: string, amount = 0.2): string {
@@ -137,8 +150,10 @@ function desaturateColor(hex: string, amount = 0.2): string {
 function expandTimeBlock(
   block: TimeBlock_CalendarViewFragment,
   referenceDate: Date,
-): CalendarEvent[] {
+  now: Date,
+): EventInput[] {
   if (!block.activityType) return [];
+  // `weekStart` is Monday-based, matching the server's ISO week convention.
   const monday = weekStart(referenceDate);
   const { hours: startH, minutes: startM } = parseTime(block.startTime);
   const { hours: endH, minutes: endM } = parseTime(block.endTime);
@@ -146,64 +161,35 @@ function expandTimeBlock(
   const color = block.activityType.color;
 
   return block.daysOfWeek.map((dayIndex: number) => {
-    // dayIndex: 0=Sun, 1=Mon…6=Sat.
+    // dayIndex: 0=Sun, 1=Mon…6=Sat. `monday` is the Monday of that week.
     // offset from Monday: Mon=0, Tue=1…Sat=5, Sun=6
     const offsetFromMonday = dayIndex === 0 ? 6 : dayIndex - 1;
     const dayDate = addDays(monday, offsetFromMonday);
     const start = setMinutes(setHours(startOfDay(dayDate), startH), startM);
     const end = setMinutes(setHours(startOfDay(dayDate), endH), endM);
+    const isPast = end < now;
+    const meta: EventMeta = {
+      isTask: false,
+      isBackground: true,
+      isCompleted: false,
+    };
     return {
       id: `${block.id}-${dayIndex}`,
       title,
       start,
       end,
-      color,
-    };
+      display: 'background',
+      color: isPast ? desaturateColor(color) : color,
+      editable: false,
+      extendedProps: meta,
+    } satisfies EventInput;
   });
 }
 
-// ─── Event Style ─────────────────────────────────────────────────────────────
+// ─── Custom Event Content ────────────────────────────────────────────────────
 
-function eventStyleGetter(event: CalendarEvent) {
-  const bgColor = event.isPast ? desaturateColor(event.color) : event.color;
-
-  if (event.isTask) {
-    return {
-      style: {
-        backgroundColor: bgColor,
-        borderColor: event.isPast
-          ? desaturateColor(darkenColor(event.color))
-          : darkenColor(event.color),
-        color: event.isPast ? '#aaa' : '#fff',
-        borderRadius: '4px',
-        border: `2px solid ${event.isPast ? desaturateColor(darkenColor(event.color)) : darkenColor(event.color)}`,
-        opacity: 1,
-        fontWeight: event.isCompleted ? 400 : 600,
-        fontSize: '0.75rem',
-        zIndex: 10,
-        textDecoration: event.isCompleted ? 'line-through' : 'none',
-        fontStyle: event.isCompleted ? 'italic' : 'normal',
-      },
-    };
-  }
-
-  return {
-    style: {
-      backgroundColor: bgColor,
-      borderColor: bgColor,
-      color: event.isPast ? '#999' : '#fff',
-      borderRadius: '4px',
-      border: 'none',
-      opacity: 0.85,
-      fontWeight: 500,
-      fontSize: '0.8rem',
-    },
-  };
-}
-
-// ─── Custom Event Component ──────────────────────────────────────────────────
-
-function CalendarEventComponent({ event }: { event: CalendarEvent }) {
+function TaskEventContent({ arg }: { arg: EventDisplayInfo }) {
+  const meta = arg.event.extendedProps as EventMeta;
   const toast = useToast();
 
   // These fire optimistically, so a rejection silently rolls the event back to
@@ -225,52 +211,61 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
   );
 
   const completing = completingHabit || completingTodo;
-  const isHabit = event.isTask && event.kind === 'habit';
-  const isTodo = event.isTask && event.kind === 'todo';
+  const isHabit = meta.kind === 'habit';
+  const isTodo = meta.kind === 'todo';
+  const canComplete = (isHabit || isTodo) && !meta.isCompleted;
 
   function handleClick(e: React.MouseEvent) {
     e.stopPropagation();
     const now = new Date().toISOString();
-    if (isHabit) {
-      const raw = event.id.replace(/^scheduled-habit-/, '');
-      const habitId = raw.replace(/-\d+$/, '');
+    const start = arg.event.start ?? new Date();
+    if (isHabit && meta.habitId) {
       completeHabit({
         variables: {
           input: {
-            habitId,
-            scheduledAt: format(event.start, "yyyy-MM-dd'T'HH:mm:ss"),
+            habitId: meta.habitId,
+            scheduledAt: format(start, "yyyy-MM-dd'T'HH:mm:ss"),
           },
         },
         optimisticResponse: {
           myCompleteHabit: {
             __typename: 'HabitCompletion',
-            id: `${event.id}-optimistic`,
+            id: `${arg.event.id}-optimistic`,
             completedAt: now,
           },
         },
-      }).catch(() => {});
-    } else if (isTodo) {
-      const todoId = event.id.replace(/^scheduled-todo-/, '');
+      }).catch(console.error);
+    } else if (isTodo && meta.itemId) {
+      const todoId = meta.itemId;
       completeTodo({
         variables: { id: todoId },
         optimisticResponse: {
           myCompleteTodo: { __typename: 'Todo', id: todoId, completedAt: now },
         },
-      }).catch(() => {});
+      }).catch(console.error);
     }
   }
 
   return (
     <div
-      className="flex h-full items-center justify-between gap-1 overflow-hidden px-0.5"
+      className="flex h-full w-full items-center justify-between gap-1 overflow-hidden px-0.5"
       style={{ opacity: completing ? 0.5 : 1, transition: 'opacity 150ms' }}
     >
-      <span className="truncate text-xs leading-tight">{event.title}</span>
-      {(isHabit || isTodo) && (
+      <span
+        className="truncate text-xs leading-tight"
+        style={{
+          textDecoration: meta.isCompleted ? 'line-through' : 'none',
+          fontStyle: meta.isCompleted ? 'italic' : 'normal',
+          fontWeight: meta.isCompleted ? 400 : 600,
+        }}
+      >
+        {arg.event.title}
+      </span>
+      {canComplete && (
         <button
           type="button"
           disabled={completing}
-          className="flex-shrink-0 rounded p-0.5 opacity-80 hover:opacity-100 hover:bg-black/20 disabled:cursor-not-allowed"
+          className="flex-shrink-0 rounded p-0.5 opacity-80 hover:bg-black/20 hover:opacity-100 disabled:cursor-not-allowed"
           title={isHabit ? 'Mark habit complete' : 'Mark todo complete'}
           onClick={handleClick}
         >
@@ -285,9 +280,22 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
   );
 }
 
+function renderEventContent(arg: EventDisplayInfo) {
+  const meta = arg.event.extendedProps as EventMeta;
+  // Background time-block shading uses FullCalendar's default (empty) rendering.
+  if (meta.isBackground) return undefined;
+  return <TaskEventContent arg={arg} />;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 type CalendarViewMode = 'day' | 'week' | 'month';
+
+const FC_VIEW: Record<CalendarViewMode, string> = {
+  day: 'timeGridDay',
+  week: 'timeGridWeek',
+  month: 'dayGridMonth',
+};
 
 type CalendarViewProps = {
   timeBlocks: Array<TimeBlock_CalendarViewFragment>;
@@ -302,28 +310,34 @@ export function CalendarView({
   date,
   view,
 }: CalendarViewProps) {
+  const calendarRef = useRef<CalendarRef>(null);
+  const [selected, setSelected] = useState<EventMeta | null>(null);
   const toast = useToast();
-
+  // A drop is applied to the calendar before the server confirms it, so a
+  // rejection snaps the event back with no other sign it failed.
   const [pinTodo] = useMutation(PIN_TODO, {
     update: (cache) => invalidate(cache, ...DERIVED),
-    // A refused drag snaps the event back to where it started, which on its own
-    // is indistinguishable from the drop not registering.
-    onError: (err) => toast(err.message || 'Could not move this todo'),
+    onError: (err) => toast(err.message || 'Could not move this item'),
   });
 
-  const backgroundEvents = useMemo<CalendarEvent[]>(() => {
-    const now = new Date();
+  const fcView = FC_VIEW[view];
+
+  // The parent owns date/view via the URL; drive FullCalendar imperatively.
+  useEffect(() => {
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+    if (api.view.type !== fcView) api.changeView(fcView, date);
+    else api.gotoDate(date);
+  }, [fcView, date]);
+
+  const backgroundEvents = useMemo<EventInput[]>(() => {
     // Skip background time-block shading in month view — too noisy on a grid
     if (view === 'month') return [];
-    return timeBlocks.flatMap((block) =>
-      expandTimeBlock(block, date).map((event) => ({
-        ...event,
-        isPast: event.end < now,
-      })),
-    );
+    const now = new Date();
+    return timeBlocks.flatMap((block) => expandTimeBlock(block, date, now));
   }, [timeBlocks, date, view]);
 
-  const scheduledEvents = useMemo<CalendarEvent[]>(() => {
+  const scheduledEvents = useMemo<EventInput[]>(() => {
     const now = new Date();
     return schedule
       .filter((item) => {
@@ -333,20 +347,49 @@ export function CalendarView({
         return new Date(item.scheduledEnd) > now;
       })
       .map((item) => {
+        const color = item.activityType?.color ?? FALLBACK_COLOR;
+        const start = new Date(item.scheduledStart as string);
+        const end = new Date(item.scheduledEnd as string);
+        const isPast = end < now;
         const kindPrefix = item.kind === 'todo' ? '✓ ' : '↻ ';
+        const meta: EventMeta = {
+          isTask: true,
+          isBackground: false,
+          isCompleted: false,
+          kind: item.kind,
+          itemId: item.id,
+          detailTitle: item.title,
+          isOverdue: item.isOverdue,
+          priority: item.priority,
+          estimatedLength: item.estimatedLength,
+          startISO: item.scheduledStart as string,
+          endISO: item.scheduledEnd as string,
+          ...(item.activityType
+            ? {
+                activityName: item.activityType.name,
+                activityColor: item.activityType.color,
+              }
+            : {}),
+          // Habit instance ids look like "<habitId>-<n>"; strip the suffix.
+          ...(item.kind === 'habit'
+            ? { habitId: item.id.replace(/-\d+$/, '') }
+            : {}),
+        };
         return {
           id: `scheduled-${item.kind}-${item.id}`,
           title: `${kindPrefix}${item.title}`,
-          kind: item.kind,
-          start: new Date(item.scheduledStart as string),
-          end: new Date(item.scheduledEnd as string),
-          color: item.activityType?.color ?? '#64748b',
-          isTask: true,
-        };
+          start,
+          end,
+          color: isPast ? desaturateColor(color) : color,
+          contrastColor: isPast ? '#d1d5db' : '#ffffff',
+          // Only todos can be dragged to reschedule.
+          startEditable: item.kind === 'todo',
+          extendedProps: meta,
+        } satisfies EventInput;
       });
   }, [schedule]);
 
-  const completedEvents = useMemo<CalendarEvent[]>(() => {
+  const completedEvents = useMemo<EventInput[]>(() => {
     return schedule
       .filter(
         (item) =>
@@ -356,72 +399,194 @@ export function CalendarView({
           item.scheduledEnd,
       )
       .map((item) => {
+        const color = item.activityType?.color ?? FALLBACK_COLOR;
         const start = new Date(item.completedAt as string);
         const scheduledStart = new Date(item.scheduledStart as string);
         const scheduledEnd = new Date(item.scheduledEnd as string);
         const durationMs = scheduledEnd.getTime() - scheduledStart.getTime();
+        const meta: EventMeta = {
+          isTask: true,
+          isBackground: false,
+          isCompleted: true,
+          kind: 'todo',
+          itemId: item.id,
+          detailTitle: item.title,
+          isOverdue: false,
+          priority: item.priority,
+          estimatedLength: item.estimatedLength,
+          startISO: item.scheduledStart as string,
+          endISO: item.scheduledEnd as string,
+          completedAtISO: item.completedAt as string,
+          ...(item.activityType
+            ? {
+                activityName: item.activityType.name,
+                activityColor: item.activityType.color,
+              }
+            : {}),
+        };
         return {
           id: `completed-todo-${item.id}`,
           title: `✓ ${item.title}`,
-          kind: 'todo',
           start,
           end: new Date(start.getTime() + durationMs),
-          color: item.activityType?.color ?? '#64748b',
-          isTask: true,
-          isPast: true,
-          isCompleted: true,
-        };
+          color: desaturateColor(color),
+          contrastColor: '#d1d5db',
+          startEditable: false,
+          extendedProps: meta,
+        } satisfies EventInput;
       });
   }, [schedule]);
 
-  function onEventDrop({
-    event,
-    start,
-  }: { event: CalendarEvent; start: Date | string }) {
-    if (!event.isTask || event.kind !== 'todo') return;
-    // event.id format: "scheduled-todo-{id}"
-    const match = event.id.match(/^scheduled-todo-(.+)$/);
-    if (!match) return;
-    const todoId = match[1] ?? '';
-    const newStart = start instanceof Date ? start : new Date(start);
+  const events = useMemo<EventInput[]>(
+    () => [...backgroundEvents, ...scheduledEvents, ...completedEvents],
+    [backgroundEvents, scheduledEvents, completedEvents],
+  );
+
+  function onEventDrop(info: EventDropInfo) {
+    const meta = info.event.extendedProps as EventMeta;
+    if (meta.kind !== 'todo' || meta.isCompleted || !meta.itemId) {
+      info.revert();
+      return;
+    }
+    const newStart = info.event.start;
+    if (!newStart) {
+      info.revert();
+      return;
+    }
     // Send naive local datetime (no Z) so the server stores local time, not UTC
     pinTodo({
       variables: {
         input: {
-          id: todoId,
+          id: meta.itemId,
           scheduledAt: format(newStart, "yyyy-MM-dd'T'HH:mm:ss"),
           manuallyScheduled: true,
         },
       },
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error(err);
+      info.revert();
+    });
   }
 
+  function onEventClick(info: EventClickInfo) {
+    const meta = info.event.extendedProps as EventMeta;
+    if (meta.isBackground) return;
+    // Let the inline complete button handle its own clicks.
+    const target = info.jsEvent.target as HTMLElement | null;
+    if (target?.closest('button')) return;
+    info.jsEvent.preventDefault();
+    setSelected(meta);
+  }
+
+  const detailRange = selected
+    ? formatDetailRange(selected.startISO, selected.endISO)
+    : null;
+
   return (
-    <div className="rbc-calendar-wrapper h-full" style={{ minHeight: '400px' }}>
-      <DnDCalendar
-        localizer={localizer}
-        date={date}
-        view={view}
-        onNavigate={() => {}}
-        onView={() => {}}
-        toolbar={false}
-        events={[...scheduledEvents, ...completedEvents]}
-        backgroundEvents={backgroundEvents}
-        defaultView="week"
-        views={['day', 'week', 'month']}
-        step={30}
-        timeslots={2}
-        eventPropGetter={eventStyleGetter as never}
-        components={{ event: CalendarEventComponent as never }}
-        style={{ height: '100%' }}
-        formats={{
-          timeGutterFormat: (date: Date) => format(date, 'h a'),
-          eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
-            `${format(start, 'h:mm')}–${format(end, 'h:mm a')}`,
+    <div className="fc-calendar-wrapper h-full" style={{ minHeight: '400px' }}>
+      <FullCalendar
+        ref={calendarRef}
+        plugins={[
+          classicTheme,
+          dayGridPlugin,
+          timeGridPlugin,
+          interactionPlugin,
+        ]}
+        initialView={fcView}
+        initialDate={date}
+        headerToolbar={false}
+        firstDay={1}
+        height="100%"
+        expandRows={true}
+        nowIndicator={true}
+        allDaySlot={false}
+        slotDuration="00:30:00"
+        scrollTime="07:00:00"
+        editable={true}
+        eventDurationEditable={false}
+        events={events}
+        eventContent={renderEventContent}
+        eventDrop={onEventDrop}
+        eventClick={onEventClick}
+        eventTimeFormat={{
+          hour: 'numeric',
+          minute: '2-digit',
+          meridiem: 'short',
         }}
-        onEventDrop={onEventDrop}
-        resizable={false}
+        slotHeaderFormat={{ hour: 'numeric', meridiem: 'short' }}
       />
+
+      <Dialog
+        open={selected !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null);
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          {selected && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 pr-6">
+                  {selected.activityColor && (
+                    <ColorDot color={selected.activityColor} />
+                  )}
+                  <span>{selected.detailTitle}</span>
+                </DialogTitle>
+                <DialogDescription className="capitalize">
+                  {selected.kind}
+                  {selected.isCompleted
+                    ? ' · completed'
+                    : selected.isOverdue
+                      ? ' · overdue'
+                      : ' · scheduled'}
+                </DialogDescription>
+              </DialogHeader>
+              <dl className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-2 text-sm">
+                {detailRange && (
+                  <>
+                    <dt className="text-muted-foreground">When</dt>
+                    <dd>{detailRange}</dd>
+                  </>
+                )}
+                {selected.activityName && (
+                  <>
+                    <dt className="text-muted-foreground">Activity</dt>
+                    <dd className="flex items-center gap-1.5">
+                      {selected.activityColor && (
+                        <ColorDot color={selected.activityColor} size="sm" />
+                      )}
+                      {selected.activityName}
+                    </dd>
+                  </>
+                )}
+                {typeof selected.estimatedLength === 'number' && (
+                  <>
+                    <dt className="text-muted-foreground">Length</dt>
+                    <dd>{selected.estimatedLength} min</dd>
+                  </>
+                )}
+                {typeof selected.priority === 'number' && (
+                  <>
+                    <dt className="text-muted-foreground">Priority</dt>
+                    <dd>{priorityLabel(selected.priority)}</dd>
+                  </>
+                )}
+                {selected.completedAtISO && (
+                  <>
+                    <dt className="text-muted-foreground">Completed</dt>
+                    <dd>
+                      {format(
+                        parseISO(selected.completedAtISO),
+                        'EEE, MMM d, h:mm a',
+                      )}
+                    </dd>
+                  </>
+                )}
+              </dl>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
