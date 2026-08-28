@@ -34,6 +34,7 @@ export const ROOT_FIELDS = [
   'myHabitDetail',
   'myHabitStats',
   'myHabits',
+  'myManualEvents',
   'myProfile',
   'myProject',
   'myProjects',

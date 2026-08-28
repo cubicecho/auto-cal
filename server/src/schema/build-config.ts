@@ -110,6 +110,7 @@ export const buildSchemaConfig: BuildSchemaConfig = {
       },
     },
     timeBlocks: { orderBy: { startTime: 'asc' } },
+    manualEvents: { orderBy: { startAt: 'asc' } },
     apiKeys: { orderBy: { createdAt: 'desc' } },
     projects: { orderBy: { createdAt: 'desc' } },
     projectNotes: {

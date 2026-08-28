@@ -7,5 +7,6 @@ export * from './todo_lists.ts';
 export * from './todos.ts';
 export * from './habits.ts';
 export * from './time_blocks.ts';
+export * from './manual_events.ts';
 export * from './habit_completions.ts';
 export * from './api_keys.ts';

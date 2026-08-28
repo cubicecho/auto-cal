@@ -17,6 +17,7 @@ import { apiKeyMutations } from './api-keys.ts';
 import { authMutations } from './auth.ts';
 import { habitMutations, habitQueries } from './habits.ts';
 import { importMutations } from './import.ts';
+import { manualEventMutations } from './manual-events.ts';
 import { profileMutations } from './profile.ts';
 import { projectFields, projectMutations } from './projects.ts';
 import { scheduleMutations, scheduleQueries } from './schedule.ts';
@@ -247,6 +248,23 @@ const extensionSDL = `
     priority: Int
   }
 
+  input CreateManualEventArgs {
+    title: String!
+    description: String
+    color: String
+    startAt: String!
+    endAt: String!
+  }
+
+  input UpdateManualEventArgs {
+    id: ID!
+    title: String
+    description: String
+    color: String
+    startAt: String
+    endAt: String
+  }
+
   input CompleteHabitArgs {
     habitId: ID!
     scheduledAt: String
@@ -315,6 +333,7 @@ const extensionSDL = `
     activityType
     timeBlock
     project
+    manualEvent
   }
 
   type DataChangedEvent {
@@ -357,9 +376,10 @@ const extensionSDL = `
   }
 
   # myProfile / myActivityTypes / myTodoLists / myTodos / myHabits /
-  # myTimeBlocks / myApiKeys / myProjects / myProject are generated queries,
-  # renamed and scoped to the caller by \`scopeRootFields\` (../scope.ts). Only
-  # the queries that compute something beyond a filter are declared here.
+  # myTimeBlocks / myApiKeys / myProjects / myProject / myManualEvents are
+  # generated queries, renamed and scoped to the caller by \`scopeRootFields\`
+  # (../scope.ts). Only the queries that compute something beyond a filter are
+  # declared here.
   extend type Query {
     myActivityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
     myHabitStats(habitId: ID, startDate: String, endDate: String): [HabitStats!]!
@@ -392,6 +412,9 @@ const extensionSDL = `
     myUncompleteHabit(completionId: ID!): Boolean!
     myCreateTimeBlock(input: CreateTimeBlockArgs!): TimeBlock!
     myDeleteTimeBlock(id: ID!): Boolean!
+    myCreateManualEvent(input: CreateManualEventArgs!): ManualEvent!
+    myUpdateManualEvent(input: UpdateManualEventArgs!): ManualEvent!
+    myDeleteManualEvent(id: ID!): Boolean!
     myReschedule(weekStart: String): Boolean!
     requestMagicLink(email: String!): RequestMagicLinkResult!
     verifyMagicLink(token: String!): VerifyMagicLinkResult!
@@ -535,6 +558,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     ...authMutations,
     ...apiKeyMutations,
     ...importMutations,
+    ...manualEventMutations,
   });
   attach(subscriptionType, subscriptionResolvers);
 

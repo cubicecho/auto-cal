@@ -23,6 +23,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.users.id,
       to: r.timeBlocks.userId,
     }),
+    manualEvents: r.many.manualEvents({
+      from: r.users.id,
+      to: r.manualEvents.userId,
+    }),
     apiKeys: r.many.apiKeys({
       from: r.users.id,
       to: r.apiKeys.userId,
@@ -136,6 +140,12 @@ export const relations = defineRelations(schema, (r) => ({
     activityType: r.one.activityTypes({
       from: r.timeBlocks.activityTypeId,
       to: r.activityTypes.id,
+    }),
+  },
+  manualEvents: {
+    user: r.one.users({
+      from: r.manualEvents.userId,
+      to: r.users.id,
     }),
   },
 }));

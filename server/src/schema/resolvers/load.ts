@@ -2,6 +2,7 @@ import type {
   ActivityType,
   ApiKey,
   Habit,
+  ManualEvent,
   Project,
   ProjectNote,
   TimeBlock,
@@ -22,6 +23,7 @@ type OwnedRow = {
   activityTypes: ActivityType;
   apiKeys: ApiKey;
   habits: Habit;
+  manualEvents: ManualEvent;
   projectNotes: ProjectNote;
   projects: Project;
   timeBlocks: TimeBlock;
@@ -34,6 +36,7 @@ const ENTITY_LABEL: Record<keyof OwnedRow, string> = {
   activityTypes: 'ActivityType',
   apiKeys: 'ApiKey',
   habits: 'Habit',
+  manualEvents: 'ManualEvent',
   projectNotes: 'ProjectNote',
   projects: 'Project',
   timeBlocks: 'TimeBlock',

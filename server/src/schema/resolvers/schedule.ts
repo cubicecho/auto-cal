@@ -2,6 +2,7 @@ import {
   type ActivityType,
   type Habit,
   type HabitCompletion,
+  type ManualEvent,
   type TimeBlock,
   type Todo,
   type TodoList,
@@ -64,37 +65,52 @@ export const scheduleQueries: QueryMap<'mySchedule'> = {
       userTodoLists,
       userHabits,
       userActivityTypes,
-    ]: [TimeBlock[], Todo[], Todo[], TodoList[], Habit[], ActivityType[]] =
-      await Promise.all([
-        context.db.query.timeBlocks.findMany({
-          where: { userId },
-        }),
-        context.db.query.todos.findMany({
-          where: {
-            userId,
-            completedAt: { isNull: true },
-          },
-          orderBy: { priority: 'desc' },
-        }),
-        context.db.query.todos.findMany({
-          where: {
-            userId,
-            completedAt: { isNotNull: true },
-          },
-        }),
-        context.db.query.todoLists.findMany({
-          where: { userId },
-        }),
-        context.db.query.habits.findMany({
-          where: {
-            userId,
-            activityTypeId: { isNotNull: true },
-          },
-        }),
-        context.db.query.activityTypes.findMany({
-          where: { userId },
-        }),
-      ]);
+      userManualEvents,
+    ]: [
+      TimeBlock[],
+      Todo[],
+      Todo[],
+      TodoList[],
+      Habit[],
+      ActivityType[],
+      ManualEvent[],
+    ] = await Promise.all([
+      context.db.query.timeBlocks.findMany({
+        where: { userId },
+      }),
+      context.db.query.todos.findMany({
+        where: {
+          userId,
+          completedAt: { isNull: true },
+        },
+        orderBy: { priority: 'desc' },
+      }),
+      context.db.query.todos.findMany({
+        where: {
+          userId,
+          completedAt: { isNotNull: true },
+        },
+      }),
+      context.db.query.todoLists.findMany({
+        where: { userId },
+      }),
+      context.db.query.habits.findMany({
+        where: {
+          userId,
+          activityTypeId: { isNotNull: true },
+        },
+      }),
+      context.db.query.activityTypes.findMany({
+        where: { userId },
+      }),
+      context.db.query.manualEvents.findMany({
+        where: {
+          userId,
+          startAt: { lt: weekEnd },
+          endAt: { gte: weekStart },
+        },
+      }),
+    ]);
 
     const listActivityTypeMap = new Map(
       userTodoLists.map((l) => [l.id, l.activityTypeId]),
@@ -211,6 +227,7 @@ export const scheduleQueries: QueryMap<'mySchedule'> = {
       habitInstances,
       activityTypeMap,
       args.timezone ?? 'UTC',
+      userManualEvents,
     );
 
     const todoCompletedAtMap = new Map(
