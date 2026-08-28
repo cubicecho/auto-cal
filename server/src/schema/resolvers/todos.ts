@@ -11,6 +11,7 @@ export const todoMutations: MutationMap<
   | 'myCreateTodo'
   | 'myUpdateTodo'
   | 'myCompleteTodo'
+  | 'myUnscheduleTodo'
   | 'myDeleteTodo'
   | 'myDeleteTodos'
 > = {
@@ -111,6 +112,26 @@ export const todoMutations: MutationMap<
     runSchedulerWriteback(context.db, userId).catch(console.error);
     publishTodoEvent(userId, { type: 'updated', entity: completed });
     return completed;
+  },
+
+  myUnscheduleTodo: async (_parent, args, context) => {
+    const userId = requireUser(context);
+    await loadOwned(context, 'todos', args.id, userId);
+    // Clear the manual pin and the slot so the scheduler re-places it on the
+    // next writeback (fired below).
+    const [updated] = await context.db
+      .update(todos)
+      .set({
+        manuallyScheduled: false,
+        scheduledAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(todos.id, args.id))
+      .returning();
+    if (!updated) throw new Error(`Failed to unschedule todo ${args.id}`);
+    runSchedulerWriteback(context.db, userId).catch(console.error);
+    publishTodoEvent(userId, { type: 'updated', entity: updated });
+    return updated;
   },
 
   myDeleteTodo: async (_parent, args, context) => {
