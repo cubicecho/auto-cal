@@ -494,4 +494,8 @@ The server package has the following vitest suites — run with `npm test` from 
 - `server/test/schema/validators.test.ts` — Zod validator coverage
 - `server/test/services/scheduler.test.ts` — pure scheduler algorithm
 
-Resolver-level integration tests (PGLite in-memory) are not yet in place — see todo.md #15.
+- `server/test/schema/resolvers/index.test.ts` — resolver integration over in-memory PGLite
+- `server/test/schema/resolvers/scope.test.ts` — tenant-isolation guarantees
+
+The client has no behavioural tests yet — see
+[cubicecho/auto-cal#57](https://github.com/cubicecho/auto-cal/issues/57).

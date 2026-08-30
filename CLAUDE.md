@@ -24,7 +24,7 @@ npm run db:migrate       # apply pending migrations
 npm run db:studio        # Drizzle Studio GUI
 
 # GraphQL codegen
-npm run generate:schema  # write src/__generated__/schema.graphql from Drizzle schema (no DB required — uses in-memory PGlite)
+npm run generate:schema  # write src/__generated__/schema.graphql from Drizzle schema (no DB required — client is never connected)
 npm run codegen:server   # regenerate server resolver types from schema.graphql
 npm run codegen          # generate:schema → codegen:server → client typed operations
 
@@ -171,13 +171,15 @@ All `__generated__/` directories are gitignored and not committed. Run codegen b
 
 Detailed patterns and decisions live in `.agents/`:
 
-- [`.agents/db-patterns.md`](.agents/db-patterns.md) — Drizzle table definitions, dual-backend connection, query patterns, migrations
+- [`.agents/db-patterns.md`](.agents/db-patterns.md) — Drizzle table definitions, connection, query patterns, migrations
 - [`.agents/server-patterns.md`](.agents/server-patterns.md) — Full resolver authoring guide, Zod constraint table, auth details, DataLoader usage, iCal endpoint
 - [`.agents/graphql-patterns.md`](.agents/graphql-patterns.md) — Full SDL, naming conventions, cache invalidation
 - [`.agents/client-patterns.md`](.agents/client-patterns.md) — Apollo Client setup, expo-router, cache invalidation, fragment colocation, ShadCN/Tailwind patterns
 - [`.agents/scheduling.md`](.agents/scheduling.md) — Scheduling algorithm, writeback service, habit instance generation, pre-placement lock
 - [`.agents/deployment.md`](.agents/deployment.md) — Docker, environment variables, Postgres setup
-- [`.agents/todo.md`](.agents/todo.md) — Open issues and deferred work (read before starting new features)
 - [`.agents/project-structure.md`](.agents/project-structure.md) — Full directory tree, DB schema columns, route table, GraphQL operation index
 
-All agent-created planning and tracking files must live in `.agents/`, not at the repo root.
+Open work is tracked in GitHub issues (`gh issue list`), not in a file — read the
+`v1` milestone before starting new features. Agent-created *planning* documents
+(design notes for a specific feature, like `plan-caldav.md`) still live in
+`.agents/`, not at the repo root.
