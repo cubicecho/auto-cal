@@ -44,24 +44,38 @@ export type FrequencyUnit = (typeof FREQUENCY_UNITS)[number];
 frequencyUnit: text('frequency_unit').notNull().$type<FrequencyUnit>()
 ```
 
-## Dual-Backend Connection
+## Connection
+
+Postgres via postgres.js, and nothing else. `DATABASE_URL` is required — the
+module throws at import time without it rather than falling back, so a
+misconfigured deploy fails on boot instead of quietly running on an embedded
+database.
 
 ```typescript
 // db/src/index.ts
 const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) throw new Error('DATABASE_URL is required. …');
 
-if (databaseUrl) {
-  // Production: postgres.js
-  const postgres = await import('postgres');
-  const client = postgres.default(databaseUrl);
-  db = drizzle({ client, schema });
-} else {
-  // Dev: PGLite (embedded, zero-setup)
-  const { PGlite } = await import('@electric-sql/pglite');
-  const client = new PGlite(process.env.PGLITE_DATA_DIR);
-  db = drizzle({ client, schema });
-}
+const client = postgres(databaseUrl);
+const db = drizzle({ client, schema, relations });
+
+await migrate(db, { migrationsFolder });
 ```
+
+Migrations run here, on import, so every entry point (server, `migrator.ts`,
+scripts) gets a migrated database without coordinating.
+
+**Tests do not use this module.** They build their own in-memory PGLite and
+migrate it per file — see `server/test/schema/resolvers/test-helpers.ts`:
+
+```typescript
+const client = new PGlite('memory://');
+const db = drizzle({ client, schema, relations });
+await migrate(db, { migrationsFolder });
+```
+
+That is the only remaining use of PGLite in the repo; it is a devDependency of
+`server`, so a production install never pulls it in.
 
 ## Query Patterns
 

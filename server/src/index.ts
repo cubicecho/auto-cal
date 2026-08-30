@@ -35,12 +35,6 @@ const { version: appVersion } = JSON.parse(
   ),
 ) as { version: string };
 
-const dbBackend = process.env.DATABASE_URL
-  ? 'postgres'
-  : process.env.PGLITE_DATA_DIR
-    ? 'pglite'
-    : 'unset';
-
 process.on('uncaughtException', (err) => {
   log.error('Uncaught exception:', err);
   process.exit(1);
@@ -281,7 +275,7 @@ const PORT = Number(process.env.PORT ?? 3001);
 httpServer.listen(PORT, '0.0.0.0', () => {
   log.info(
     `auto-cal server v${appVersion} | node ${process.version} | ` +
-      `env=${process.env.NODE_ENV ?? 'development'} | db=${dbBackend} | ` +
+      `env=${process.env.NODE_ENV ?? 'development'} | db=postgres | ` +
       `log=${logLevelName} | port=${PORT} | pid=${process.pid}`,
   );
   log.info(`Server ready at http://0.0.0.0:${PORT}/graphql`);

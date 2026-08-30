@@ -1,0 +1,29 @@
+# Local development database. The app itself runs on the host via `npm run dev`;
+# this brings up only Postgres, since PGLite is no longer a runtime backend.
+#
+#   npm run db:up      # start
+#   npm run db:down    # stop
+#
+# Then set in .env:  DATABASE_URL=postgresql://autocal:autocal@127.0.0.1:5434/autocal
+#
+# Port 5434, not 5432: developers commonly already have something on the default
+# port. Override with AUTOCAL_DB_PORT if 5434 is taken too.
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "127.0.0.1:${AUTOCAL_DB_PORT:-5434}:5432"
+    environment:
+      POSTGRES_USER: autocal
+      POSTGRES_PASSWORD: autocal
+      POSTGRES_DB: autocal
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autocal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-dev-data:

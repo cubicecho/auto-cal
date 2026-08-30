@@ -2,7 +2,7 @@
 
 Auto Cal is a smart todo and habit scheduling application. Users create todo lists (grouped by activity type), todos (single-time tasks belonging to a list), and habits (repeated tasks) that are automatically scheduled within user-defined time blocks based on priority and activity type.
 
-Monorepo: `db` (Drizzle + PGLite), `server` (Express + Apollo), `client` (React + Vite).
+Monorepo: `db` (Drizzle + Postgres), `server` (Express + Apollo), `client` (React + Vite).
 
 ## Commands
 
@@ -43,7 +43,7 @@ the commit until both pass. A commit is not done until lint and tests are green
 |--------|-----|
 | **Biome** | Single tool replacing ESLint + Prettier; enforces `useImportType`, `noUnusedImports`, consistent formatting |
 | **drizzle-graphql** | Auto-generates GraphQL schema from Drizzle tables — zero duplication; we extend with custom resolvers |
-| **PGLite** | Embedded Postgres, zero setup for local dev and single-node deploys; swap to full Postgres via `DATABASE_URL` |
+| **PostgreSQL** | The only runtime backend, via postgres.js and `DATABASE_URL`; `npm run db:up` starts one locally. PGLite is a test-only fixture — see `.agents/deployment.md` |
 | **--experimental-strip-types** | Node 22+ runs TypeScript directly — no tsc watch, no build step for the server; requires `.ts` extensions in all imports |
 | **Auth** | Magic-link + JWT (jose) is live. `requestMagicLink` / `verifyMagicLink` mutations are public. Set `EXPOSE_MAGIC_LINK` for dev-style passwordless login on local/secure networks. |
 
@@ -133,7 +133,7 @@ the GitHub Pages workflow (`.github/workflows/pages.yml`) deploys on push to `ma
 - [`.agents/graphql-patterns.md`](.agents/graphql-patterns.md) — Schema extension SDL, core/custom types, key queries and mutations, naming conventions, cache invalidation
 - [`.agents/client-patterns.md`](.agents/client-patterns.md) — Apollo Client setup, TanStack Router, colocated operations, fragment colocation, TanStack Form, ShadCN/Tailwind component patterns, codegen
 - [`.agents/scheduling.md`](.agents/scheduling.md) — Scheduling algorithm, writeback service, pre-placement lock, habit instance generation
-- [`.agents/deployment.md`](.agents/deployment.md) — Docker setup, environment variables, PGLite vs Postgres switching
+- [`.agents/deployment.md`](.agents/deployment.md) — Docker setup, environment variables, Postgres setup
 - [`.agents/todo.md`](.agents/todo.md) — Open feature requests, issues, and deferred work items
 - [`.agents/plan-19-api-keys.md`](.agents/plan-19-api-keys.md) — Plan for personal API keys (Home Assistant and similar external integrations)
 - [`.agents/plan-caldav.md`](.agents/plan-caldav.md) — Optional feature: read-write CalDAV endpoint authenticated via API keys
