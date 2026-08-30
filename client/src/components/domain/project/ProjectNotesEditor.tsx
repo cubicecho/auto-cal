@@ -1,7 +1,7 @@
 import type { ProjectNote_EditorFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirm } from '@/components/ui/confirm';
 import { ChevronDown, ChevronUp, Plus, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import type { InputHandle } from '@/components/ui/input-base';
@@ -63,12 +63,12 @@ export function ProjectNotesEditor({
   projectId,
   notes,
 }: ProjectNotesEditorProps) {
+  const confirm = useConfirm();
   const [selectedId, setSelectedId] = useState<string | null>(
     notes[0]?.id ?? null,
   );
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<Note | null>(null);
 
   const titleInputRef = useRef<InputHandle>(null);
   // Set to the id of a just-created note so we can focus its title once the
@@ -151,10 +151,13 @@ export function ProjectNotesEditor({
     });
   }
 
-  async function handleConfirmDelete() {
-    if (!deleteTarget) return;
-    await deleteNote({ variables: { id: deleteTarget.id } });
-    setDeleteTarget(null);
+  async function handleDelete(note: Note) {
+    const ok = await confirm({
+      title: 'Delete note?',
+      description: `“${note.title || 'Untitled note'}” will be permanently deleted.`,
+    });
+    if (!ok) return;
+    await deleteNote({ variables: { id: note.id } });
   }
 
   async function handleMove(note: Note, direction: -1 | 1) {
@@ -236,7 +239,7 @@ export function ProjectNotesEditor({
                   size="icon"
                   variant="ghost"
                   className="h-6 w-6 hover:text-destructive"
-                  onPress={() => setDeleteTarget(note)}
+                  onPress={() => void handleDelete(note)}
                   aria-label={`Delete ${note.title || 'note'}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -274,7 +277,7 @@ export function ProjectNotesEditor({
             <TabsContent value="edit">
               <Textarea
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChangeText={setContent}
                 placeholder="Write markdown…"
                 className="min-h-[320px] font-mono text-sm"
               />
@@ -291,20 +294,6 @@ export function ProjectNotesEditor({
           Select or add a note to start writing.
         </div>
       )}
-
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete note?"
-        description={
-          <>
-            &ldquo;{deleteTarget?.title || 'Untitled note'}&rdquo; will be
-            permanently deleted.
-          </>
-        }
-        confirmLabel="Delete"
-        onConfirm={handleConfirmDelete}
-      />
     </div>
   );
 }

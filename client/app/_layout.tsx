@@ -1,5 +1,6 @@
 import { apolloClient } from '@/apollo-client';
 import { RouteError } from '@/components/ui/route-error';
+import { ConfirmProvider } from '@/components/ui/confirm';
 import { ToastProvider } from '@/components/ui/toast';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { storage } from '@/storage';
@@ -39,9 +40,11 @@ export default function RootLayout() {
     <ApolloProvider client={apolloClient}>
       {/* Outside the guard so a toast survives a redirect to /auth/login. */}
       <ToastProvider>
-        <AuthGuard>
-          <Stack screenOptions={{ headerShown: false }} />
-        </AuthGuard>
+        <ConfirmProvider>
+          <AuthGuard>
+            <Stack screenOptions={{ headerShown: false }} />
+          </AuthGuard>
+        </ConfirmProvider>
       </ToastProvider>
     </ApolloProvider>
   );

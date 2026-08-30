@@ -1,5 +1,6 @@
 import { Page } from '@/components/ui/page';
 import type { ReactNode } from 'react';
+import { Text } from 'react-native';
 
 type DetailPageProps<T> = {
   /** The loaded entity, or null/undefined while loading or when missing. */
@@ -25,9 +26,9 @@ export function DetailPage<T>({
       {entity ? (
         children(entity)
       ) : (
-        <p className="text-muted-foreground">
+        <Text className="text-muted-foreground">
           {loading ? 'Loading…' : notFoundLabel}
-        </p>
+        </Text>
       )}
     </Page>
   );

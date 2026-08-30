@@ -7,14 +7,13 @@ import type {
 import { graphql } from '@/__generated__/index.js';
 import { TodoListCard } from '@/components/domain/todo-list/TodoListCard';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirm } from '@/components/ui/confirm';
 import { DetailHeader, EditButton } from '@/components/ui/detail-header';
 import { Archive } from '@/components/ui/icons';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { StatusChip } from '@/components/ui/status-chip';
 import { invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
-import { useState } from 'react';
 import { ProjectNotesEditor } from './ProjectNotesEditor';
 
 export const PROJECT_DETAIL_FRAGMENT = graphql(`
@@ -62,9 +61,9 @@ export function ProjectDetail({
   onBack,
   onEdit,
 }: ProjectDetailProps) {
-  const [archiveOpen, setArchiveOpen] = useState(false);
+  const confirm = useConfirm();
 
-  const [archiveProject, { loading: archiving }] = useMutation<
+  const [archiveProject] = useMutation<
     ArchiveProjectMutation,
     ArchiveProjectMutationVariables
   >(ARCHIVE_PROJECT, {
@@ -75,8 +74,13 @@ export function ProjectDetail({
   });
 
   async function handleArchive() {
+    const ok = await confirm({
+      title: 'Archive project?',
+      description: `“${project.name}” will be hidden from the default project list. Nothing is deleted.`,
+      confirmLabel: 'Archive',
+    });
+    if (!ok) return;
     await archiveProject({ variables: { id: project.id } });
-    setArchiveOpen(false);
   }
 
   return (
@@ -100,7 +104,7 @@ export function ProjectDetail({
               <Button
                 variant="outline"
                 size="sm"
-                onPress={() => setArchiveOpen(true)}
+                onPress={() => void handleArchive()}
               >
                 <Archive className="mr-1.5 h-3.5 w-3.5" />
                 Archive
@@ -129,21 +133,6 @@ export function ProjectDetail({
           )}
         </div>
       </div>
-
-      <ConfirmDialog
-        open={archiveOpen}
-        onOpenChange={setArchiveOpen}
-        title="Archive project?"
-        description={
-          <>
-            &ldquo;{project.name}&rdquo; will be hidden from the default project
-            list. Nothing is deleted.
-          </>
-        }
-        confirmLabel="Archive"
-        loading={archiving}
-        onConfirm={handleArchive}
-      />
     </div>
   );
 }

@@ -1,5 +1,12 @@
+/**
+ * What shows when the tree below a route has thrown.
+ *
+ * Deliberately dependency-free beyond `ui/`: it must not rely on Apollo, the
+ * router, or theme state, since any of those could be what failed.
+ */
 import { Button } from '@/components/ui/button';
 import { CircleAlert } from '@/components/ui/icons';
+import { Text, View } from 'react-native';
 
 type RouteErrorProps = {
   error: unknown;
@@ -16,7 +23,7 @@ function friendlyMessage(error: unknown): string {
       return 'Could not reach the server. Check your connection and try again.';
     }
     if (error.message.includes('Not authenticated')) {
-      return 'Your session has expired. Please reload the page.';
+      return 'Your session has expired. Please sign in again.';
     }
     return error.message;
   }
@@ -25,19 +32,19 @@ function friendlyMessage(error: unknown): string {
 
 export function RouteError({ error, reset }: RouteErrorProps) {
   return (
-    <div className="flex flex-col items-center gap-4 py-20 text-center">
-      <div className="rounded-full bg-destructive/10 p-4">
+    <View className="flex-1 items-center justify-center gap-4 px-8 py-20">
+      <View className="rounded-full bg-destructive/10 p-4">
         <CircleAlert className="h-7 w-7 text-destructive" />
-      </div>
-      <div className="max-w-sm">
-        <p className="font-semibold">Failed to load</p>
-        <p className="mt-1 text-sm text-muted-foreground">
+      </View>
+      <View className="max-w-sm items-center">
+        <Text className="font-semibold text-foreground">Failed to load</Text>
+        <Text className="mt-1 text-center text-sm text-muted-foreground">
           {friendlyMessage(error)}
-        </p>
-      </div>
+        </Text>
+      </View>
       <Button variant="outline" size="sm" onPress={reset}>
         Try again
       </Button>
-    </div>
+    </View>
   );
 }

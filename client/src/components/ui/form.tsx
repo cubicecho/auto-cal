@@ -5,6 +5,8 @@ import {
   FieldLabel as FieldLabelPrimitive,
   Field as FieldPrimitive,
 } from '@/components/ui/field';
+import { FormElement } from '@/components/ui/form-element';
+import type { FormElementProps } from '@/components/ui/form-element-base';
 import type { InputProps } from '@/components/ui/input-base';
 import { Input } from '@/components/ui/input.js';
 import type { Label } from '@/components/ui/label';
@@ -15,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea, type TextareaProps } from '@/components/ui/textarea';
 import { Slot } from '@radix-ui/react-slot';
 import { createFormHookContexts, useStore } from '@tanstack/react-form';
 import * as React from 'react';
@@ -62,18 +64,20 @@ function useFieldComponentContext() {
   }, [id, isTouched, submissionAttempts, errors]);
 }
 
-// <Form> — auto-handles submit event
-function Form({ ...props }: React.ComponentProps<'form'>) {
+// <Form> — the form body. On web this is a real `<form>` so Enter inside a
+// field still submits; on native it is a `View` and `SubmitButton` is the only
+// path to submission. Either way the submit is routed through form context.
+function Form({ className, children }: Omit<FormElementProps, 'onSubmit'>) {
   const form = useFormContext();
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
+    <FormElement
+      onSubmit={() => {
         form.handleSubmit();
       }}
-      {...props}
-    />
+      className={className}
+    >
+      {children}
+    </FormElement>
   );
 }
 
@@ -194,7 +198,7 @@ function InputField({ label, ...props }: InputFieldProps) {
 
 type TextAreaFieldProps = {
   label: string;
-} & React.ComponentProps<'textarea'>;
+} & Omit<TextareaProps, 'value' | 'onChangeText' | 'onBlur'>;
 
 function TextAreaField({ label, ...props }: TextAreaFieldProps) {
   const field = useFieldContext<string>();
@@ -207,7 +211,7 @@ function TextAreaField({ label, ...props }: TextAreaFieldProps) {
           {...props}
           value={field.state.value ?? ''}
           onBlur={field.handleBlur}
-          onChange={(e) => field.handleChange(e.target.value)}
+          onChangeText={(text) => field.handleChange(text)}
         />
       }
     />

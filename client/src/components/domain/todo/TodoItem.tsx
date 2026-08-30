@@ -5,7 +5,7 @@ import {
   type CompletionDialogTarget,
 } from '@/components/domain/CompletionDialog';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirm } from '@/components/ui/confirm';
 import {
   Check,
   Pencil,
@@ -83,10 +83,10 @@ type TodoItemProps = {
 
 export function TodoItem({ todo, onEdit }: TodoItemProps) {
   const toast = useToast();
+  const confirm = useConfirm();
   const isCompleted = todo.completedAt !== null;
   const [completionTarget, setCompletionTarget] =
     useState<CompletionDialogTarget | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Both mutations return the todo, so the lists rendering it patch
   // themselves; only the derived views have to be dropped.
@@ -100,12 +100,25 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
     { update: (cache) => invalidate(cache, ...DERIVED) },
   );
 
-  const [deleteTodo, { loading: deleting }] = useMutation(DELETE_TODO, {
+  const [deleteTodo] = useMutation(DELETE_TODO, {
     update: (cache) => {
       evictEntity(cache, 'Todo', todo.id);
       invalidate(cache, ...DERIVED);
     },
   });
+
+  async function confirmDelete() {
+    const ok = await confirm({
+      title: 'Delete todo?',
+      description: `“${todo.title}” will be permanently deleted.`,
+    });
+    if (!ok) return;
+    try {
+      await deleteTodo({ variables: { id: todo.id } });
+    } catch (err) {
+      toast(errorMessage(err, 'Could not delete this todo'));
+    }
+  }
 
   function handleSaveLength(estimatedLength: number) {
     updateTodo({
@@ -211,30 +224,12 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
       <Button
         size="icon"
         variant="ghost"
-        onPress={() => setDeleteOpen(true)}
+        onPress={() => void confirmDelete()}
         aria-label={`Delete ${todo.title}`}
         className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
       >
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
-
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete todo?"
-        description={
-          <>&ldquo;{todo.title}&rdquo; will be permanently deleted.</>
-        }
-        confirmLabel="Delete"
-        loading={deleting}
-        onConfirm={() =>
-          deleteTodo({ variables: { id: todo.id } })
-            .then(() => setDeleteOpen(false))
-            .catch((err) =>
-              toast(errorMessage(err, 'Could not delete this todo')),
-            )
-        }
-      />
 
       <CompletionDialog
         target={completionTarget}

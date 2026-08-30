@@ -13,11 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirm } from '@/components/ui/confirm';
 import { FolderKanban, ListX, Pencil, Plus } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/toast';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
-import { formatDuration } from '@/lib/utils';
+import { errorMessage, formatDuration } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { useState } from 'react';
 import { TodoListForm } from './TodoListForm';
@@ -48,17 +49,18 @@ type TodoListCardProps = {
 };
 
 export function TodoListCard({ list, todos }: TodoListCardProps) {
+  const confirm = useConfirm();
+  const toast = useToast();
   const [editingList, setEditingList] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [clearCompletedOpen, setClearCompletedOpen] = useState(false);
 
   const [createTodo, { loading: creating }] = useMutation(QUICK_CREATE_TODO, {
     update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
   });
 
-  const [deleteTodos, { loading: clearing }] = useMutation(DELETE_TODOS, {
+  const [deleteTodos] = useMutation(DELETE_TODOS, {
     // Returns the rows it deleted, so each one can be evicted by id rather
     // than re-fetching every list that might have held them.
     update: (cache, { data }) => {
@@ -98,14 +100,18 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
   }
 
   async function handleClearCompleted() {
+    const ok = await confirm({
+      title: 'Remove all completed?',
+      description: `${completedCount} completed ${
+        completedCount === 1 ? 'todo' : 'todos'
+      } in “${list.name}” will be permanently deleted.`,
+      confirmLabel: 'Remove all',
+    });
+    if (!ok) return;
     try {
-      await deleteTodos({
-        variables: { listId: list.id, completed: true },
-      });
-      setClearCompletedOpen(false);
+      await deleteTodos({ variables: { listId: list.id, completed: true } });
     } catch (err) {
-      // Keep the dialog open on failure so the user can retry.
-      console.error('Failed to clear completed todos', err);
+      toast(errorMessage(err, 'Could not remove the completed todos'));
     }
   }
 
@@ -155,7 +161,7 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  onPress={() => setClearCompletedOpen(true)}
+                  onPress={() => void handleClearCompleted()}
                   aria-label={`Remove all completed todos from ${list.name}`}
                   className="h-7 w-7 hover:text-destructive"
                 >
@@ -226,22 +232,6 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
         {...(editingTodo ? { todo: editingTodo } : {})}
         open={editingTodo !== null}
         onOpenChange={(open) => !open && setEditingTodo(null)}
-      />
-
-      <ConfirmDialog
-        open={clearCompletedOpen}
-        onOpenChange={setClearCompletedOpen}
-        title="Remove all completed?"
-        description={
-          <>
-            {completedCount} completed {completedCount === 1 ? 'todo' : 'todos'}{' '}
-            in &ldquo;{list.name}
-            &rdquo; will be permanently deleted.
-          </>
-        }
-        confirmLabel="Remove all"
-        loading={clearing}
-        onConfirm={handleClearCompleted}
       />
     </>
   );
