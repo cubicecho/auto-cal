@@ -175,7 +175,9 @@ Detailed patterns and decisions live in `.agents/`:
 - [`.agents/client-patterns.md`](.agents/client-patterns.md) — Apollo Client setup, expo-router, cache invalidation, fragment colocation, ShadCN/Tailwind patterns
 - [`.agents/scheduling.md`](.agents/scheduling.md) — Scheduling algorithm, writeback service, habit instance generation, pre-placement lock
 - [`.agents/deployment.md`](.agents/deployment.md) — Docker, environment variables, PGLite vs Postgres
-- [`.agents/todo.md`](.agents/todo.md) — Open issues and deferred work (read before starting new features)
 - [`.agents/project-structure.md`](.agents/project-structure.md) — Full directory tree, DB schema columns, route table, GraphQL operation index
 
-All agent-created planning and tracking files must live in `.agents/`, not at the repo root.
+Open work is tracked in GitHub issues (`gh issue list`), not in a file — read the
+`v1` milestone before starting new features. Agent-created *planning* documents
+(design notes for a specific feature, like `plan-caldav.md`) still live in
+`.agents/`, not at the repo root.

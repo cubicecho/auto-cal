@@ -587,7 +587,9 @@ variants are DOM-only, and nothing was setting that attribute.
 
 **Still to convert:** the remaining radix-backed primitives (`popover`,
 `select`, `tabs`, `tooltip`, `switch`, plus `date-time-input` and
-`CalendarView`) keep a `.web.tsx`. See `.agents/todo.md`.
+`CalendarView`) keep a `.web.tsx`. Tracked in
+[cubicecho/auto-cal#59](https://github.com/cubicecho/auto-cal/issues/59); the
+rest of the convergence chain is #60-#63.
 
 ## Shared Native Primitives
 

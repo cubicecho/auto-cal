@@ -392,7 +392,9 @@ There are existing vitest suites — the project is not test-free:
 - `server/test/schema/validators.test.ts` — Zod validator coverage
 - `server/test/services/scheduler.test.ts` — pure scheduler algorithm
 
-Run with `npm test`. todo.md #15 ("test suite") covers the gaps that remain (resolver integration tests, CI workflow, coverage targets).
+Run with `npm test`; CI runs the same suites on every PR via `.github/workflows/ci.yml`.
+Client smoke tests and coverage thresholds are the remaining gap —
+[cubicecho/auto-cal#57](https://github.com/cubicecho/auto-cal/issues/57).
 
 ---
 

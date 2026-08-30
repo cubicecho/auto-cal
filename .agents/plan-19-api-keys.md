@@ -5,7 +5,7 @@
 
 ## Goal
 
-Today the only credential the server accepts is a 30-day JWT (issued via magic link) and, transitionally, a raw UUID. Neither works for a headless integration: JWTs expire, and the UUID fallback is a known security hole (`todo.md` #25). Add a third auth mechanism — hashed personal API keys, scoped to one user, individually revocable — and surface CRUD for them in Settings.
+Today the only credential the server accepts is a 30-day JWT (issued via magic link) and, transitionally, a raw UUID. Neither works for a headless integration: JWTs expire, and the UUID fallback is a known security hole. Add a third auth mechanism — hashed personal API keys, scoped to one user, individually revocable — and surface CRUD for them in Settings.
 
 ## Decisions (locked)
 
@@ -163,7 +163,6 @@ Operations colocated under `client/src/operations/api-keys.graphql.ts` (matching
 
 - New section in `.agents/server-patterns.md`: "API keys — third auth mechanism." Brief — token format, hash storage, the no-self-management guard, where to look (`api-keys.ts`).
 - README: a "Connecting Home Assistant" snippet — generate a read-only key in Settings, use it as a Bearer token against `/graphql`, sample query for the next week's schedule.
-- Mark `todo.md` #19 done, link this plan from it (mirror how plan-7 is linked).
 
 ## Out of scope (deliberate)
 
