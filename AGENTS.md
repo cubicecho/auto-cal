@@ -134,6 +134,5 @@ the GitHub Pages workflow (`.github/workflows/pages.yml`) deploys on push to `ma
 - [`.agents/client-patterns.md`](.agents/client-patterns.md) — Apollo Client setup, TanStack Router, colocated operations, fragment colocation, TanStack Form, ShadCN/Tailwind component patterns, codegen
 - [`.agents/scheduling.md`](.agents/scheduling.md) — Scheduling algorithm, writeback service, pre-placement lock, habit instance generation
 - [`.agents/deployment.md`](.agents/deployment.md) — Docker setup, environment variables, PGLite vs Postgres switching
-- [`.agents/todo.md`](.agents/todo.md) — Open feature requests, issues, and deferred work items
 - [`.agents/plan-19-api-keys.md`](.agents/plan-19-api-keys.md) — Plan for personal API keys (Home Assistant and similar external integrations)
 - [`.agents/plan-caldav.md`](.agents/plan-caldav.md) — Optional feature: read-write CalDAV endpoint authenticated via API keys
