@@ -102,6 +102,14 @@ Any new public endpoint (e.g. a webhook or health check) must be added to this s
 
 ## Schema Pipeline
 
+**`graphql` is held at 16 by a root `overrides` entry.** `graphql-parse-resolve-info`
+— a required peer of `@vantreeseba/drizzle-graphql` — has no graphql 17 support, so
+drizzle-graphql 9 bounds its own peer range below 17. The override keeps a
+transitive dependency from pulling graphql 17 in beside it. (The root and server
+`package.json` previously carried a `resolutions` block for the same purpose;
+npm ignores `resolutions` — it is a yarn field — so it never did anything.)
+
+
 ```typescript
 // server/src/schema/index.ts
 import { buildSchemaConfig } from './build-config.ts';
