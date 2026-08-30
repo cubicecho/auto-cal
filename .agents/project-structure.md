@@ -10,11 +10,11 @@ The repo is a **npm workspace** monorepo (`workspaces: ["client", "db", "server"
 
 | Package | Role |
 |---------|------|
-| `db/` | Drizzle ORM schema, PGLite/Postgres connection, seed + migration runners |
+| `db/` | Drizzle ORM schema, Postgres connection, seed + migration runners |
 | `server/` | Node 22 GraphQL API (Express + Apollo) — runs `.ts` directly via `--experimental-strip-types` |
 | `client/` | Expo + expo-router + React Native Web + Apollo Client + ShadCN/NativeWind |
 
-Key tech choices: **Biome** (lint+format), `@vantreeseba/drizzle-graphql` (auto-generates GraphQL schema from Drizzle tables — feature-fork of upstream), **PGLite** (embedded Postgres default; swap to real Postgres via `DATABASE_URL`), **vitest** for tests.
+Key tech choices: **Biome** (lint+format), `@vantreeseba/drizzle-graphql` (auto-generates GraphQL schema from Drizzle tables — feature-fork of upstream), **PostgreSQL** (the only runtime backend, via `DATABASE_URL`; PGLite is test-only), **vitest** for tests.
 
 ---
 
@@ -24,7 +24,7 @@ Key tech choices: **Biome** (lint+format), `@vantreeseba/drizzle-graphql` (auto-
 
 ```
 db/src/
-├── index.ts            # PGLite/Postgres dual-backend, exports `db` instance
+├── index.ts            # Postgres connection + migrations, exports `db` instance
 ├── schema.ts           # Aggregates all model exports
 ├── relations.ts        # Drizzle relations
 ├── migrator.ts         # Programmatic drizzle-kit migrate (used by Dockerfile)

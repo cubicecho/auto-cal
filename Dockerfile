@@ -42,17 +42,14 @@ COPY db ./db
 # Pull the built web bundle from Stage 1
 COPY --from=client-builder /app/client/dist ./client/dist
 
-RUN mkdir -p /app/pgdata
-
 EXPOSE 3001
 
 ENV NODE_ENV=production
 ENV PORT=3001
-# NOTE: PGLITE_DATA_DIR is intentionally NOT baked in. The backend is chosen at
-# runtime: DATABASE_URL → real Postgres; otherwise PGLITE_DATA_DIR → PGLite.
-# Baking in a PGLITE_DATA_DIR default made a run without DATABASE_URL silently
-# fall back to PGLite's WASM event loop, which busy-waits and burns CPU at idle.
-# Now such a run fails loudly ("Set DATABASE_URL or PGLITE_DATA_DIR") instead.
-# For the embedded-DB mode, docker-compose.pglite.yml sets PGLITE_DATA_DIR itself.
+# DATABASE_URL must be supplied at run time — Postgres is the only backend, and
+# the server exits immediately without it. There is deliberately no embedded
+# fallback: the PGLite one busy-waited on a WASM event loop and burned CPU at
+# idle, so a deploy that lost its DATABASE_URL degraded silently instead of
+# failing. See docker-compose.yml.
 
 CMD ["node", "--experimental-strip-types", "server/src/index.ts"]

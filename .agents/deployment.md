@@ -14,51 +14,86 @@ The Dockerfile installs only production deps, then copies:
 - `db` — TypeScript source + migration files
 - `client/dist` — built static assets
 
-Migrations run automatically when the server starts — `db/src/index.ts` calls `migrate()` for whichever backend is active before exporting `db`. The Dockerfile `CMD` is:
+Migrations run automatically when the server starts — `db/src/index.ts` calls `migrate()` before exporting `db`. The Dockerfile `CMD` is:
 
 ```sh
 node --experimental-strip-types server/src/index.ts
 ```
 
-**Do not use the separate `src/migrator.ts` script in Docker.** When `DATABASE_URL` is set, postgres.js keeps its connection pool open after `migrate()` returns, so the migrator process never exits. The `&&`-chained CMD would hang forever before the server starts. `db/src/index.ts` already handles migrations for both backends.
+**Do not use the separate `src/migrator.ts` script in Docker.** postgres.js keeps its connection pool open after `migrate()` returns, so the migrator process never exits. The `&&`-chained CMD would hang forever before the server starts. `db/src/index.ts` already runs migrations on boot.
 
 ## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `PORT` | No | Server port (default `3001`) |
-| `DATABASE_URL` | Conditional | Postgres connection string (e.g. `postgresql://user:pass@host:5432/db`); when set, uses `postgres.js` driver |
-| `PGLITE_DATA_DIR` | Conditional | Path to PGLite data directory; required when `DATABASE_URL` is not set |
+| `DATABASE_URL` | **Yes** | Postgres connection string (e.g. `postgresql://user:pass@host:5432/db`). The server throws on boot without it — there is no fallback backend |
 | `NODE_ENV` | No | `production` / `development` |
 | `EXPOSE_MAGIC_LINK` | No | `1`/`true`/`yes` returns the magic link directly in the `requestMagicLink` response (dev-style passwordless login) even in production. For local/secure networks only — never enable on a public deployment. |
 | `BYPASS_AUTH_UUID` | No | An existing user UUID accepted as a Bearer token in any environment; passwordless access for that one user. Local/secure networks only. |
 
 ## Docker Compose Files
 
-| File | Backend | Use case |
-|------|---------|----------|
-| `docker-compose.yml` | Real Postgres (recommended) | Production — no idle CPU spin |
-| `docker-compose.postgres.yml` | Real Postgres | Same as above, explicit name |
-| `docker-compose.pglite.yml` | PGLite (WASM) | Single-binary dev/demo only |
+| File | Contents | Use case |
+|------|----------|----------|
+| `docker-compose.yml` | App + Postgres | Deployment, and any full-stack run |
+| `docker-compose.dev.yml` | Postgres only | Local dev — the app runs on the host via `npm run dev` (`npm run db:up` / `npm run db:down`) |
 
-**Use `docker-compose.yml` (or `docker-compose.postgres.yml`) for any real deployment.**
+There is no embedded-database compose file. `docker-compose.pglite.yml` and the
+redundant `docker-compose.postgres.yml` were removed when PGLite stopped being a
+runtime backend.
 
-## PGLite Idle CPU Problem
+## Why PGLite Is Not a Runtime Backend
 
-PGLite compiles PostgreSQL to WebAssembly via Emscripten. Emscripten simulates PostgreSQL's event loop with `setTimeout(fn, 0)` — a busy-wait that fires on every event loop tick. Real Postgres uses OS-level sleep between background worker wakeups; the WASM port cannot, so the Node.js process consumes measurable CPU even with zero client activity.
+PGLite compiles PostgreSQL to WebAssembly via Emscripten. Emscripten simulates
+PostgreSQL's event loop with `setTimeout(fn, 0)` — a busy-wait that fires on
+every event loop tick. Real Postgres uses OS-level sleep between background
+worker wakeups; the WASM port cannot, so the Node.js process consumes measurable
+CPU even with zero client activity.
 
-**Root cause:** `postgres.js` in `@electric-sql/pglite` contains `setTimeout(MainLoop.runner, 0)` — Emscripten's unconditional main-loop spin.
+**Root cause:** `postgres.js` in `@electric-sql/pglite` contains
+`setTimeout(MainLoop.runner, 0)` — Emscripten's unconditional main-loop spin.
 
-**Fix:** Use `DATABASE_URL` with a real Postgres instance (see `docker-compose.yml`). PGLite is appropriate only for local development or single-user demos where the CPU overhead is acceptable.
+The deeper problem was that PGLite was the *fallback*: an app container that
+never received `DATABASE_URL` silently opened an embedded database and burned
+idle CPU while the Postgres container sat unused, and the only symptom was a
+startup log line. `db/src/index.ts` now throws without `DATABASE_URL`, so that
+failure mode is loud and immediate.
 
-At startup the server logs which backend it selected — `[auto-cal] DB backend: Postgres (via DATABASE_URL)` or `[auto-cal] DB backend: PGLite (PGLITE_DATA_DIR=…)` — and additionally warns when PGLite is used under `NODE_ENV=production`. If a deployment that you believe is on Postgres is burning idle CPU, check that log line first: it almost always means the app container never received `DATABASE_URL` and silently fell back to PGLite while the Postgres container sits unused.
+PGLite remains a **test** dependency — `server/test/**` builds in-memory
+instances directly (`new PGlite('memory://')`, see
+`server/test/schema/resolvers/test-helpers.ts`), which is why `npm test` needs
+no database. It is a devDependency of `server`, so `npm install --omit=dev`
+never installs it.
 
-**Silent-fallback footgun (fixed):** the Dockerfile previously baked in `ENV PGLITE_DATA_DIR=/app/pgdata`, so running the image without `DATABASE_URL` quietly dropped to PGLite. That default has been removed — a run with neither `DATABASE_URL` nor `PGLITE_DATA_DIR` now fails fast with `Set DATABASE_URL or PGLITE_DATA_DIR` instead of busy-looping. `docker-compose.pglite.yml` sets `PGLITE_DATA_DIR` explicitly, so the embedded-DB mode is unaffected.
+## Historical PGLite Notes
 
-## Switching to Full Postgres
+Kept because the symptoms are recognisable and the reasoning still explains the
+current shape:
 
-Set `DATABASE_URL` — the runtime automatically selects the `postgres.js` driver over PGLite. See `.env.example` and `docker-compose.yml`.
+**Silent-fallback footgun (twice fixed).** The Dockerfile once baked in
+`ENV PGLITE_DATA_DIR=/app/pgdata`, so running the image without `DATABASE_URL`
+quietly dropped to PGLite. Removing that default only downgraded the failure to
+"fails unless someone sets the other variable"; removing the backend removed the
+class of bug.
 
-## PGLite (Local / Embedded)
+**Startup log.** The server prints `[auto-cal] DB backend: Postgres (via
+DATABASE_URL)` on boot. There is now only one thing it can print, but the line
+is worth keeping: its absence means the process died before the database was
+reached.
 
-Data is persisted to the volume at `/app/pgdata`. No separate database server is needed. Do not use in production — see idle CPU problem above.
+## Local Development
+
+```bash
+npm run db:up     # docker compose -f docker-compose.dev.yml up -d
+# .env: DATABASE_URL=postgresql://autocal:autocal@127.0.0.1:5434/autocal
+npm run dev
+npm run db:down   # when finished
+```
+
+The dev database binds `127.0.0.1:5434`, not the default 5432, because a
+developer machine usually already has something on 5432. Set `AUTOCAL_DB_PORT`
+to move it.
+
+Migrations run on server boot, so `npm run db:migrate` is only needed to apply
+migrations without starting the server.

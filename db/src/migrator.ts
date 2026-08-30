@@ -1,4 +1,4 @@
-import { migrate } from 'drizzle-orm/pglite/migrator';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { db } from './index.ts';
 
 await migrate(db, {

@@ -13,37 +13,24 @@
 
 ## Running with Docker
 
-### Option 1: Embedded database (PGLite)
-
-Simplest option. Data is stored in a Docker volume alongside the app — no separate database container needed.
+`docker-compose.yml` brings up the app and a PostgreSQL container together:
 
 ```bash
-docker compose -f docker-compose.pglite.yml up -d
+docker compose up -d
 ```
 
-Open http://localhost:3001.
+Open http://localhost:3001. Data lives in the named volume `postgres-data`, which you can back up with the usual `docker volume` / `pg_dump` tooling.
 
-To persist data across container recreations the named volume `auto-cal-data` is created automatically. Back it up with `docker volume` commands if needed.
+> **Change the default password** before exposing this to a network. Edit `POSTGRES_PASSWORD` and the matching `DATABASE_URL` in `docker-compose.yml`.
 
-### Option 2: PostgreSQL
-
-Recommended for multi-user setups or when you want a standalone database you can back up independently.
-
-```bash
-docker compose -f docker-compose.postgres.yml up -d
-```
-
-Open http://localhost:3001.
-
-> **Change the default password** before exposing this to a network. Edit `POSTGRES_PASSWORD` and the matching `DATABASE_URL` in `docker-compose.postgres.yml`.
+PostgreSQL is the only supported database — the app exits on startup without a `DATABASE_URL`.
 
 ### Environment variables
 
 | Variable | Description | Default |
 |---|---|---|
 | `NODE_ENV` | Set to `production` in containers | `development` |
-| `PGLITE_DATA_DIR` | Path for embedded database files | — |
-| `DATABASE_URL` | Postgres connection string (overrides PGLite) | — |
+| `DATABASE_URL` | Postgres connection string — **required** | — |
 | `APP_URL` | Public URL of the app, used in magic-link emails | derived from request |
 | `JWT_SECRET` | Secret for signing session tokens | auto-generated |
 | `MAGIC_LINK_SECRET` | Secret for signing magic-link tokens | auto-generated |
@@ -61,11 +48,14 @@ Open http://localhost:3001.
 
 ```bash
 npm install
-npm run db:migrate
+cp .env.example .env
+npm run db:up      # start a local Postgres in Docker (host port 5434)
 npm run dev
 ```
 
-This starts the GraphQL API at `http://localhost:3001` and the web client at `http://localhost:3000`.
+This starts the GraphQL API at `http://localhost:3001` and the web client at `http://localhost:3000`. Migrations are applied automatically when the server boots; `npm run db:down` stops the database.
+
+Tests need no database of their own — they run against an in-memory instance.
 
 ### Commands
 
@@ -81,6 +71,8 @@ This starts the GraphQL API at `http://localhost:3001` and the web client at `ht
 | `npm run db:generate` | Generate a migration after schema changes |
 | `npm run db:migrate` | Apply pending migrations |
 | `npm run db:studio` | Open Drizzle Studio (database GUI) |
+| `npm run db:up` | Start the local Postgres container |
+| `npm run db:down` | Stop the local Postgres container |
 | `npm run codegen` | Regenerate GraphQL types |
 | `npm run build` | Production build |
 | `npm run build:docker` | Build Docker image |
@@ -89,7 +81,7 @@ This starts the GraphQL API at `http://localhost:3001` and the web client at `ht
 
 **Frontend** — React, Expo Router, Apollo Client, ShadCN, Tailwind CSS, TypeScript
 
-**Backend** — Node.js 22 (strip-types, no build step), Express, Apollo Server, Drizzle ORM, PGLite / PostgreSQL, Zod
+**Backend** — Node.js 22 (strip-types, no build step), Express, Apollo Server, Drizzle ORM, PostgreSQL, Zod
 
 **Tooling** — Biome (lint + format), Vitest, GraphQL Codegen, Drizzle Kit, Docker
 

@@ -17,13 +17,13 @@ export default defineConfig({
       '{client,db,server}/test/**/*.test.ts',
       '{client,db,server}/src/**/*.test.ts',
     ],
-    // Prevent .env's PGLITE_DATA_DIR from leaking into tests.
-    // Any test that accidentally imports @auto-cal/db without mocking it will
-    // throw immediately ("Set DATABASE_URL or PGLITE_DATA_DIR") rather than
-    // silently opening a file-backed database.
+    // Prevent .env's DATABASE_URL from leaking into tests. Any test that
+    // accidentally imports @auto-cal/db without mocking it throws immediately
+    // ("DATABASE_URL is required") rather than connecting to — and migrating —
+    // a real database. Tests build their own in-memory PGLite instead; see
+    // server/test/schema/resolvers/test-helpers.ts.
     env: {
       DATABASE_URL: '',
-      PGLITE_DATA_DIR: '',
     },
     coverage: {
       provider: 'v8',

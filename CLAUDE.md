@@ -24,7 +24,7 @@ npm run db:migrate       # apply pending migrations
 npm run db:studio        # Drizzle Studio GUI
 
 # GraphQL codegen
-npm run generate:schema  # write src/__generated__/schema.graphql from Drizzle schema (no DB required — uses in-memory PGlite)
+npm run generate:schema  # write src/__generated__/schema.graphql from Drizzle schema (no DB required — client is never connected)
 npm run codegen:server   # regenerate server resolver types from schema.graphql
 npm run codegen          # generate:schema → codegen:server → client typed operations
 
@@ -40,7 +40,9 @@ Prefer these `package.json` scripts over ad-hoc `npx` invocations — they wrap 
 npm workspaces monorepo: `db` → `server` → `client`. No SST, no pnpm.
 
 ### `db`
-Drizzle ORM schema + PGLite/Postgres dual-backend. Exports a single `db` instance; picks the backend from env: `DATABASE_URL` → postgres.js, `PGLITE_DATA_DIR` → PGLite. Types are always inferred (`$inferSelect` / `$inferInsert`) — never duplicated manually.
+Drizzle ORM schema over postgres.js. Exports a single `db` instance built from `DATABASE_URL`, and **throws at import time if that is unset** — Postgres is the only runtime backend. Types are always inferred (`$inferSelect` / `$inferInsert`) — never duplicated manually.
+
+PGLite survives only as a *test* fixture: `server/test/**` constructs its own in-memory instances (`new PGlite('memory://')`) and never imports this module. It is a devDependency of `server`, not a dependency of `db`, so a production install cannot pull it in. It was dropped as a runtime backend because its WASM event loop busy-waits (see [`deployment.md`](.agents/deployment.md)), which made a deploy that lost its `DATABASE_URL` degrade silently instead of failing.
 
 ### `server`
 Express + Apollo Server, running TypeScript directly via `--experimental-strip-types` (Node 22). **All imports must include `.ts` extension.** No build step.
@@ -169,12 +171,12 @@ All `__generated__/` directories are gitignored and not committed. Run codegen b
 
 Detailed patterns and decisions live in `.agents/`:
 
-- [`.agents/db-patterns.md`](.agents/db-patterns.md) — Drizzle table definitions, dual-backend connection, query patterns, migrations
+- [`.agents/db-patterns.md`](.agents/db-patterns.md) — Drizzle table definitions, connection, query patterns, migrations
 - [`.agents/server-patterns.md`](.agents/server-patterns.md) — Full resolver authoring guide, Zod constraint table, auth details, DataLoader usage, iCal endpoint
 - [`.agents/graphql-patterns.md`](.agents/graphql-patterns.md) — Full SDL, naming conventions, cache invalidation
 - [`.agents/client-patterns.md`](.agents/client-patterns.md) — Apollo Client setup, expo-router, cache invalidation, fragment colocation, ShadCN/Tailwind patterns
 - [`.agents/scheduling.md`](.agents/scheduling.md) — Scheduling algorithm, writeback service, habit instance generation, pre-placement lock
-- [`.agents/deployment.md`](.agents/deployment.md) — Docker, environment variables, PGLite vs Postgres
+- [`.agents/deployment.md`](.agents/deployment.md) — Docker, environment variables, Postgres setup
 - [`.agents/project-structure.md`](.agents/project-structure.md) — Full directory tree, DB schema columns, route table, GraphQL operation index
 
 Open work is tracked in GitHub issues (`gh issue list`), not in a file — read the
