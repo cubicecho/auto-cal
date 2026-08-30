@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useState } from 'react';
+import { View } from 'react-native';
 
 interface DateTimeInputProps {
   value: Date;
@@ -20,11 +21,14 @@ interface DateTimeInputProps {
 /**
  * Combined date + time picker.
  *
- * - Date is chosen via a popover-mounted shadcn calendar.
- * - Time is a styled native `<input type="time">` (HH:mm) — keeps the
- *   composite light without pulling a second picker library.
+ * - Date is chosen from a `Calendar` in a `Popover` — a dropdown anchored to
+ *   the trigger on web, a sheet on native.
+ * - Time is an `Input type="time"`: a real `<input type="time">` on web, a
+ *   plain HH:mm text field on native, which is the split `input` exists for.
  *
- * The two inputs always commit a single Date back via `onChange`.
+ * Shared by both platforms with no `.web.tsx`: every piece it composes is
+ * already a cross-platform primitive. The two inputs always commit a single
+ * Date back via `onChange`.
  */
 export function DateTimeInput({
   value,
@@ -54,7 +58,7 @@ export function DateTimeInput({
   }
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <View className={cn('flex-row items-center gap-2', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -67,7 +71,6 @@ export function DateTimeInput({
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
-            mode="single"
             selected={value}
             onSelect={handleDateSelect}
             defaultMonth={value}
@@ -80,6 +83,6 @@ export function DateTimeInput({
         onChangeText={handleTimeChange}
         className="w-[120px]"
       />
-    </div>
+    </View>
   );
 }

@@ -20,7 +20,7 @@ no-ops off web.
 
 Only use components that are already installed — do not add new ones without checking first. Files live in `client/src/components/ui/`.
 
-ShadCN primitives (13): `button` `calendar` `card` `dialog` `field` `form` `input` `label` `popover` `select` `switch` `tabs` `textarea` `tooltip`
+ShadCN primitives (14): `button` `calendar` `card` `dialog` `field` `form` `input` `label` `popover` `select` `switch` `tabs` `textarea` `tooltip` — all of them cross-platform, several as a `.tsx`/`.web.tsx` pair (see "Cross-Platform Primitives")
 
 Custom (the rest — keep tagged as such): `color-bar` `color-dot`
 `confirm-dialog` `date-time-input` `detail-header` `detail-page`
@@ -465,12 +465,13 @@ Companion hook: `hooks/useListSection.ts` — owns the create/edit dialog open
 state (`formOpen`, `editing`, `openCreate`, `openEdit`, `handleOpenChange`) that
 every list component needs.
 
-## Cross-Platform Primitives (in progress)
+## Cross-Platform Primitives
 
-`button.tsx`, `card.tsx`, `input.tsx`, `icons.tsx`, `dialog.tsx`, `label.tsx`
-and `field.tsx` have been converted to react-native primitives and now render on
-both platforms. The rest of `components/ui/` is still web-only. The conversion rules, which every further
-primitive follows:
+Every primitive in `components/ui/` now renders on both platforms. The
+radix-backed ones (`popover`, `select`, `tabs`, `tooltip`, `switch`) and
+`calendar` keep a `.web.tsx`; `button`, `card`, `field`, `label`, `input`,
+`icons`, `dialog`, `date-time-input` and the layout primitives are shared
+files. The conversion rules, which every further primitive follows:
 
 **File naming inverts.** The old convention was *plain = web, `.native.tsx` =
 native*. A converted primitive is *plain = shared*, with a `.web.tsx` **only**
@@ -585,11 +586,59 @@ One thing was dropped in that conversion: `FieldLabel`'s
 `group-data-[disabled=true]/field:opacity-50`. `data-*` attributes and group
 variants are DOM-only, and nothing was setting that attribute.
 
-**Still to convert:** the remaining radix-backed primitives (`popover`,
-`select`, `tabs`, `tooltip`, `switch`, plus `date-time-input` and
-`CalendarView`) keep a `.web.tsx`. Tracked in
-[cubicecho/auto-cal#59](https://github.com/cubicecho/auto-cal/issues/59); the
-rest of the convergence chain is #60-#63.
+### Popover, Select and Calendar
+
+The three that open something over the page share one decision: **native does
+not anchor**. Anchoring means measuring the trigger and flipping the panel
+against the viewport, which is a chunk of layout code to reproduce a
+pointer-era affordance — and every native platform shows choices in a sheet
+anyway. `popover.tsx` and `select.tsx` are both a `Modal` with a dimmed
+backdrop; `PopoverContent`'s `align` is accepted and ignored off web.
+
+`SelectValue` wraps a bare-string child in a `<Text>` for the caller. That is
+the one divergence a shared primitive should absorb rather than push out: an
+unwrapped string renders fine on web and throws inside a `View`.
+
+`calendar.tsx` is a month grid built from date-fns rather than
+react-native-calendars — the whole surface is single-date selection, and a
+calendar library brings a theming system that would sit outside the tailwind
+tokens. `calendar-base.ts` drops react-day-picker's `mode`: range and multi
+selection have no native implementation behind them, so they are not in the
+contract.
+
+Because all four compose cleanly, `date-time-input.tsx` is shared with **no**
+`.web.tsx` at all.
+
+### Tooltip
+
+Hover does not exist on a touch screen, so `tooltip.tsx` shows the bubble on
+**long press** and dismisses it after 2.5s. Dropping the content instead would
+lose the only place some labels are written down. `Tooltip` wraps its children
+in a relatively-positioned `View` so the bubble can be placed against the
+trigger; radix's root is a fragment, so that wrapper exists on native only.
+
+`TooltipProvider` is a pass-through off web — kept so `app/(app)/_layout.tsx`
+does not have to branch.
+
+### Switch
+
+Not react-native's `Switch`: that takes `trackColor`/`thumbColor` as raw colour
+values, which would pin the one control outside the tailwind theme and stop it
+following dark mode with everything else. `switch.tsx` is a `Pressable` track
+with a `View` thumb, and `switch-base.ts` exports the track/thumb classes both
+halves apply so they cannot drift visually.
+
+### CalendarView
+
+`CalendarView.web.tsx` is FullCalendar; `CalendarView.tsx` is a themed agenda —
+one section per day in the visible range, the day's time blocks above the
+events scheduled inside them. FullCalendar is drag-and-drop over absolute pixel
+offsets, none of which has a native counterpart worth reproducing, and an
+agenda answers the same question on a phone. `date` and `view` come from the
+same navigator, so both platforms always show the same span.
+
+The `DateTime` scalar generates as `unknown`, so timestamps off a fragment are
+narrowed through one `asDate` helper rather than asserted at each use.
 
 ## Shared Native Primitives
 
