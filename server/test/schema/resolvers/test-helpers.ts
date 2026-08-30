@@ -5,7 +5,6 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { relations } from '@auto-cal/db/relations';
-import * as schema from '@auto-cal/db/schema';
 import {
   activityTypes,
   habits,
@@ -29,8 +28,7 @@ const migrationsFolder = resolve(__dirname, '../../../../db/drizzle');
 export async function createTestDb() {
   const client = new PGlite('memory://');
   await client.waitReady;
-  // @ts-expect-error drizzle-orm 1.0-beta removed `schema` from config types but it remains valid at runtime
-  const db = drizzle({ client, schema, relations });
+  const db = drizzle({ client, relations });
   await migrate(db, { migrationsFolder });
   return db;
 }

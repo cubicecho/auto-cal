@@ -33,9 +33,8 @@ const client = postgres(databaseUrl);
 // PGLite instance to a `DB`-typed function — so it is tightened separately in
 // cubicecho/auto-cal#66.
 //
-// @ts-expect-error drizzle-orm 1.0-beta removed `schema` from DrizzlePgConfig types but it remains valid at runtime for relational queries
 // biome-ignore lint/suspicious/noExplicitAny: see the note above
-const db: any = drizzle({ client, schema, relations });
+const db: any = drizzle({ client, relations });
 
 await migrate(db, { migrationsFolder });
 

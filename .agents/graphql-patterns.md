@@ -2,7 +2,7 @@
 
 ## Schema Generation Pipeline
 
-1. `buildSchema(db, buildSchemaConfig)` auto-generates base schema from Drizzle tables via `@vantreeseba/drizzle-graphql` (v8). The config carries the tenant row `scope`, per-table ordering `defaults`, and the `exclude`d `keyHash` column
+1. `buildSchema(db, buildSchemaConfig)` auto-generates base schema from Drizzle tables via `@vantreeseba/drizzle-graphql` (v9). The config carries the tenant row `scope`, per-table ordering `defaults`, and the `exclude`d `keyHash` column
 2. `scopeRootFields()` (`schema/scope.ts`) renames each generated root query to its `my*` form and wraps the resolver so it AND-s a caller predicate onto the client's `where`; generated queries with no rule are deleted, and one listed in neither `QUERY_SCOPE` nor `UNEXPOSED` throws at boot
 3. `applyCustomResolvers()` extends the scoped schema with the remaining hand-written `my*` queries and every mutation via `extendSchema`, then ends with `finalizeSchema()`, which asserts no unprefixed `Query` field survived, **removes** every `Mutation` field that is neither prefixed `my` nor in `PUBLIC_MUTATIONS` (plus the `keyHash` input surfaces), and prunes the types that leaves unreferenced
 

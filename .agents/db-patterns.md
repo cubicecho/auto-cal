@@ -57,10 +57,14 @@ const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is required. …');
 
 const client = postgres(databaseUrl);
-const db = drizzle({ client, schema, relations });
+const db = drizzle({ client, relations });
 
 await migrate(db, { migrationsFolder });
 ```
+
+`relations` (from `defineRelations(schema, …)`) carries the tables, so the
+constructor takes no separate `schema` argument — drizzle-orm 1.0.0-rc.4 removed
+it along with `db._.fullSchema`. Passing one is silently ignored.
 
 Migrations run here, on import, so every entry point (server, `migrator.ts`,
 scripts) gets a migrated database without coordinating.
@@ -70,12 +74,19 @@ migrate it per file — see `server/test/schema/resolvers/test-helpers.ts`:
 
 ```typescript
 const client = new PGlite('memory://');
-const db = drizzle({ client, schema, relations });
+const db = drizzle({ client, relations });
 await migrate(db, { migrationsFolder });
 ```
 
 That is the only remaining use of PGLite in the repo; it is a devDependency of
 `server`, so a production install never pulls it in.
+
+**`drizzle-orm` and `drizzle-kit` are pinned to an exact version**, not a range.
+Their prerelease tags carry a commit hash (`1.0.0-rc.5-ab785fc`), and semver
+compares a non-numeric identifier as *greater* than a numeric one — so
+`1.0.0-rc.2-e38a2ba` satisfies `~1.0.0-rc.5` and npm reports the older build as
+up to date. Bump both by editing the exact string in `db/package.json` and
+`server/package.json` together; they must stay on the same build.
 
 ## Query Patterns
 

@@ -48,7 +48,7 @@ PGLite survives only as a *test* fixture: `server/test/**` constructs its own in
 Express + Apollo Server, running TypeScript directly via `--experimental-strip-types` (Node 22). **All imports must include `.ts` extension.** No build step.
 
 **Schema pipeline** (three layers):
-1. `buildSchema(db, buildSchemaConfig)` — `@vantreeseba/drizzle-graphql` (v8) auto-generates the full SDL from Drizzle tables. The config carries the tenant `scope`, the per-table `defaults` (ordering), the `exclude`d columns, and the disabled features
+1. `buildSchema(db, buildSchemaConfig)` — `@vantreeseba/drizzle-graphql` (v9) auto-generates the full SDL from Drizzle tables. The config carries the tenant `scope`, the per-table `defaults` (ordering), the `exclude`d columns, and the disabled features
 2. `scopeRootFields(schema)` — see below: renames the generated root queries to their `my*` form, guards them with `requireUser`, and deletes the rest
 3. `applyCustomResolvers(schema)` — runs step 2, extends the result with custom SDL, wires the remaining resolvers, then ends with `finalizeSchema`: a `mapSchema` pass that asserts every surviving `Query` field is `my*`-prefixed, **removes** every `Mutation` field not starting with `my` (and not in `PUBLIC_MUTATIONS`), and `pruneSchema`s whatever that leaves unreferenced
 

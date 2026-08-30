@@ -11,34 +11,31 @@
     "@apollo/server": "^5.5.1",
     "@as-integrations/express4": "^1.1.2",
     "@auto-cal/db": "*",
-    "@graphql-tools/utils": "^11.2.2",
-    "@vantreeseba/drizzle-graphql": "^8.0.0",
+    "@graphql-tools/utils": "^12.0.0",
+    "@vantreeseba/drizzle-graphql": "^9.0.0",
     "cors": "^2.8.5",
     "dataloader": "^2.2.3",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "drizzle-orm": "~1.0.0-rc.2",
+    "drizzle-orm": "1.0.0-rc.5-ab785fc",
     "express": "^4.21.2",
     "graphql": "^16.9.0",
     "graphql-parse-resolve-info": "^4.13.0",
-    "graphql-scalars": "^1.25.0",
+    "graphql-scalars": "^2.0.0",
     "graphql-subscriptions": "^3.0.0",
     "graphql-ws": "^6.0.8",
-    "ical-generator": "^10.2.0",
-    "jose": "^5.10.0",
+    "ical-generator": "^11.1.1",
+    "jose": "^6.2.10",
     "js-logger": "^1.6.1",
     "ws": "^8.20.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.2.15",
+    "@electric-sql/pglite": "^0.5.8",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^25.6.0",
     "@types/pluralize": "^0.0.33",
     "@types/ws": "^8.18.1"
-  },
-  "resolutions": {
-    "graphql": "16.10.0"
   }
 }
