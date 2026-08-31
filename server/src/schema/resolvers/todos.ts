@@ -1,9 +1,13 @@
 import { todos } from '@auto-cal/db/schema';
-import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { requireUser } from '../../errors.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
-import { CreateTodoInput, UpdateTodoInput } from '../validators.ts';
-import { loadOwned } from './load.ts';
+import {
+  CreateTodoInput,
+  TodoIdsInput,
+  UpdateTodoInput,
+} from '../validators.ts';
+import { loadOwned, loadOwnedMany } from './load.ts';
 import { publishTodoEvent } from './subscriptions.ts';
 import type { FieldMap, MutationMap } from './types.ts';
 
@@ -11,9 +15,11 @@ export const todoMutations: MutationMap<
   | 'myCreateTodo'
   | 'myUpdateTodo'
   | 'myCompleteTodo'
+  | 'myCompleteTodos'
   | 'myUnscheduleTodo'
   | 'myDeleteTodo'
   | 'myDeleteTodos'
+  | 'myDeleteTodosById'
 > = {
   myCreateTodo: async (_parent, args, context) => {
     const userId = requireUser(context);
@@ -114,6 +120,34 @@ export const todoMutations: MutationMap<
     return completed;
   },
 
+  // The multi-select form of `myCompleteTodo`. Deliberately one mutation
+  // rather than N calls batched into one request: each of those would fire its
+  // own fire-and-forget `runSchedulerWriteback`, and N concurrent writebacks
+  // for one user race each other over the same `scheduledAt` columns. One
+  // mutation means one write and one writeback.
+  myCompleteTodos: async (_parent, args, context) => {
+    const userId = requireUser(context);
+    const ids = TodoIdsInput.parse(args.ids);
+    await loadOwnedMany(context, 'todos', ids, userId);
+
+    const completedAt = args.completedAt
+      ? new Date(args.completedAt)
+      : new Date();
+    // Same `scheduledAt = completedAt` move as the single-todo form: the
+    // calendar records when the work happened, not when it was planned.
+    const completed = await context.db
+      .update(todos)
+      .set({ completedAt, scheduledAt: completedAt, updatedAt: new Date() })
+      .where(and(eq(todos.userId, userId), inArray(todos.id, ids)))
+      .returning();
+
+    runSchedulerWriteback(context.db, userId).catch(console.error);
+    for (const todo of completed) {
+      publishTodoEvent(userId, { type: 'updated', entity: todo });
+    }
+    return completed;
+  },
+
   myUnscheduleTodo: async (_parent, args, context) => {
     const userId = requireUser(context);
     await loadOwned(context, 'todos', args.id, userId);
@@ -159,6 +193,26 @@ export const todoMutations: MutationMap<
     const deleted = await context.db
       .delete(todos)
       .where(and(...conditions))
+      .returning();
+
+    runSchedulerWriteback(context.db, userId).catch(console.error);
+    for (const todo of deleted) {
+      publishTodoEvent(userId, { type: 'deleted', deletedId: todo.id });
+    }
+    return deleted;
+  },
+
+  // Arbitrary multi-select delete. `myDeleteTodos` covers "clear this list";
+  // this covers "clear these five", which no list-and-completed filter can
+  // express. Same single-writeback reasoning as `myCompleteTodos`.
+  myDeleteTodosById: async (_parent, args, context) => {
+    const userId = requireUser(context);
+    const ids = TodoIdsInput.parse(args.ids);
+    await loadOwnedMany(context, 'todos', ids, userId);
+
+    const deleted = await context.db
+      .delete(todos)
+      .where(and(eq(todos.userId, userId), inArray(todos.id, ids)))
       .returning();
 
     runSchedulerWriteback(context.db, userId).catch(console.error);

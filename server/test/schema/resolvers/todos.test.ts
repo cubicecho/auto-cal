@@ -671,4 +671,203 @@ describe('todo resolvers', () => {
       expect(otherIds).toContain(theirs.id);
     });
   });
+
+  // ─── myCompleteTodos / myDeleteTodosById ──────────────────────────────────────
+
+  const COMPLETE_TODOS = `
+    mutation($ids: [ID!]!) {
+      myCompleteTodos(ids: $ids) { id completedAt scheduledAt }
+    }
+  `;
+
+  const DELETE_TODOS_BY_ID = `
+    mutation($ids: [ID!]!) {
+      myDeleteTodosById(ids: $ids) { id }
+    }
+  `;
+
+  describe('myCompleteTodos', () => {
+    it('throws when not authenticated', async () => {
+      const result = await gql(testSchema, db, '', COMPLETE_TODOS, {
+        ids: [crypto.randomUUID()],
+      });
+      expect(result.errors?.[0]?.message).toMatch(/not authenticated/i);
+    });
+
+    it('completes every id in one call and moves scheduledAt to match', async () => {
+      const { id: userId } = await seedUser(db, 'bulk-complete@example.com');
+      const at = await seedActivityType(db, userId);
+      const list = await seedTodoList(db, userId, at.id);
+      const a = await seedTodo(db, userId, list.id, { title: 'A' });
+      const b = await seedTodo(db, userId, list.id, { title: 'B' });
+      const untouched = await seedTodo(db, userId, list.id, { title: 'C' });
+
+      const result = await gql(testSchema, db, userId, COMPLETE_TODOS, {
+        ids: [a.id, b.id],
+      });
+      expect(result.errors).toBeUndefined();
+      const completed = result.data?.myCompleteTodos as Array<{
+        id: string;
+        completedAt: string | null;
+        scheduledAt: string | null;
+      }>;
+      expect(completed).toHaveLength(2);
+      expect(completed.map((t) => t.id).sort()).toEqual([a.id, b.id].sort());
+      for (const todo of completed) {
+        expect(todo.completedAt).not.toBeNull();
+        // Both come back as Date instances from the DateTime scalar.
+        expect(todo.scheduledAt).toEqual(todo.completedAt);
+      }
+
+      const after = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos { id completedAt } }',
+      );
+      const stillOpen = (
+        after.data?.myTodos as Array<{ id: string; completedAt: string | null }>
+      ).filter((t) => t.completedAt === null);
+      expect(stillOpen.map((t) => t.id)).toEqual([untouched.id]);
+    });
+
+    it('rejects the whole batch when one id belongs to another user', async () => {
+      const { id: userId } = await seedUser(
+        db,
+        'bulk-complete-mine@example.com',
+      );
+      const { id: otherId } = await seedUser(
+        db,
+        'bulk-complete-theirs@example.com',
+      );
+      const at = await seedActivityType(db, userId);
+      const list = await seedTodoList(db, userId, at.id);
+      const mine = await seedTodo(db, userId, list.id, { title: 'Mine' });
+      const otherAt = await seedActivityType(db, otherId);
+      const otherList = await seedTodoList(db, otherId, otherAt.id);
+      const theirs = await seedTodo(db, otherId, otherList.id, {
+        title: 'Theirs',
+      });
+
+      const result = await gql(testSchema, db, userId, COMPLETE_TODOS, {
+        ids: [mine.id, theirs.id],
+      });
+      expect(result.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+
+      // All-or-nothing: the caller's own todo is not completed either.
+      const after = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos { id completedAt } }',
+      );
+      const row = (
+        after.data?.myTodos as Array<{ id: string; completedAt: string | null }>
+      ).find((t) => t.id === mine.id);
+      expect(row?.completedAt).toBeNull();
+    });
+
+    it('rejects an unknown id as NOT_FOUND', async () => {
+      const { id: userId } = await seedUser(
+        db,
+        'bulk-complete-404@example.com',
+      );
+      const result = await gql(testSchema, db, userId, COMPLETE_TODOS, {
+        ids: [crypto.randomUUID()],
+      });
+      expect(result.errors?.[0]?.extensions?.code).toBe('NOT_FOUND');
+    });
+
+    it('rejects an empty id list', async () => {
+      const { id: userId } = await seedUser(
+        db,
+        'bulk-complete-empty@example.com',
+      );
+      const result = await gql(testSchema, db, userId, COMPLETE_TODOS, {
+        ids: [],
+      });
+      expect(result.errors?.[0]).toBeDefined();
+    });
+  });
+
+  describe('myDeleteTodosById', () => {
+    it('throws when not authenticated', async () => {
+      const result = await gql(testSchema, db, '', DELETE_TODOS_BY_ID, {
+        ids: [crypto.randomUUID()],
+      });
+      expect(result.errors?.[0]?.message).toMatch(/not authenticated/i);
+    });
+
+    it('deletes exactly the selected todos across lists', async () => {
+      const { id: userId } = await seedUser(db, 'bulk-delete-ids@example.com');
+      const at = await seedActivityType(db, userId);
+      const listA = await seedTodoList(db, userId, at.id);
+      const listB = await seedTodoList(db, userId, at.id);
+      const a = await seedTodo(db, userId, listA.id, { title: 'A' });
+      const b = await seedTodo(db, userId, listB.id, { title: 'B' });
+      const keep = await seedTodo(db, userId, listA.id, { title: 'Keep' });
+
+      const result = await gql(testSchema, db, userId, DELETE_TODOS_BY_ID, {
+        ids: [a.id, b.id],
+      });
+      expect(result.errors).toBeUndefined();
+      const deleted = (
+        result.data?.myDeleteTodosById as Array<{ id: string }>
+      ).map((t) => t.id);
+      expect(deleted.sort()).toEqual([a.id, b.id].sort());
+
+      const after = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos { id } }',
+      );
+      expect(
+        (after.data?.myTodos as Array<{ id: string }>).map((t) => t.id),
+      ).toEqual([keep.id]);
+    });
+
+    it("refuses to delete another user's todo, leaving the batch intact", async () => {
+      const { id: userId } = await seedUser(
+        db,
+        'bulk-del-ids-mine@example.com',
+      );
+      const { id: otherId } = await seedUser(
+        db,
+        'bulk-del-ids-theirs@example.com',
+      );
+      const at = await seedActivityType(db, userId);
+      const list = await seedTodoList(db, userId, at.id);
+      const mine = await seedTodo(db, userId, list.id, { title: 'Mine' });
+      const otherAt = await seedActivityType(db, otherId);
+      const otherList = await seedTodoList(db, otherId, otherAt.id);
+      const theirs = await seedTodo(db, otherId, otherList.id, {
+        title: 'Theirs',
+      });
+
+      const result = await gql(testSchema, db, userId, DELETE_TODOS_BY_ID, {
+        ids: [mine.id, theirs.id],
+      });
+      expect(result.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+
+      const after = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos { id } }',
+      );
+      expect(
+        (after.data?.myTodos as Array<{ id: string }>).map((t) => t.id),
+      ).toContain(mine.id);
+      const otherAfter = await gql(
+        testSchema,
+        db,
+        otherId,
+        'query { myTodos { id } }',
+      );
+      expect(
+        (otherAfter.data?.myTodos as Array<{ id: string }>).map((t) => t.id),
+      ).toContain(theirs.id);
+    });
+  });
 });

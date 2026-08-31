@@ -94,6 +94,12 @@ export const UpdateTodoInput = z.object({
   completedAt: z.string().nullable().optional(),
 });
 
+/**
+ * Ids for a bulk complete/delete. Capped so one request cannot ask for an
+ * unbounded `IN (…)`; 200 is well past what a multi-select produces.
+ */
+export const TodoIdsInput = z.array(z.string().uuid()).min(1).max(200);
+
 export const CreateHabitInput = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),

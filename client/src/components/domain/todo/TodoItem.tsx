@@ -5,6 +5,7 @@ import {
   type CompletionDialogTarget,
 } from '@/components/domain/CompletionDialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useConfirm } from '@/components/ui/confirm';
 import {
   Check,
@@ -80,9 +81,15 @@ type Todo = Todo_TodoListFragment;
 type TodoItemProps = {
   todo: Todo;
   onEdit: (todo: Todo) => void;
+  /**
+   * Present only while the parent list is in multi-select mode. Its presence
+   * is what swaps the complete/edit/delete controls for a checkbox — the two
+   * sets of actions would otherwise compete for the same row.
+   */
+  selection?: { selected: boolean; onToggle: (todo: Todo) => void } | undefined;
 };
 
-export function TodoItem({ todo, onEdit }: TodoItemProps) {
+export function TodoItem({ todo, onEdit, selection }: TodoItemProps) {
   const toast = useToast();
   const confirm = useConfirm();
   const isCompleted = todo.completedAt !== null;
@@ -133,7 +140,15 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
         isCompleted ? 'opacity-60' : ''
       }`}
     >
-      {!isCompleted ? (
+      {selection ? (
+        <View className="h-6 w-6 shrink-0 items-center justify-center">
+          <Checkbox
+            checked={selection.selected}
+            onCheckedChange={() => selection.onToggle(todo)}
+            accessibilityLabel={`Select ${todo.title}`}
+          />
+        </View>
+      ) : !isCompleted ? (
         <Button
           size="icon"
           variant="ghost"
@@ -217,25 +232,32 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
         </View>
       </View>
 
-      <Button
-        size="icon"
-        variant="ghost"
-        onPress={() => onEdit(todo)}
-        aria-label={`Edit ${todo.title}`}
-        className={cn('h-6 w-6 shrink-0', HOVER_REVEAL)}
-      >
-        <Pencil className="h-3.5 w-3.5" />
-      </Button>
+      {!selection && (
+        <>
+          <Button
+            size="icon"
+            variant="ghost"
+            onPress={() => onEdit(todo)}
+            aria-label={`Edit ${todo.title}`}
+            className={cn('h-6 w-6 shrink-0', HOVER_REVEAL)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
 
-      <Button
-        size="icon"
-        variant="ghost"
-        onPress={() => void confirmDelete()}
-        aria-label={`Delete ${todo.title}`}
-        className={cn('h-6 w-6 shrink-0 hover:text-destructive', HOVER_REVEAL)}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onPress={() => void confirmDelete()}
+            aria-label={`Delete ${todo.title}`}
+            className={cn(
+              'h-6 w-6 shrink-0 hover:text-destructive',
+              HOVER_REVEAL,
+            )}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </>
+      )}
 
       <CompletionDialog
         target={completionTarget}

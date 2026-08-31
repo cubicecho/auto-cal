@@ -10,7 +10,7 @@ import type {
   TodoList,
 } from '@auto-cal/db';
 import type { Context } from '../../context.ts';
-import { requireOwner } from '../../errors.ts';
+import { forbidden, notFound, requireOwner } from '../../errors.ts';
 
 /**
  * The tables with a `userId` column, mapped to the row each returns.
@@ -68,4 +68,32 @@ export async function loadOwned<K extends keyof OwnedRow>(
     | OwnedRow[K]
     | undefined;
   return requireOwner(row, ENTITY_LABEL[table], id, userId);
+}
+
+/**
+ * The batch form of {@link loadOwned}: one query for the whole id list, and the
+ * same guard order — a missing id is NOT_FOUND, someone else's is FORBIDDEN.
+ *
+ * Checking explicitly rather than just ANDing `userId` into the write matters
+ * for a bulk action: a scoped `IN (…)` silently drops the ids the caller does
+ * not own, so a request that half-worked reports success. Rows come back in
+ * `ids` order so the caller can rely on the pairing.
+ */
+export async function loadOwnedMany<K extends keyof OwnedRow>(
+  context: Context,
+  table: K,
+  ids: readonly string[],
+  userId: string,
+): Promise<OwnedRow[K][]> {
+  const rows = (await context.db.query[table].findMany({
+    where: { id: { in: [...ids] } },
+  })) as OwnedRow[K][];
+  const byId = new Map(rows.map((row) => [row.id, row]));
+
+  return ids.map((id) => {
+    const row = byId.get(id);
+    if (!row) throw notFound(ENTITY_LABEL[table], id);
+    if (row.userId !== userId) throw forbidden();
+    return row;
+  });
 }

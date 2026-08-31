@@ -14,11 +14,19 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
-import { FolderKanban, ListX, Pencil, Plus } from '@/components/ui/icons';
+import {
+  Check,
+  FolderKanban,
+  ListChecks,
+  ListX,
+  Pencil,
+  Plus,
+  Trash2,
+} from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
-import { errorMessage, formatDuration } from '@/lib/utils';
+import { cn, errorMessage, formatDuration } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
@@ -41,6 +49,27 @@ const DELETE_TODOS = graphql(`
   }
 `);
 
+// One mutation for the whole selection rather than N `myCompleteTodo` calls:
+// each of those fires its own scheduler writeback, and N writebacks for one
+// user race each other over the same `scheduledAt` columns.
+const COMPLETE_SELECTED = graphql(`
+  mutation CompleteSelectedTodos($ids: [ID!]!) {
+    myCompleteTodos(ids: $ids) {
+      id
+      completedAt
+      scheduledAt
+    }
+  }
+`);
+
+const DELETE_SELECTED = graphql(`
+  mutation DeleteSelectedTodos($ids: [ID!]!) {
+    myDeleteTodosById(ids: $ids) {
+      id
+    }
+  }
+`);
+
 type TodoList = TodoList_TodoListListFragment;
 type Todo = Todo_TodoListFragment;
 
@@ -56,10 +85,33 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  // `null` is "not selecting"; an empty set is selection mode with nothing
+  // picked, which still has to show the toolbar so there is a way back out.
+  const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null);
 
   const [createTodo, { loading: creating }] = useMutation(QUICK_CREATE_TODO, {
     update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
   });
+
+  const [completeSelected, { loading: completingSelected }] = useMutation(
+    COMPLETE_SELECTED,
+    {
+      // The mutation returns every row it touched, so the lists rendering them
+      // patch themselves; only membership and the derived views move.
+      update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
+    },
+  );
+
+  const [deleteSelected, { loading: deletingSelected }] = useMutation(
+    DELETE_SELECTED,
+    {
+      update: (cache, { data }) => {
+        for (const todo of data?.myDeleteTodosById ?? [])
+          evictEntity(cache, 'Todo', todo.id);
+        invalidate(cache, 'myTodos', ...DERIVED);
+      },
+    },
+  );
 
   const [deleteTodos] = useMutation(DELETE_TODOS, {
     // Returns the rows it deleted, so each one can be evicted by id rather
@@ -82,6 +134,45 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
     totalLength += t.estimatedLength;
     if (t.completedAt !== null) completedCount += 1;
     else remainingLength += t.estimatedLength;
+  }
+
+  const selectionCount = selectedIds?.size ?? 0;
+  const busy = completingSelected || deletingSelected;
+
+  function toggleSelected(todo: Todo) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev ?? []);
+      if (next.has(todo.id)) next.delete(todo.id);
+      else next.add(todo.id);
+      return next;
+    });
+  }
+
+  async function handleCompleteSelected() {
+    if (!selectedIds?.size) return;
+    try {
+      await completeSelected({ variables: { ids: [...selectedIds] } });
+      setSelectedIds(null);
+    } catch (err) {
+      toast(errorMessage(err, 'Could not complete the selected todos'));
+    }
+  }
+
+  async function handleDeleteSelected() {
+    if (!selectedIds?.size) return;
+    const count = selectedIds.size;
+    const ok = await confirm({
+      title: `Delete ${count} ${count === 1 ? 'todo' : 'todos'}?`,
+      description: 'The selected todos will be permanently deleted.',
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
+    try {
+      await deleteSelected({ variables: { ids: [...selectedIds] } });
+      setSelectedIds(null);
+    } catch (err) {
+      toast(errorMessage(err, 'Could not delete the selected todos'));
+    }
   }
 
   async function handleQuickAdd() {
@@ -151,6 +242,26 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
               )}
             </View>
             <View className="flex-row shrink-0 items-center gap-1">
+              {visibleTodos.length > 1 && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onPress={() =>
+                    setSelectedIds((prev) => (prev === null ? new Set() : null))
+                  }
+                  aria-label={
+                    selectedIds === null
+                      ? `Select todos in ${list.name}`
+                      : 'Cancel selection'
+                  }
+                  className={cn(
+                    'h-7 w-7',
+                    selectedIds !== null && 'bg-muted text-foreground',
+                  )}
+                >
+                  <ListChecks className="h-3.5 w-3.5" />
+                </Button>
+              )}
               <Button
                 size="icon"
                 variant="ghost"
@@ -176,27 +287,72 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
         </CardHeader>
 
         <CardContent className="flex-1 flex-col gap-2 pt-0">
-          <View className="flex-row items-center gap-2">
-            <Input
-              value={newTitle}
-              placeholder="Add a todo…"
-              onChangeText={setNewTitle}
-              onSubmitEditing={() => {
-                void handleQuickAdd();
-              }}
-              className="h-8 flex-1 text-sm"
-            />
-            <Button
-              size="icon"
-              variant="ghost"
-              onPress={handleQuickAdd}
-              disabled={creating || newTitle.trim().length === 0}
-              aria-label="Add todo"
-              className="h-8 w-8 shrink-0"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </View>
+          {selectedIds === null ? (
+            <View className="flex-row items-center gap-2">
+              <Input
+                value={newTitle}
+                placeholder="Add a todo…"
+                onChangeText={setNewTitle}
+                onSubmitEditing={() => {
+                  void handleQuickAdd();
+                }}
+                className="h-8 flex-1 text-sm"
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                onPress={handleQuickAdd}
+                disabled={creating || newTitle.trim().length === 0}
+                aria-label="Add todo"
+                className="h-8 w-8 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </View>
+          ) : (
+            <View className="flex-row flex-wrap items-center gap-2 rounded-md bg-muted px-2 py-1.5">
+              <Text className="text-xs font-medium text-muted-foreground">
+                {selectionCount} selected
+              </Text>
+              <Button
+                size="sm"
+                variant="ghost"
+                onPress={() =>
+                  setSelectedIds(
+                    selectionCount === visibleTodos.length
+                      ? new Set()
+                      : new Set(visibleTodos.map((t) => t.id)),
+                  )
+                }
+                className="h-7 px-2 text-xs"
+              >
+                {selectionCount === visibleTodos.length
+                  ? 'Clear'
+                  : 'Select all'}
+              </Button>
+              <View className="flex-1" />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={selectionCount === 0 || busy}
+                onPress={() => void handleCompleteSelected()}
+                className="h-7 px-2 text-xs"
+              >
+                <Check className="mr-1 h-3.5 w-3.5" />
+                Complete
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={selectionCount === 0 || busy}
+                onPress={() => void handleDeleteSelected()}
+                className="h-7 px-2 text-xs hover:text-destructive"
+              >
+                <Trash2 className="mr-1 h-3.5 w-3.5" />
+                Delete
+              </Button>
+            </View>
+          )}
 
           {visibleTodos.length === 0 && completedCount === 0 && (
             <Text className="py-2 text-center text-xs text-muted-foreground">
@@ -206,7 +362,19 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
 
           <View className="gap-1">
             {visibleTodos.map((todo) => (
-              <TodoItem key={todo.id} todo={todo} onEdit={setEditingTodo} />
+              <TodoItem
+                key={todo.id}
+                todo={todo}
+                onEdit={setEditingTodo}
+                selection={
+                  selectedIds === null
+                    ? undefined
+                    : {
+                        selected: selectedIds.has(todo.id),
+                        onToggle: toggleSelected,
+                      }
+                }
+              />
             ))}
           </View>
 
