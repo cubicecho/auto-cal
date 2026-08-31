@@ -25,7 +25,7 @@ import { Text, View } from 'react-native';
 // Reuses the ScheduledItem_ScheduleView fragment defined in ScheduleView.tsx.
 // `completedAt` is pulled in outside the fragment for the habit digest — the
 // cards do not render it, so it does not belong to their fragment.
-const MY_TODAY = graphql(`
+export const MY_TODAY = graphql(`
   query MyToday($weekStart: String, $timezone: String) {
     mySchedule(weekStart: $weekStart, timezone: $timezone) {
       id

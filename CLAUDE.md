@@ -14,6 +14,7 @@ npm run dev:client       # Expo dev server only (localhost:3000)
 npm test                 # vitest (all suites)
 npm test -- server/test/services/scheduler.test.ts  # single file
 npm test -- -t "schedules a todo"                           # single test by name
+npm run test:coverage    # single run with coverage; fails below the thresholds in vitest.config.ts (this is what CI runs)
 npm run lint             # biome check .
 npm run lint:fix         # biome check --write .
 npm run typecheck        # tsc --noEmit across all packages

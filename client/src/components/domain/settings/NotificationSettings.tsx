@@ -24,7 +24,7 @@ import { useMutation, useQuery } from '@apollo/client/react';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
-const NOTIFICATION_SETTINGS = graphql(`
+export const NOTIFICATION_SETTINGS = graphql(`
   query NotificationSettings {
     myPushPublicKey
     myNotificationPreferences {
@@ -44,7 +44,7 @@ const NOTIFICATION_SETTINGS = graphql(`
   }
 `);
 
-const UPDATE_NOTIFICATION_PREFERENCES = graphql(`
+export const UPDATE_NOTIFICATION_PREFERENCES = graphql(`
   mutation MyUpdateNotificationPreferences(
     $input: UpdateNotificationPreferencesArgs!
   ) {
