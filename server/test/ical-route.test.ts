@@ -152,7 +152,7 @@ describe('icalHandler', () => {
 
     it('returns 403 when the API key lacks read scope', async () => {
       vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(
-        makeApiKey({ scopes: ['write'] as unknown as ('read' | 'write')[][] }),
+        makeApiKey({ scopes: ['write'] }),
       );
       const res = makeRes();
       await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
