@@ -40,7 +40,7 @@ const CREATE_HABIT = graphql(`
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
-  activityTypeId: z.string().uuid('Activity type is required'),
+  activityTypeId: z.uuid('Activity type is required'),
   frequencyCount: z.number().int().min(1).max(30),
   frequencyUnit: z.enum(['week', 'month']),
 });

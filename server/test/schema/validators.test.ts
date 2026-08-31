@@ -54,7 +54,7 @@ describe('CreateActivityTypeInput', () => {
 });
 
 describe('UpdateActivityTypeInput', () => {
-  const validId = '00000000-0000-0000-0000-000000000001';
+  const validId = '11111111-1111-4111-8111-111111111111';
 
   it('accepts valid update with only id', () => {
     expect(() => UpdateActivityTypeInput.parse({ id: validId })).not.toThrow();
@@ -70,6 +70,28 @@ describe('UpdateActivityTypeInput', () => {
     expect(() => UpdateActivityTypeInput.parse({ id: 'not-a-uuid' })).toThrow();
   });
 
+  // Zod 4's `z.uuid()` is RFC 9562, not just the 8-4-4-4-12 hex shape that
+  // Zod 3's `z.string().uuid()` accepted: the version nibble must be 1-8 and
+  // the variant nibble 8/9/a/b. Every id the API ever sees is a Postgres
+  // `gen_random_uuid()` or a `crypto.randomUUID()`, so nothing real is caught
+  // by the tightening — but the two ids below are the shape an ad-hoc client
+  // or a hand-written fixture reaches for, and they are rejected now.
+  it('rejects a shape-valid id with no UUID version', () => {
+    expect(() =>
+      UpdateActivityTypeInput.parse({
+        id: '00000000-0000-0000-0000-000000000001',
+      }),
+    ).toThrow();
+  });
+
+  it('accepts the nil UUID, which RFC 9562 carves out', () => {
+    expect(() =>
+      UpdateActivityTypeInput.parse({
+        id: '00000000-0000-0000-0000-000000000000',
+      }),
+    ).not.toThrow();
+  });
+
   it('rejects invalid color in update', () => {
     expect(() =>
       UpdateActivityTypeInput.parse({ id: validId, color: 'red' }),
@@ -78,7 +100,7 @@ describe('UpdateActivityTypeInput', () => {
 });
 
 describe('CreateTodoInput', () => {
-  const validListId = '00000000-0000-0000-0000-000000000001';
+  const validListId = '11111111-1111-4111-8111-111111111111';
 
   it('accepts valid minimal input', () => {
     const result = CreateTodoInput.parse({
@@ -171,7 +193,7 @@ describe('CreateTodoInput', () => {
 });
 
 describe('UpdateTodoInput', () => {
-  const validId = '00000000-0000-0000-0000-000000000001';
+  const validId = '11111111-1111-4111-8111-111111111111';
 
   it('accepts update with only id', () => {
     expect(() => UpdateTodoInput.parse({ id: validId })).not.toThrow();
@@ -201,7 +223,7 @@ describe('UpdateTodoInput', () => {
 });
 
 describe('CreateHabitInput', () => {
-  const validActivityTypeId = '00000000-0000-0000-0000-000000000001';
+  const validActivityTypeId = '11111111-1111-4111-8111-111111111111';
 
   it('accepts valid input', () => {
     const result = CreateHabitInput.parse({
@@ -281,7 +303,7 @@ describe('CreateHabitInput', () => {
 });
 
 describe('UpdateHabitInput', () => {
-  const validId = '00000000-0000-0000-0000-000000000001';
+  const validId = '11111111-1111-4111-8111-111111111111';
 
   it('accepts partial update', () => {
     expect(() =>
@@ -295,7 +317,7 @@ describe('UpdateHabitInput', () => {
 });
 
 describe('CreateTimeBlockInput', () => {
-  const validActivityTypeId = '00000000-0000-0000-0000-000000000001';
+  const validActivityTypeId = '11111111-1111-4111-8111-111111111111';
 
   it('accepts valid time block', () => {
     expect(() =>
@@ -386,7 +408,7 @@ describe('CreateTimeBlockInput', () => {
 });
 
 describe('UpdateTimeBlockInput', () => {
-  const validId = '00000000-0000-0000-0000-000000000001';
+  const validId = '11111111-1111-4111-8111-111111111111';
 
   it('accepts partial update with only id', () => {
     expect(() => UpdateTimeBlockInput.parse({ id: validId })).not.toThrow();
@@ -400,7 +422,7 @@ describe('UpdateTimeBlockInput', () => {
 });
 
 describe('CompleteHabitInput', () => {
-  const validHabitId = '00000000-0000-0000-0000-000000000001';
+  const validHabitId = '11111111-1111-4111-8111-111111111111';
 
   it('accepts valid habitId', () => {
     expect(() =>

@@ -338,11 +338,25 @@ All validators live in `server/src/schema/validators.ts`, with coverage in `serv
 | `daysOfWeek` | array of 0–6, min 1, max 7, unique |
 | `startTime` / `endTime` | `HH:mm` format; end must be after start |
 | `scheduledAt` | local datetime string (no `Z`) |
+| any `*Id` | RFC 9562 UUID — see below |
 
 ```typescript
 // In resolver:
 const input = CreateTodoInput.parse(args.input);
 ```
+
+Formats use Zod 4's top-level constructors — `z.uuid()`, `z.email()`,
+`z.url()`, `z.iso.datetime({ local: true })` — not the `z.string().uuid()`
+method chain, which is deprecated in 4.
+
+`z.uuid()` is stricter than the Zod 3 method it replaces: the 8-4-4-4-12 hex
+shape is no longer enough, the version nibble must be 1-8 and the variant
+nibble 8/9/a/b (the nil and max UUIDs are carved out). Nothing real is caught
+by that — every id the API sees is a `gen_random_uuid()` or a
+`crypto.randomUUID()` — but a hand-written fixture like
+`00000000-0000-0000-0000-000000000001` is rejected where it used to pass. Use
+`z.guid()` if a genuinely loose check is ever needed; two tests in
+`validators.test.ts` pin the boundary.
 
 **Every** validator belongs in `validators.ts` — never declare one next to the
 resolver that uses it. `UpdateHabitInput` and `UpdateTimeBlockInput` were both
