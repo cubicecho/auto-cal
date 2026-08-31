@@ -20,7 +20,7 @@ Migrations run automatically when the server starts — `db/src/index.ts` calls 
 node --experimental-strip-types server/src/index.ts
 ```
 
-**Do not use the separate `src/migrator.ts` script in Docker.** postgres.js keeps its connection pool open after `migrate()` returns, so the migrator process never exits. The `&&`-chained CMD would hang forever before the server starts. `db/src/index.ts` already runs migrations on boot.
+The separate `db/src/migrator.ts` script is redundant in Docker — the server migrates on boot — but it is safe to run. It used to hang forever (postgres.js holds the event loop open until the pool is closed, so the script printed `Migrations complete` and never exited, which would have stalled an `&&`-chained CMD before the server started); it now calls `closeDb()` and exits.
 
 ## Environment Variables
 
@@ -28,6 +28,9 @@ node --experimental-strip-types server/src/index.ts
 |----------|----------|-------------|
 | `PORT` | No | Server port (default `3001`) |
 | `DATABASE_URL` | **Yes** | Postgres connection string (e.g. `postgresql://user:pass@host:5432/db`). The server throws on boot without it — there is no fallback backend |
+| `DATABASE_POOL_MAX` | No | Connections in the postgres.js pool (default `10`). See [Connection Pooling](#connection-pooling) |
+| `DATABASE_IDLE_TIMEOUT` | No | Seconds an idle connection is kept before being retired (default `30`) |
+| `DATABASE_CONNECT_TIMEOUT` | No | Seconds to wait for a connection before failing (default `10`) |
 | `NODE_ENV` | No | `production` / `development` |
 | `EXPOSE_MAGIC_LINK` | No | `1`/`true`/`yes` returns the magic link directly in the `requestMagicLink` response (dev-style passwordless login) even in production. For local/secure networks only — never enable on a public deployment. |
 | `BYPASS_AUTH_UUID` | No | An existing user UUID accepted as a Bearer token in any environment; passwordless access for that one user. Local/secure networks only. |
@@ -58,6 +61,82 @@ not per-process. **Running more than one replica means each replica ticks**;
 overlapping ticks will not double-send (the loser of the insert sends nothing),
 so this is safe, merely redundant.
 
+
+## Connection Pooling
+
+`db/src/index.ts` builds one postgres.js pool for the process and exports the
+Drizzle instance over it. The sizing is stated explicitly rather than inherited:
+
+```ts
+postgres(databaseUrl, {
+  max: intEnv('DATABASE_POOL_MAX', 10),
+  idle_timeout: intEnv('DATABASE_IDLE_TIMEOUT', 30),
+  connect_timeout: intEnv('DATABASE_CONNECT_TIMEOUT', 10),
+})
+```
+
+**`max: 10` — postgres.js's own default, kept.** The load that motivated the
+question is `runSchedulerWriteback`, which every mutating resolver fires and
+forgets, so several full recomputes for one user can be in flight at once. That
+turns out not to need a bigger pool: postgres.js *queues* work beyond `max`
+rather than erroring, and 12- and 50-way concurrent writebacks for a single user
+complete with zero failures and a consistent final schedule on a 10-connection
+pool. Raising `max` would let more of them run at once; it would not make them
+correct, because they already are.
+
+**It is tunable because the right number is not a constant.** A Postgres server
+has a global `max_connections` (100 by default, minus superuser reservations),
+and every replica holds its own pool. The budget is roughly
+`max_connections / replicas`, so scaling out is the reason to turn `max` *down*,
+not up. Ten replicas on a default Postgres is already at the ceiling.
+
+**`idle_timeout: 30` is a change from the postgres.js default of `0`** (keep idle
+connections forever). Server-side slots are the scarce resource, and an instance
+that has gone quiet — or that is being scaled down — should stop holding them.
+`connect_timeout: 10` exists so a boot that cannot reach the database fails
+instead of hanging.
+
+**pgBouncer is not needed at this size and would cost something.** A single API
+process with a bounded pool already is the connection multiplexer that pgBouncer
+would provide. It becomes worth adding at the point where replica count times
+`DATABASE_POOL_MAX` approaches `max_connections`; note that transaction-mode
+pooling breaks session state, so it would need `prepare: false` on the
+postgres.js side.
+
+**Notices are filtered, not printed raw.** postgres.js's default `onnotice`
+dumps the whole notice object to stdout, so every boot logged a multi-line
+`{severity: 'NOTICE', code: '42P06', ...}` for drizzle's own
+`CREATE SCHEMA IF NOT EXISTS drizzle`. `onnotice` now drops the duplicate-object
+codes (`42P06`, `42P07`) the migrator provokes on every run after the first and
+prints anything else as a single `[auto-cal] postgres notice ...` line.
+
+## Verified Against Real Postgres
+
+The production path was exercised end to end against a clean Postgres 16
+container (cubicecho/auto-cal#49) — worth recording because everything else
+(tests, CI) runs on PGLite, and the concern was that PGLite had been hiding a
+divergence.
+
+- **Migrations from a virgin database.** The full set applies cleanly and
+  idempotently, producing 14 tables. A second run is a no-op.
+- **`time_blocks.days_of_week`.** Genuinely `integer[]` on Postgres; values
+  round-trip exactly.
+- **Timestamps.** Every timestamp column is `timestamp without time zone`, which
+  was the suspected divergence. It is not one: instants written and read back
+  through postgres.js are identical under `TZ=UTC`, `America/Chicago` and
+  `Asia/Tokyo` (zero drift). The scheduler does its own timezone arithmetic with
+  `date-fns-tz` and never relies on the server's `TimeZone` setting.
+- **Concurrency.** 12 and 50 overlapping `runSchedulerWriteback` calls for one
+  user: no failures, consistent final schedule. See
+  [Connection Pooling](#connection-pooling).
+- **Running app.** Auth, generated and hand-written queries, mutations,
+  `mySchedule`, the `scheduledAt` column proving the fire-and-forget writeback
+  landed, `myCreateApiKey`, the `/ical?secret=` route (200, `text/calendar`,
+  real `VEVENT`s), and a `myTodosUpdated` subscription delivered over the
+  WebSocket transport.
+
+No PGLite-specific surprises. Two real defects surfaced and were fixed: the
+migrator never exiting, and the raw notice object on every boot.
 
 ## Docker Compose Files
 
