@@ -81,6 +81,20 @@ await migrate(db, { migrationsFolder });
 That is the only remaining use of PGLite in the repo; it is a devDependency of
 `server`, so a production install never pulls it in.
 
+**`DB` is the driver-agnostic type, not `typeof db`.** The runtime instance is a
+`PostgresJsDatabase`, but every shared signature (`Context['db']`,
+`runSchedulerWriteback`, `createLoaders`, …) is written against the exported
+alias:
+
+```typescript
+export type DB = PgAsyncDatabase<PgQueryResultHKT, typeof relations>;
+```
+
+postgres.js and PGLite produce the same database class parameterised by
+different query-result HKTs, so widening to the base is what lets the tests hand
+their PGLite instance to server code with no cast anywhere. Narrowing this to
+`typeof db` puts an `as unknown as` at every test call site; do not.
+
 **`drizzle-orm` and `drizzle-kit` are pinned to an exact version**, not a range.
 Their prerelease tags carry a commit hash (`1.0.0-rc.5-ab785fc`), and semver
 compares a non-numeric identifier as *greater* than a numeric one — so
