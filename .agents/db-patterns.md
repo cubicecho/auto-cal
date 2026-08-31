@@ -56,18 +56,32 @@ database.
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is required. …');
 
-const client = postgres(databaseUrl);
+const client = postgres(databaseUrl, {
+  max: intEnv('DATABASE_POOL_MAX', 10),
+  idle_timeout: intEnv('DATABASE_IDLE_TIMEOUT', 30),
+  connect_timeout: intEnv('DATABASE_CONNECT_TIMEOUT', 10),
+  onnotice: (notice) => { /* drop 42P06/42P07, log the rest as one line */ },
+});
 const db = drizzle({ client, relations });
 
 await migrate(db, { migrationsFolder });
 ```
+
+The pool options are postgres.js's defaults made explicit and tunable, except
+`idle_timeout` — the default there is "never retire". The reasoning, including
+why 50 concurrent `runSchedulerWriteback` calls are fine on ten connections and
+when pgBouncer would start to earn its place, is in
+[`deployment.md`](deployment.md#connection-pooling).
 
 `relations` (from `defineRelations(schema, …)`) carries the tables, so the
 constructor takes no separate `schema` argument — drizzle-orm 1.0.0-rc.4 removed
 it along with `db._.fullSchema`. Passing one is silently ignored.
 
 Migrations run here, on import, so every entry point (server, `migrator.ts`,
-scripts) gets a migrated database without coordinating.
+scripts) gets a migrated database without coordinating. `migrator.ts` is
+therefore just that import plus `closeDb()` — a one-shot script has to close the
+pool explicitly, because postgres.js otherwise holds the event loop open and the
+process never exits.
 
 **Tests do not use this module.** They build their own in-memory PGLite and
 migrate it per file — see `server/test/schema/resolvers/test-helpers.ts`:
