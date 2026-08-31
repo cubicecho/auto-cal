@@ -261,6 +261,12 @@ export const CompleteHabitInput = z.object({
   completedAt: z.string().datetime({ local: true }).optional(),
 });
 
+export const SkipHabitInput = z.object({
+  habitId: z.string().uuid(),
+  /** The instance slot being declined. Defaults to now. */
+  scheduledAt: z.string().datetime({ local: true }).optional(),
+});
+
 export const MyCreateApiKeyInput = z.object({
   name: z.string().min(1).max(60),
   scopes: z.array(z.enum(API_KEY_SCOPES)).min(1),

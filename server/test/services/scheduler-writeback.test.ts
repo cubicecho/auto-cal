@@ -364,4 +364,74 @@ describe('runSchedulerWriteback', () => {
     const real = completions.filter((c) => c.completedAt !== null);
     expect(real.length).toBeGreaterThanOrEqual(1);
   });
+  it('preserves skips and counts them toward the period', async () => {
+    await db.insert(timeBlocks).values({
+      userId,
+      activityTypeId,
+      daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+      startTime: '09:00',
+      endTime: '17:00',
+      priority: 0,
+    });
+    const habit = seed(
+      await db
+        .insert(habits)
+        .values({
+          userId,
+          activityTypeId,
+          title: 'Skippable habit',
+          estimatedLength: 30,
+          frequencyCount: 2,
+          frequencyUnit: 'week',
+          priority: 1,
+        })
+        .returning(),
+    );
+
+    await runSchedulerWriteback(db, userId);
+    const placed = (
+      await db.query.habitCompletions.findMany({ where: { habitId: habit.id } })
+    )
+      .filter((c): c is typeof c & { scheduledAt: Date } => !!c.scheduledAt)
+      .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
+    const declined = placed[0];
+    if (!declined?.scheduledAt) throw new Error('nothing was scheduled');
+
+    // Count within the declined instance's own week — the period the skip is
+    // charged against. Which week that is depends on when the test runs.
+    const { start, end } = isoWeekOf(declined.scheduledAt);
+    const inPeriod = (c: { scheduledAt: Date | null }) =>
+      !!c.scheduledAt && c.scheduledAt >= start && c.scheduledAt < end;
+    const before = placed.filter(inPeriod).length;
+
+    await db.insert(habitCompletions).values({
+      habitId: habit.id,
+      scheduledAt: declined.scheduledAt,
+      skipped: true,
+    });
+
+    await runSchedulerWriteback(db, userId);
+
+    const after = await db.query.habitCompletions.findMany({
+      where: { habitId: habit.id },
+    });
+    // The skip survives the sweep of uncompleted rows…
+    expect(after.filter((c) => c.skipped).length).toBe(1);
+    // …and takes one instance's place, so the week is not re-filled.
+    const tentative = after.filter(
+      (c) => !c.skipped && c.completedAt === null && inPeriod(c),
+    );
+    expect(tentative.length).toBe(before - 1);
+  });
 });
+
+/** The [start, end) of the ISO week `ref` falls in, in local time. */
+function isoWeekOf(ref: Date): { start: Date; end: Date } {
+  const start = new Date(ref);
+  const day = start.getDay();
+  start.setDate(start.getDate() - (day === 0 ? 6 : day - 1));
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  return { start, end };
+}

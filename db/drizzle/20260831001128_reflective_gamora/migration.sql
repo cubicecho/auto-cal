@@ -1,0 +1,1 @@
+ALTER TABLE "habit_completions" ADD COLUMN "skipped" boolean DEFAULT false NOT NULL;

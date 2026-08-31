@@ -41,6 +41,7 @@ const extensionSDL = `
     title: String!
     completionRate: Float!
     totalCompletions: Int!
+    totalSkipped: Int!
   }
 
   type HabitPeriod {
@@ -48,7 +49,12 @@ const extensionSDL = `
     periodStart: String!
     periodEnd: String!
     completions: Int!
+    """Instances deliberately skipped in this period. Not failures."""
+    skipped: Int!
     target: Int!
+    """Instances still owed once skips are taken off the target."""
+    effectiveTarget: Int!
+    """completions / effectiveTarget — 1 when nothing was owed."""
     rate: Float!
   }
 
@@ -62,6 +68,7 @@ const extensionSDL = `
     frequencyUnit: String!
     activityType: ActivityType
     totalCompletions: Int!
+    totalSkipped: Int!
     allTimeRate: Float!
     periods: [HabitPeriod!]!
   }
@@ -271,6 +278,11 @@ const extensionSDL = `
     completedAt: String
   }
 
+  input SkipHabitArgs {
+    habitId: ID!
+    scheduledAt: String
+  }
+
   type CreateApiKeyResult {
     apiKey: ApiKey!
     token: String!
@@ -412,6 +424,8 @@ const extensionSDL = `
     myUpdateTimeBlock(input: UpdateTimeBlockArgs!): TimeBlock!
     myCompleteHabit(input: CompleteHabitArgs!): HabitCompletion!
     myUncompleteHabit(completionId: ID!): Boolean!
+    mySkipHabit(input: SkipHabitArgs!): HabitCompletion!
+    myUnskipHabit(completionId: ID!): Boolean!
     myCreateTimeBlock(input: CreateTimeBlockArgs!): TimeBlock!
     myDeleteTimeBlock(id: ID!): Boolean!
     myCreateManualEvent(input: CreateManualEventArgs!): ManualEvent!

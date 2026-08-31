@@ -3,7 +3,7 @@ import { graphql } from '@/__generated__/index.js';
 import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
-import { Check, Plus, TriangleAlert } from '@/components/ui/icons';
+import { Check, Plus, SkipForward, TriangleAlert } from '@/components/ui/icons';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { useToast } from '@/components/ui/toast';
 import {
@@ -53,6 +53,20 @@ const COMPLETE_HABIT = graphql(`
       __typename
       id
       completedAt
+    }
+  }
+`);
+
+// Declining one instance rather than completing it. The server keeps the row
+// so the scheduler stops re-placing this slot for the period, and the habit's
+// completion rate drops it from the denominator instead of counting a miss.
+const SKIP_HABIT = graphql(`
+  mutation SkipHabitFromSchedule($input: SkipHabitArgs!) {
+    mySkipHabit(input: $input) {
+      __typename
+      id
+      skipped
+      scheduledAt
     }
   }
 `);
@@ -159,7 +173,23 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
     },
   );
 
-  const completing = completingHabit || completingTodo;
+  const [skipHabit, { loading: skipping }] = useMutation(SKIP_HABIT, {
+    update: (cache) => invalidate(cache, ...DERIVED),
+    onError: (err) => toast(err.message || 'Could not skip this habit'),
+  });
+
+  const completing = completingHabit || completingTodo || skipping;
+
+  function handleSkipHabit(item: ScheduledItem_ScheduleViewFragment) {
+    skipHabit({
+      variables: {
+        input: {
+          habitId: item.id.replace(/-\d+$/, ''),
+          scheduledAt: item.scheduledStart ?? undefined,
+        },
+      },
+    });
+  }
 
   function handleCompleteHabit(item: ScheduledItem_ScheduleViewFragment) {
     const habitId = item.id.replace(/-\d+$/, '');
@@ -225,6 +255,11 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
                         ? () => handleCompleteHabit(item)
                         : () => handleCompleteTodo(item)
                   }
+                  onSkip={
+                    !completing && item.kind === 'habit'
+                      ? () => handleSkipHabit(item)
+                      : undefined
+                  }
                 />
               ))}
             </View>
@@ -274,9 +309,11 @@ function unschedulableReason(item: ScheduledItem_ScheduleViewFragment): string {
 function ScheduleCard({
   item,
   onComplete,
+  onSkip,
 }: {
   item: ScheduledItem_ScheduleViewFragment;
   onComplete?: (() => void) | undefined;
+  onSkip?: (() => void) | undefined;
 }) {
   const timeRange =
     item.scheduledStart && item.scheduledEnd
@@ -325,6 +362,24 @@ function ScheduleCard({
               >
                 <Check className="h-3.5 w-3.5" />
               </Button>
+            )}
+            {onSkip && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 text-muted-foreground hover:text-amber-600"
+                    aria-label={`Skip ${item.title}`}
+                    onPress={onSkip}
+                  >
+                    <SkipForward className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Skip this one — it won’t count against the habit
+                </TooltipContent>
+              </Tooltip>
             )}
           </View>
         </View>

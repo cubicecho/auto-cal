@@ -31,6 +31,7 @@ const GET_HABIT_DETAIL = graphql(`
       frequencyCount
       frequencyUnit
       totalCompletions
+      totalSkipped
       allTimeRate
       activityType {
         id
@@ -42,7 +43,9 @@ const GET_HABIT_DETAIL = graphql(`
         periodStart
         periodEnd
         completions
+        skipped
         target
+        effectiveTarget
         rate
       }
     }
@@ -146,6 +149,16 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
                   avg completion rate
                 </Text>
               </View>
+              {detail.totalSkipped > 0 && (
+                <View>
+                  <Text className="text-3xl font-bold text-amber-600">
+                    {detail.totalSkipped}
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">
+                    skipped, not missed
+                  </Text>
+                </View>
+              )}
             </CardContent>
           </Card>
 
@@ -166,7 +179,9 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
                     period.completions / Math.max(maxCompletions, 1),
                     1,
                   );
-                  const met = period.completions >= period.target;
+                  // Against what the period actually asked for: skipping an
+                  // instance lowers the bar rather than counting as a miss.
+                  const met = period.completions >= period.effectiveTarget;
                   return (
                     <View
                       key={period.label}
@@ -191,7 +206,7 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
                         <View
                           className="absolute top-0 bottom-0 w-px bg-foreground/30"
                           style={{
-                            left: `${(period.target / Math.max(maxCompletions, 1)) * 100}%`,
+                            left: `${(period.effectiveTarget / Math.max(maxCompletions, 1)) * 100}%`,
                           }}
                         />
                       </View>
@@ -201,15 +216,18 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
                           met ? 'text-green-600' : 'text-muted-foreground'
                         }`}
                       >
-                        {period.completions}/{period.target}
+                        {period.completions}/{period.effectiveTarget}
+                      </Text>
+                      <Text className="w-16 flex-shrink-0 text-xs text-amber-600">
+                        {period.skipped > 0 ? `${period.skipped} skipped` : ''}
                       </Text>
                     </View>
                   );
                 })}
               </View>
               <Text className="mt-3 text-xs text-muted-foreground">
-                Vertical line = target. Bar uses activity type color when target
-                met.
+                Vertical line = target for the period, lowered by any skips. Bar
+                uses activity type color when the target is met.
               </Text>
             </CardContent>
           </Card>
