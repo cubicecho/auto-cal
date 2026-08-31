@@ -47,7 +47,7 @@ Drizzle ORM schema over postgres.js. Exports a single `db` instance built from `
 PGLite survives only as a *test* fixture: `server/test/**` constructs its own in-memory instances (`new PGlite('memory://')`) and never imports this module. It is a devDependency of `server`, not a dependency of `db`, so a production install cannot pull it in. It was dropped as a runtime backend because its WASM event loop busy-waits (see [`deployment.md`](.agents/deployment.md)), which made a deploy that lost its `DATABASE_URL` degrade silently instead of failing.
 
 ### `server`
-Express + Apollo Server, running TypeScript directly via `--experimental-strip-types` (Node 22). **All imports must include `.ts` extension.** No build step.
+Express + Apollo Server, running TypeScript directly via `--experimental-strip-types` (Node 24). **All imports must include `.ts` extension.** No build step.
 
 **Schema pipeline** (three layers):
 1. `buildSchema(db, buildSchemaConfig)` — `@vantreeseba/drizzle-graphql` (v9) auto-generates the full SDL from Drizzle tables. The config carries the tenant `scope`, the per-table `defaults` (ordering), the `exclude`d columns, and the disabled features

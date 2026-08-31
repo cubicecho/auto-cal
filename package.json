@@ -4,6 +4,9 @@
   "type": "module",
   "description": "Auto Cal - Todo and habit scheduling application",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "workspaces": ["client", "db", "server"],
   "scripts": {
     "dev": "npm run codegen && concurrently \"npm:dev:server\" \"npm:dev:client\"",
