@@ -750,3 +750,155 @@ describe('computeSchedule — activity-type inheritance', () => {
     expect(result?.scheduledStart).toBe('2026-05-04T09:00:00.000Z');
   });
 });
+
+// ─── Pomodoro auto-fill ───────────────────────────────────────────────────────
+
+/**
+ * The pass that runs after everything else is placed: a pomodoro habit takes
+ * whatever is left of its own dedicated blocks and lays units and breaks into
+ * it. It is the one part of the scheduler that produces items nobody asked for
+ * by count, so its stopping conditions are what these tests are about.
+ */
+describe('computeSchedule — pomodoro auto-fill', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(`${WEEK}T00:00:00`));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const EXERCISE_BLOCK = makeBlock({
+    id: 'tb-exercise',
+    activityTypeId: EXERCISE.id,
+    daysOfWeek: [1],
+    startTime: '09:00',
+    endTime: '11:00',
+  });
+
+  function pomodoroHabit(overrides: Partial<Habit> = {}) {
+    return makeHabit({
+      title: 'Study',
+      estimatedLength: 0,
+      frequencyCount: 0,
+      pomodoroEnabled: true,
+      pomodoroUnitLength: 25,
+      pomodoroShortBreakLength: 5,
+      pomodoroUnitsBeforeLongBreak: 2,
+      pomodoroLongBreakLength: 15,
+      ...overrides,
+    });
+  }
+
+  const pomodoros = (items: ReturnType<typeof computeSchedule>) =>
+    items.filter((i) => i.kind === 'pomodoro');
+
+  it('lays units through the block, short break between, long break after the cycle', () => {
+    const units = pomodoros(
+      computeSchedule(WEEK, [EXERCISE_BLOCK], [], [pomodoroHabit()], AT_MAP),
+    );
+
+    // 09:00 +25, break 5 → 09:30 +25, then a long break of 15 → 10:10 +25,
+    // break 5 → 10:40 +25 ends exactly at 11:05, past the block, so four fit.
+    expect(units.map((u) => u.scheduledStart)).toEqual([
+      '2026-05-04T09:00:00.000Z',
+      '2026-05-04T09:30:00.000Z',
+      '2026-05-04T10:10:00.000Z',
+    ]);
+    expect(units[0]?.scheduledEnd).toBe('2026-05-04T09:25:00.000Z');
+    expect(units[0]?.estimatedLength).toBe(25);
+  });
+
+  it('numbers the units per day in the title', () => {
+    const units = pomodoros(
+      computeSchedule(WEEK, [EXERCISE_BLOCK], [], [pomodoroHabit()], AT_MAP),
+    );
+
+    expect(units.map((u) => u.title)).toEqual([
+      'Study - pom 1',
+      'Study - pom 2',
+      'Study - pom 3',
+    ]);
+  });
+
+  it('stops at the daily cap and gives the rest of the block back to nobody', () => {
+    const units = pomodoros(
+      computeSchedule(
+        WEEK,
+        [EXERCISE_BLOCK],
+        [],
+        [pomodoroHabit({ pomodoroMaxPerDay: 2 })],
+        AT_MAP,
+      ),
+    );
+
+    expect(units).toHaveLength(2);
+  });
+
+  it('fills only what the rest of the schedule left over', () => {
+    // A 90-minute habit is placed first, so the fill starts at 10:30 and only
+    // one more unit fits before the block ends.
+    const units = pomodoros(
+      computeSchedule(
+        WEEK,
+        [EXERCISE_BLOCK],
+        [],
+        [
+          makeHabit({ id: 'habit-run', title: 'Run', estimatedLength: 90 }),
+          pomodoroHabit(),
+        ],
+        AT_MAP,
+      ),
+    );
+
+    expect(units.map((u) => u.scheduledStart)).toEqual([
+      '2026-05-04T10:30:00.000Z',
+    ]);
+  });
+
+  it('never fills an ancestor type’s block', () => {
+    // Deliberate asymmetry with ordinary scheduling, which does inherit
+    // upwards: a greedy fill would swallow a shared general block whole.
+    const CHILD: ActivityType = makeActivityType({
+      id: 'at-study',
+      name: 'Study',
+      parentId: WORK.id,
+    });
+    const hierMap = new Map<string, ActivityType>([
+      [WORK.id, WORK],
+      [CHILD.id, CHILD],
+    ]);
+
+    const items = computeSchedule(
+      WEEK,
+      [
+        makeBlock({
+          activityTypeId: WORK.id,
+          daysOfWeek: [1],
+          startTime: '09:00',
+          endTime: '11:00',
+        }),
+      ],
+      [],
+      [pomodoroHabit({ activityTypeId: CHILD.id })],
+      hierMap,
+    );
+
+    expect(pomodoros(items)).toEqual([]);
+  });
+
+  it('ignores a habit with pomodoro on but no unit length configured', () => {
+    const units = pomodoros(
+      computeSchedule(
+        WEEK,
+        [EXERCISE_BLOCK],
+        [],
+        [pomodoroHabit({ pomodoroUnitLength: null })],
+        AT_MAP,
+      ),
+    );
+
+    expect(units).toEqual([]);
+  });
+});

@@ -807,3 +807,51 @@ npm run codegen   # regenerates client/src/__generated__/
 ```
 
 Types from `@/__generated__/graphql.js` are auto-imported — never write them by hand.
+
+## Testing Client Code
+
+Screens and hooks are tested in the same vitest run as the server — no jest, no
+babel, no nativewind transform. Three pieces of `vitest.config.ts` make that
+work:
+
+- `resolve.alias` maps `react-native` → `react-native-web`, so a component
+  importing `View`/`Text` renders to DOM nodes, and `@` → `client/src`, matching
+  the tsconfig path.
+- `resolve.extensions` lists `.web.tsx`/`.web.ts` **first**, so a platform-split
+  primitive resolves to the web variant exactly as Metro would on web.
+- `test.environment` stays `node`; a client test opts into jsdom with a
+  `// @vitest-environment jsdom` docblock on the first line.
+
+Tests live in `client/test/`, mirroring the source tree
+(`components/`, `hooks/`, `lib/`, plus `support/` for helpers).
+
+**Mount through `renderWithProviders`** (`client/test/support/render.tsx`),
+which supplies the `MockedProvider` plus the Toast, Confirm and Tooltip
+providers `app/(app)/_layout.tsx` supplies. A component that reaches for a
+missing provider throws rather than degrading — `useConfirm` is the usual one.
+
+**Mocks must reference the same DocumentNode the component uses.** Either
+export the operation from the module under test (`export const MY_TODAY = …`)
+or import the generated one (`GetTodoListsPageDocument` from
+`@/__generated__/graphql`). A re-declared copy of the same query text is a
+different object and will not match. Give every mock
+`maxUsageCount: Number.POSITIVE_INFINITY` when the screen re-reads under
+`cache-and-network`.
+
+Two things every screen mount also does, and every test therefore has to
+answer: `useSyncTimezone` fires `UpdateProfileTimezone`, and any screen with a
+route link needs `expo-router` stubbed (`vi.mock('expo-router', …)` returning a
+pass-through `Link`, `useRouter`, `usePathname`) because the page is rendered
+directly rather than through a navigator.
+
+For subscriptions, drive `useLiveUpdates` with a `MockSubscriptionLink` and
+`link.simulateResult(...)` — see `client/test/hooks/live-updates.test.tsx`. It
+broadcasts one payload to every active subscription, so include a null for each
+field the three documents select, and await a real timer tick (not just a
+microtask) for delivery.
+
+Coverage thresholds are enforced by `npm run test:coverage`, which is what CI
+runs; they cover `server/src/services/scheduler.ts` and
+`server/src/schema/resolvers/**` only. Client coverage is not thresholded —
+smoke tests are there to catch a screen that stopped rendering, not to hit a
+number.

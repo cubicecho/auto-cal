@@ -94,6 +94,11 @@ export function invalidate(
  *
  * Appends, which matches every list the server returns in insertion or
  * position order. A list ordered any other way needs its own `cache.modify`.
+ *
+ * A no-op when the parent has no cached value for the field: `cache.modify`
+ * only runs modifiers for fields already in the store, so a parent fetched
+ * without the list keeps reading through to the network rather than being
+ * given a one-item one.
  */
 export function appendToField(
   cache: ApolloCache,
