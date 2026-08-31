@@ -108,6 +108,7 @@ export async function runSchedulerWriteback(
     userHabits,
     userActivityTypes,
     allActualCompletions,
+    allSkips,
     userManualEvents,
   ] = (await Promise.all([
     db.query.timeBlocks.findMany({
@@ -139,6 +140,11 @@ export async function runSchedulerWriteback(
         completedAt: { isNotNull: true },
       },
     }),
+    // Declined instances. They count toward the period exactly as a completion
+    // does, so the deficit loop below does not re-place what the user skipped.
+    db.query.habitCompletions.findMany({
+      where: { habit: { userId }, skipped: true },
+    }),
     db.query.manualEvents.findMany({
       where: { userId, endAt: { gte: now } },
     }),
@@ -148,6 +154,7 @@ export async function runSchedulerWriteback(
     TodoList[],
     Habit[],
     ActivityType[],
+    HabitCompletion[],
     HabitCompletion[],
     ManualEvent[],
   ];
@@ -256,8 +263,27 @@ export async function runSchedulerWriteback(
       monthEnd,
     );
 
-    const weekCounts = addCounts(actualWeek, tentativeWeek);
-    const monthCounts = addCounts(actualMonth, tentativeMonth);
+    const skipWeek = countByPeriod(
+      allSkips,
+      'scheduledAt',
+      weekCursor,
+      weekEnd,
+    );
+    const skipMonth = countByPeriod(
+      allSkips,
+      'scheduledAt',
+      monthStart,
+      monthEnd,
+    );
+
+    const weekCounts = addCounts(
+      addCounts(actualWeek, tentativeWeek),
+      skipWeek,
+    );
+    const monthCounts = addCounts(
+      addCounts(actualMonth, tentativeMonth),
+      skipMonth,
+    );
 
     const habitInstances: Array<
       (typeof userHabits)[number] & { instanceIndex: number }
@@ -346,14 +372,15 @@ export async function runSchedulerWriteback(
   // ── Replace tentative habit completions ────────────────────────────────────
   const userHabitIds = userHabits.map((h) => h.id);
   if (userHabitIds.length > 0) {
-    await db
-      .delete(habitCompletions)
-      .where(
-        and(
-          inArray(habitCompletions.habitId, userHabitIds),
-          isNull(habitCompletions.completedAt),
-        ),
-      );
+    await db.delete(habitCompletions).where(
+      and(
+        inArray(habitCompletions.habitId, userHabitIds),
+        isNull(habitCompletions.completedAt),
+        // A skip is also an uncompleted row, but it is the user's, not this
+        // function's — it has to survive the sweep it would otherwise fall in.
+        eq(habitCompletions.skipped, false),
+      ),
+    );
   }
 
   if (newTentativeCompletions.length > 0) {

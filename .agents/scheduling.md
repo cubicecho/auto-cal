@@ -48,7 +48,17 @@ Todos with `manuallyScheduled: true` are excluded from the scheduler entirely un
 
 ## Habit Instance Generation
 
-For each habit, the writeback counts how many completions (actual + tentative) exist in the current week/month and computes a deficit (`frequencyCount - done`). That many instances are passed to `computeSchedule` with an `instanceIndex` suffix on the ID.
+For each habit, the writeback counts how many completions (actual + tentative + **skipped**) exist in the current week/month and computes a deficit (`frequencyCount - done`). That many instances are passed to `computeSchedule` with an `instanceIndex` suffix on the ID.
+
+## Skipped Instances
+
+`mySkipHabit` declines one placed instance. It writes a `habit_completions` row with `completedAt` null, `scheduledAt` set to the slot, and `skipped: true` — the same shape as a tentative row, plus the flag, and that flag is what makes it behave differently in three places:
+
+- **It survives the writeback's sweep.** Step 7 above deletes every uncompleted row for the user's habits before re-inserting; that delete is now `AND skipped = false`, so a skip is not swept away by the run its own writeback triggers.
+- **It counts toward the period.** Both `runSchedulerWriteback` and `mySchedule` add skips to the same per-period count completions go into, so the deficit shrinks by one and the scheduler does not simply re-place what the user just declined. It is charged to the ISO week / local month its `scheduledAt` falls in.
+- **It never counts as a completion.** `completedAt` stays null, so `myHabitStats` and `myHabitDetail` exclude it from the numerator — and they subtract it from the *denominator* too (`effectiveTarget = frequencyCount - skipped`). A declined instance was never owed, so it reads as "skipped", not as a miss.
+
+Skips are capped at `MAX_SKIPS_PER_PERIOD` (2) per habit per period, in `server/src/schema/resolvers/habits.ts`; past that `mySkipHabit` throws `BAD_USER_INPUT`. `myUnskipHabit` deletes one. The two undo paths are deliberately separate: `myUncompleteHabit` refuses a skip and `myUnskipHabit` refuses a real completion.
 
 ## `dueAt` (not yet load-bearing in the scheduler)
 

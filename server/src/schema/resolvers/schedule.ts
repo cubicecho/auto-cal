@@ -155,12 +155,17 @@ export const scheduleQueries: QueryMap<'mySchedule'> = {
 
     const userHabitIds = userHabits.map((h) => h.id);
 
-    const [weekCompletions, monthCompletions]: [
+    // Skips are fetched alongside completions and counted the same way: an
+    // instance the user declined is settled for the period, so the deficit
+    // loop below must not hand it back.
+    const [weekCompletions, monthCompletions, weekSkips, monthSkips]: [
+      HabitCompletion[],
+      HabitCompletion[],
       HabitCompletion[],
       HabitCompletion[],
     ] =
       userHabitIds.length === 0
-        ? [[], []]
+        ? [[], [], [], []]
         : await Promise.all([
             context.db.query.habitCompletions.findMany({
               where: {
@@ -182,6 +187,20 @@ export const scheduleQueries: QueryMap<'mySchedule'> = {
                 },
               },
             }),
+            context.db.query.habitCompletions.findMany({
+              where: {
+                habitId: { in: userHabitIds },
+                skipped: true,
+                scheduledAt: { gte: weekStart, lte: weekEnd },
+              },
+            }),
+            context.db.query.habitCompletions.findMany({
+              where: {
+                habitId: { in: userHabitIds },
+                skipped: true,
+                scheduledAt: { gte: monthStart, lte: monthEnd },
+              },
+            }),
           ]);
 
     const activityTypeMap = new Map<string, ActivityType>(
@@ -189,14 +208,14 @@ export const scheduleQueries: QueryMap<'mySchedule'> = {
     );
 
     const weekCompletionCounts = new Map<string, number>();
-    for (const c of weekCompletions) {
+    for (const c of [...weekCompletions, ...weekSkips]) {
       weekCompletionCounts.set(
         c.habitId,
         (weekCompletionCounts.get(c.habitId) ?? 0) + 1,
       );
     }
     const monthCompletionCounts = new Map<string, number>();
-    for (const c of monthCompletions) {
+    for (const c of [...monthCompletions, ...monthSkips]) {
       monthCompletionCounts.set(
         c.habitId,
         (monthCompletionCounts.get(c.habitId) ?? 0) + 1,

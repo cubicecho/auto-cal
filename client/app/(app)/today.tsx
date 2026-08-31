@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  SkipForward,
   TriangleAlert,
 } from '@/components/ui/icons';
 import { Page, PageHeader } from '@/components/ui/page';
@@ -36,6 +37,19 @@ const COMPLETE_HABIT = graphql(`
       __typename
       id
       completedAt
+    }
+  }
+`);
+
+// Declining today's instance. The row survives the scheduler's rewrite, so the
+// slot is not simply handed back, and it leaves the completion rate alone.
+const SKIP_HABIT = graphql(`
+  mutation SkipHabitFromToday($input: SkipHabitArgs!) {
+    mySkipHabit(input: $input) {
+      __typename
+      id
+      skipped
+      scheduledAt
     }
   }
 `);
@@ -103,7 +117,23 @@ export default function TodayPage() {
       onError: (err) => console.error('[completeTodo]', err.message),
     },
   );
-  const completing = completingHabit || completingTodo;
+  const [skipHabit, { loading: skipping }] = useMutation(SKIP_HABIT, {
+    update: (cache) => invalidate(cache, ...DERIVED),
+    onError: (err) => console.error('[skipHabit]', err.message),
+  });
+
+  const completing = completingHabit || completingTodo || skipping;
+
+  function handleSkip(item: ScheduledItem_ScheduleViewFragment) {
+    skipHabit({
+      variables: {
+        input: {
+          habitId: item.id.replace(/-\d+$/, ''),
+          scheduledAt: item.scheduledStart ?? undefined,
+        },
+      },
+    });
+  }
 
   function handleComplete(item: ScheduledItem_ScheduleViewFragment) {
     const now = new Date().toISOString();
@@ -208,6 +238,11 @@ export default function TodayPage() {
                   onComplete={
                     completing ? undefined : () => handleComplete(item)
                   }
+                  onSkip={
+                    !completing && item.kind === 'habit'
+                      ? () => handleSkip(item)
+                      : undefined
+                  }
                 />
               ))}
             </View>
@@ -232,9 +267,11 @@ export default function TodayPage() {
 function TodaySlot({
   item,
   onComplete,
+  onSkip,
 }: {
   item: ScheduledItem_ScheduleViewFragment;
   onComplete?: (() => void) | undefined;
+  onSkip?: (() => void) | undefined;
 }) {
   const startTime = item.scheduledStart
     ? format(parseISO(item.scheduledStart), 'HH:mm')
@@ -286,6 +323,20 @@ function TodaySlot({
           onPress={onComplete}
         >
           <Check className="h-4 w-4" />
+        </Button>
+      )}
+      {onSkip && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className={cn(
+            'h-7 w-7 text-muted-foreground hover:text-amber-600',
+            HOVER_REVEAL,
+          )}
+          aria-label={`Skip ${item.title}`}
+          onPress={onSkip}
+        >
+          <SkipForward className="h-4 w-4" />
         </Button>
       )}
     </View>

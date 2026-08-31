@@ -646,4 +646,248 @@ describe('habit resolvers', () => {
       expect(result.errors?.[0]?.message).toMatch(/forbidden/i);
     });
   });
+  // ─── mySkipHabit / myUnskipHabit ──────────────────────────────────────────────
+
+  describe('mySkipHabit', () => {
+    it('throws when not authenticated', async () => {
+      const result = await gql(
+        testSchema,
+        db,
+        '',
+        'mutation($input: SkipHabitArgs!) { mySkipHabit(input: $input) { id } }',
+        { input: { habitId: '00000000-0000-0000-0000-000000000000' } },
+      );
+      expect(result.errors?.[0]?.message).toMatch(/not authenticated/i);
+    });
+
+    it('records a skip that is not a completion', async () => {
+      const { id: userId } = await seedUser(db, 'skip-habit@example.com');
+      const at = await seedActivityType(db, userId);
+      const habit = await seedHabit(db, userId, at.id);
+
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'mutation($input: SkipHabitArgs!) { mySkipHabit(input: $input) { id habitId skipped completedAt scheduledAt } }',
+        { input: { habitId: habit.id, scheduledAt: '2025-06-02T09:00:00' } },
+      );
+      expect(result.errors).toBeUndefined();
+      const skip = result.data?.mySkipHabit as {
+        habitId: string;
+        skipped: boolean;
+        completedAt: string | null;
+        scheduledAt: string | null;
+      };
+      expect(skip.habitId).toBe(habit.id);
+      expect(skip.skipped).toBe(true);
+      // A skip is never a completion — that is the whole point of the flag.
+      expect(skip.completedAt).toBeNull();
+      expect(skip.scheduledAt).not.toBeNull();
+    });
+
+    it('caps skips at two per period', async () => {
+      const { id: userId } = await seedUser(db, 'skip-habit-cap@example.com');
+      const at = await seedActivityType(db, userId);
+      const habit = await seedHabit(db, userId, at.id, {
+        frequencyUnit: 'week',
+      });
+      const mutation =
+        'mutation($input: SkipHabitArgs!) { mySkipHabit(input: $input) { id } }';
+      // Three slots inside one ISO week (Mon 2025-06-02 .. Sun 2025-06-08).
+      for (const day of ['2025-06-02', '2025-06-03']) {
+        const ok = await gql(testSchema, db, userId, mutation, {
+          input: { habitId: habit.id, scheduledAt: `${day}T09:00:00` },
+        });
+        expect(ok.errors).toBeUndefined();
+      }
+      const third = await gql(testSchema, db, userId, mutation, {
+        input: { habitId: habit.id, scheduledAt: '2025-06-04T09:00:00' },
+      });
+      expect(third.errors?.[0]?.message).toMatch(/limit is 2/i);
+    });
+
+    it('counts the cap per period, not overall', async () => {
+      const { id: userId } = await seedUser(
+        db,
+        'skip-habit-period@example.com',
+      );
+      const at = await seedActivityType(db, userId);
+      const habit = await seedHabit(db, userId, at.id, {
+        frequencyUnit: 'week',
+      });
+      const mutation =
+        'mutation($input: SkipHabitArgs!) { mySkipHabit(input: $input) { id } }';
+      for (const day of ['2025-06-02', '2025-06-03']) {
+        await gql(testSchema, db, userId, mutation, {
+          input: { habitId: habit.id, scheduledAt: `${day}T09:00:00` },
+        });
+      }
+      // The following week starts a fresh allowance.
+      const nextWeek = await gql(testSchema, db, userId, mutation, {
+        input: { habitId: habit.id, scheduledAt: '2025-06-09T09:00:00' },
+      });
+      expect(nextWeek.errors).toBeUndefined();
+    });
+
+    it('throws Forbidden when the habit belongs to another user', async () => {
+      const { id: userId } = await seedUser(db, 'skip-habit-mine@example.com');
+      const { id: otherId } = await seedUser(
+        db,
+        'skip-habit-other@example.com',
+      );
+      const otherAt = await seedActivityType(db, otherId);
+      const otherHabit = await seedHabit(db, otherId, otherAt.id);
+
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'mutation($input: SkipHabitArgs!) { mySkipHabit(input: $input) { id } }',
+        { input: { habitId: otherHabit.id } },
+      );
+      expect(result.errors?.[0]?.message).toMatch(/forbidden/i);
+    });
+
+    it('keeps skips out of the completion rate denominator', async () => {
+      const { id: userId } = await seedUser(db, 'skip-habit-stats@example.com');
+      const at = await seedActivityType(db, userId);
+      const habit = await seedHabit(db, userId, at.id, {
+        frequencyCount: 3,
+        frequencyUnit: 'week',
+      });
+      await db
+        .insert(habitCompletions)
+        .values({ habitId: habit.id, completedAt: new Date() });
+      await gql(
+        testSchema,
+        db,
+        userId,
+        'mutation($input: SkipHabitArgs!) { mySkipHabit(input: $input) { id } }',
+        { input: { habitId: habit.id } },
+      );
+
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'query($habitId: ID!) { myHabitStats(habitId: $habitId) { totalCompletions totalSkipped completionRate } }',
+        { habitId: habit.id },
+      );
+      expect(result.errors).toBeUndefined();
+      const stats = (
+        result.data?.myHabitStats as Array<{
+          totalCompletions: number;
+          totalSkipped: number;
+          completionRate: number;
+        }>
+      )[0];
+      expect(stats?.totalCompletions).toBe(1);
+      expect(stats?.totalSkipped).toBe(1);
+      // 1 of 3 owed, one of which was declined: 1/2, not 1/3.
+      expect(stats?.completionRate).toBeCloseTo(0.5);
+    });
+  });
+
+  describe('myUnskipHabit', () => {
+    it('removes the skip', async () => {
+      const { id: userId } = await seedUser(db, 'unskip-habit@example.com');
+      const at = await seedActivityType(db, userId);
+      const habit = await seedHabit(db, userId, at.id);
+      const skip = await gql(
+        testSchema,
+        db,
+        userId,
+        'mutation($input: SkipHabitArgs!) { mySkipHabit(input: $input) { id } }',
+        { input: { habitId: habit.id } },
+      );
+      const id = (skip.data?.mySkipHabit as { id: string }).id;
+
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'mutation($id: ID!) { myUnskipHabit(completionId: $id) }',
+        { id },
+      );
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.myUnskipHabit).toBe(true);
+
+      const remaining = await db.query.habitCompletions.findMany({
+        where: { habitId: habit.id },
+      });
+      expect(remaining).toHaveLength(0);
+    });
+
+    it('refuses to unskip a real completion', async () => {
+      const { id: userId } = await seedUser(db, 'unskip-not-skip@example.com');
+      const at = await seedActivityType(db, userId);
+      const habit = await seedHabit(db, userId, at.id);
+      const [completion] = await db
+        .insert(habitCompletions)
+        .values({ habitId: habit.id, completedAt: new Date() })
+        .returning();
+      if (!completion) throw new Error('seed failed');
+
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'mutation($id: ID!) { myUnskipHabit(completionId: $id) }',
+        { id: completion.id },
+      );
+      expect(result.errors?.[0]?.message).toMatch(/not a skip/i);
+    });
+
+    it('refuses to uncomplete a skip', async () => {
+      const { id: userId } = await seedUser(
+        db,
+        'uncomplete-a-skip@example.com',
+      );
+      const at = await seedActivityType(db, userId);
+      const habit = await seedHabit(db, userId, at.id);
+      const skip = await gql(
+        testSchema,
+        db,
+        userId,
+        'mutation($input: SkipHabitArgs!) { mySkipHabit(input: $input) { id } }',
+        { input: { habitId: habit.id } },
+      );
+      const id = (skip.data?.mySkipHabit as { id: string }).id;
+
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'mutation($id: ID!) { myUncompleteHabit(completionId: $id) }',
+        { id },
+      );
+      expect(result.errors?.[0]?.message).toMatch(/myUnskipHabit/);
+    });
+
+    it("throws Forbidden for another user's skip", async () => {
+      const { id: userId } = await seedUser(db, 'unskip-mine@example.com');
+      const { id: otherId } = await seedUser(db, 'unskip-other@example.com');
+      const otherAt = await seedActivityType(db, otherId);
+      const otherHabit = await seedHabit(db, otherId, otherAt.id);
+      const [skip] = await db
+        .insert(habitCompletions)
+        .values({
+          habitId: otherHabit.id,
+          scheduledAt: new Date(),
+          skipped: true,
+        })
+        .returning();
+      if (!skip) throw new Error('seed failed');
+
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'mutation($id: ID!) { myUnskipHabit(completionId: $id) }',
+        { id: skip.id },
+      );
+      expect(result.errors?.[0]?.message).toMatch(/forbidden/i);
+    });
+  });
 });
