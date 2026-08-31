@@ -18,6 +18,18 @@ might not have.
 `>=24` rather than an exact pin because local development runs ahead (26 at time
 of writing) and nothing about that has caused trouble; the floor is what matters.
 
+The workflow *actions* are on Node 24 too — `actions/checkout@v7`,
+`actions/setup-node@v7`, `actions/upload-pages-artifact@v5`,
+`actions/deploy-pages@v5`. The v4 line ran on Node 20, which the runner now
+force-runs on 24 and warns about on every job.
+
+One of those bumps needed a flag. `upload-pages-artifact` stopped including
+dotfiles by default in v4, and `site/eleventy.config.js` copies `src/nojekyll`
+to `_site/.nojekyll` deliberately — without that file GitHub Pages runs the
+build output through Jekyll, which ignores every path beginning with an
+underscore. `include-hidden-files: true` keeps it. Nothing would have failed
+loudly; the site would just have started 404ing assets.
+
 The one exception is `client/eas.json`, which pins `node: "22.20.0"` for the EAS
 builders. That machine only bundles JavaScript — it never runs the server — and
 the version has to be one EAS actually provides, so it is pinned on its own
