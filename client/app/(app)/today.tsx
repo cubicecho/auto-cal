@@ -11,6 +11,7 @@ import {
   TriangleAlert,
 } from '@/components/ui/icons';
 import { Page, PageHeader } from '@/components/ui/page';
+import { useHabitDigest } from '@/hooks/useHabitDigest';
 import { useSyncTimezone } from '@/hooks/useSyncTimezone';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { isoDate, weekStart } from '@/lib/date';
@@ -22,11 +23,18 @@ import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 // Reuses the ScheduledItem_ScheduleView fragment defined in ScheduleView.tsx.
+// `completedAt` is pulled in outside the fragment for the habit digest — the
+// cards do not render it, so it does not belong to their fragment.
 const MY_TODAY = graphql(`
   query MyToday($weekStart: String, $timezone: String) {
     mySchedule(weekStart: $weekStart, timezone: $timezone) {
       id
+      completedAt
       ...ScheduledItem_ScheduleView
+    }
+    myNotificationPreferences {
+      id
+      habitDigest
     }
   }
 `);
@@ -102,6 +110,13 @@ export default function TodayPage() {
       unscheduledCount: schedule.filter((i) => !i.isScheduled).length,
     };
   }, [schedule, selectedKey]);
+
+  // Only on the day itself: paging to Thursday is not a reason to be told
+  // what Thursday's habits are.
+  useHabitDigest(
+    today,
+    viewingToday && (data?.myNotificationPreferences.habitDigest ?? false),
+  );
 
   const [completeHabit, { loading: completingHabit }] = useMutation(
     COMPLETE_HABIT,

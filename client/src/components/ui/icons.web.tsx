@@ -15,6 +15,7 @@ export {
   Archive,
   ArrowLeft,
   ArrowRight,
+  Bell,
   Calendar,
   Check,
   ChevronDown,

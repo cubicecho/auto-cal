@@ -295,3 +295,33 @@ export const ImportTodoListInput = z.object({
 export const ImportTodosInput = z.object({
   lists: z.array(ImportTodoListInput).min(1).max(100),
 });
+
+/** "HH:MM" in 24-hour local time, the form the quiet-hours columns store. */
+const TimeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, {
+  message: 'Expected a time of day as HH:MM',
+});
+
+export const UpdateNotificationPreferencesInput = z.object({
+  enabled: z.boolean().optional(),
+  /**
+   * Bounded rather than open: under a minute the tick cannot reliably deliver
+   * ahead of the slot, and beyond two hours the notification stops being about
+   * the slot at all.
+   */
+  leadTimeMinutes: z.number().int().min(1).max(120).optional(),
+  quietHoursStart: TimeOfDay.nullable().optional(),
+  quietHoursEnd: TimeOfDay.nullable().optional(),
+  activityTypeIds: z.array(z.string().uuid()).max(100).optional(),
+  habitDigest: z.boolean().optional(),
+});
+
+export const RegisterPushSubscriptionInput = z.object({
+  /**
+   * The push service URL the browser handed us. Capped because it is stored
+   * verbatim and comes straight from the client.
+   */
+  endpoint: z.string().url().max(2048),
+  p256dh: z.string().min(1).max(512),
+  auth: z.string().min(1).max(512),
+  userAgent: z.string().max(512).optional(),
+});

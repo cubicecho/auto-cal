@@ -444,6 +444,44 @@ const todoActivityType = async (parent, _args, context: Context) => {
 
 The URL is intentionally public (no secret). Users are warned to treat it like a password.
 
+## Notifications (Web Push)
+
+`server/src/services/notifications.ts`. Split deliberately: every function that
+decides *what* should go out is pure over rows and a clock, and only
+`runNotificationTick` touches the database or the network — which is what makes
+quiet hours and the lead-time window testable with no push service
+(`server/test/services/notifications.test.ts` mocks `web-push`).
+
+Three tables back it:
+
+| Table | Role |
+|-------|------|
+| `notification_preferences` | One row per user. Absent means *the defaults*, not "off" — `myNotificationPreferences` materialises the row on first read so no caller branches on null. |
+| `push_subscriptions` | One row per browser, unique on `endpoint` (the browser's own identifier, so a reload upserts rather than duplicating). `expiredAt` is set when a push service answers 404/410. |
+| `sent_notifications` | The idempotency key: unique on `(userId, itemKey, scheduledFor)`. |
+
+`p256dh` and `auth` are in `exclude.columns` for the same reason `keyHash` is —
+they are the credentials for pushing to that browser, and a filter or ordering
+on a secret is an oracle even when the field cannot be selected.
+
+**The tick** runs every `NOTIFICATION_TICK_SECONDS` (default 60) and is driven
+from live push subscriptions, not from the users table: a user with no browser
+registered has nowhere for a notification to go and should cost nothing. Each
+pass covers `[now + lead − tick, now + lead]` — a window rather than an instant,
+so a late tick or a slot landing between two ticks is still caught. Sending twice
+is prevented by `claimUnsent`, which inserts into `sent_notifications` with
+`onConflictDoNothing().returning()`: what comes back is exactly what this call
+won, so overlapping ticks (and multiple replicas) are safe.
+
+Quiet hours are local "HH:MM" against `users.timezone` and may wrap midnight;
+`withinQuietHours` checks a wrapping window as the union of its two halves,
+which is the case a naive `start <= t < end` gets wrong. A slot more than 15
+minutes past is dropped as stale rather than pushed late.
+
+Startup is non-fatal: without all three `VAPID_*` variables `startNotificationTick`
+logs and returns null, and `myPushPublicKey` returns null so the client hides the
+settings card. See [`deployment.md`](deployment.md).
+
 ## Auth — Email Not Wired in Production
 
 Magic links are logged to the server console in both dev and prod. In dev, `requestMagicLink` also returns `magicLink` in the GraphQL response. In production the response has `magicLink: null`. There is a TODO to integrate Resend or Nodemailer — email is not yet sent.
@@ -471,6 +509,7 @@ server/src/schema/resolvers/
   import.ts         — importMutations
   auth.ts           — authMutations
   subscriptions.ts  — subscriptionResolvers + the publish* helpers
+  notifications.ts  — notificationQueries, notificationMutations
 ```
 
 New resolver domains follow the same pattern. SDL goes in `extensionSDL` in `index.ts`; the typed maps go in a new domain file and get spread into the `attach()` calls.
