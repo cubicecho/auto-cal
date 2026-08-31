@@ -1,25 +1,42 @@
+/**
+ * The native switch: a `Pressable` track with a thumb that moves, rather than
+ * react-native's `Switch`. RN's takes `trackColor`/`thumbColor` as raw colour
+ * values, which would pin the control outside the tailwind theme and make it
+ * the one control that does not follow dark mode with the rest.
+ *
+ * `switch.web.tsx` is radix; `switch-base.ts` holds the contract and the track
+ * classes, so the two cannot drift visually.
+ */
+import {
+  SWITCH_THUMB_CLASS,
+  SWITCH_TRACK_CLASS,
+  type SwitchProps,
+} from '@/components/ui/switch-base';
 import { cn } from '@/lib/utils';
-import * as SwitchPrimitive from '@radix-ui/react-switch';
-import type * as React from 'react';
+import { Pressable, View } from 'react-native';
 
 function Switch({
+  checked,
+  onCheckedChange,
+  disabled,
   className,
-  ...props
-}: React.ComponentProps<typeof SwitchPrimitive.Root>) {
+}: SwitchProps) {
   return (
-    <SwitchPrimitive.Root
+    <Pressable
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onPress={() => onCheckedChange(!checked)}
       className={cn(
-        'peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input',
+        SWITCH_TRACK_CLASS,
+        checked ? 'bg-primary' : 'bg-input',
+        // `disabled:` never applies to a Pressable — apply the state directly.
+        disabled && 'opacity-50',
         className,
       )}
-      {...props}
     >
-      <SwitchPrimitive.Thumb
-        className={cn(
-          'pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0',
-        )}
-      />
-    </SwitchPrimitive.Root>
+      <View className={cn(SWITCH_THUMB_CLASS, checked ? 'ml-4' : 'ml-0')} />
+    </Pressable>
   );
 }
 

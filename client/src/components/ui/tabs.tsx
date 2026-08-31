@@ -1,52 +1,73 @@
+/**
+ * The native tabs: a row of `Pressable`s over a context holding the active
+ * value, and content panes that render only when selected.
+ *
+ * The active value lives in this component rather than in props because the
+ * contract is uncontrolled (see `tabs-base.ts`). Unselected panes unmount, as
+ * they do under radix without `forceMount`.
+ */
+import {
+  TABS_LIST_CLASS,
+  TABS_TRIGGER_CLASS,
+  TABS_TRIGGER_TEXT_CLASS,
+  type TabsContentProps,
+  type TabsListProps,
+  type TabsProps,
+  type TabsTriggerProps,
+} from '@/components/ui/tabs-base';
 import { cn } from '@/lib/utils';
-import * as TabsPrimitive from '@radix-ui/react-tabs';
-import * as React from 'react';
+import { createContext, useContext, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 
-const Tabs = TabsPrimitive.Root;
+type TabsState = { value: string; setValue: (value: string) => void };
 
-const TabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    className={cn(
-      'inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground',
-      className,
-    )}
-    {...props}
-  />
-));
-TabsList.displayName = TabsPrimitive.List.displayName;
+const TabsContext = createContext<TabsState>({ value: '', setValue: () => {} });
 
-const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm',
-      className,
-    )}
-    {...props}
-  />
-));
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
+function Tabs({ defaultValue, className, children }: TabsProps) {
+  const [value, setValue] = useState(defaultValue);
+  return (
+    <TabsContext.Provider value={{ value, setValue }}>
+      <View className={cn(className)}>{children}</View>
+    </TabsContext.Provider>
+  );
+}
 
-const TabsContent = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
-    ref={ref}
-    className={cn(
-      'mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-      className,
-    )}
-    {...props}
-  />
-));
-TabsContent.displayName = TabsPrimitive.Content.displayName;
+function TabsList({ className, children }: TabsListProps) {
+  return (
+    <View className={cn('flex-row', TABS_LIST_CLASS, className)}>
+      {children}
+    </View>
+  );
+}
+
+function TabsTrigger({ value, className, children }: TabsTriggerProps) {
+  const tabs = useContext(TabsContext);
+  const active = tabs.value === value;
+  return (
+    <Pressable
+      role="tab"
+      aria-selected={active}
+      onPress={() => tabs.setValue(value)}
+      className={cn(TABS_TRIGGER_CLASS, active && 'bg-background', className)}
+    >
+      {/* Text colour does not inherit on native, so the active/inactive split
+          has to land on the `<Text>` rather than on the container. */}
+      <Text
+        className={cn(
+          TABS_TRIGGER_TEXT_CLASS,
+          active ? 'text-foreground' : 'text-muted-foreground',
+        )}
+      >
+        {children}
+      </Text>
+    </Pressable>
+  );
+}
+
+function TabsContent({ value, className, children }: TabsContentProps) {
+  const tabs = useContext(TabsContext);
+  if (tabs.value !== value) return null;
+  return <View className={cn('mt-2', className)}>{children}</View>;
+}
 
 export { Tabs, TabsList, TabsTrigger, TabsContent };

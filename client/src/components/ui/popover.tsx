@@ -1,27 +1,86 @@
+/**
+ * The native popover: a transparent `Modal` with a dimmed backdrop and a
+ * centred card.
+ *
+ * It is deliberately *not* anchored to its trigger. Anchoring means measuring
+ * the trigger and flipping the card against the viewport, which is a chunk of
+ * layout code to reproduce a hover-era affordance — on a phone a centred sheet
+ * is the native idiom anyway. `align` is accepted and ignored, and the same
+ * backdrop-as-sibling rule as `dialog.tsx` applies (a `Pressable` has no
+ * `stopPropagation`, so the card must not be nested inside it).
+ */
+import type {
+  PopoverContentProps,
+  PopoverProps,
+  PopoverTriggerProps,
+} from '@/components/ui/popover-base';
 import { cn } from '@/lib/utils';
-import * as PopoverPrimitive from '@radix-ui/react-popover';
-import * as React from 'react';
+import {
+  type ReactElement,
+  cloneElement,
+  createContext,
+  isValidElement,
+  useContext,
+} from 'react';
+import { Modal, Pressable, View } from 'react-native';
 
-const Popover = PopoverPrimitive.Root;
-const PopoverTrigger = PopoverPrimitive.Trigger;
+type PopoverState = { open: boolean; setOpen: (open: boolean) => void };
 
-const PopoverContent = React.forwardRef<
-  React.ElementRef<typeof PopoverPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(({ className, align = 'center', sideOffset = 4, ...props }, ref) => (
-  <PopoverPrimitive.Portal>
-    <PopoverPrimitive.Content
-      ref={ref}
-      align={align}
-      sideOffset={sideOffset}
-      className={cn(
-        'z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-        className,
-      )}
-      {...props}
-    />
-  </PopoverPrimitive.Portal>
-));
-PopoverContent.displayName = PopoverPrimitive.Content.displayName;
+const PopoverContext = createContext<PopoverState>({
+  open: false,
+  setOpen: () => {},
+});
+
+function Popover({ open, onOpenChange, children }: PopoverProps) {
+  return (
+    <PopoverContext.Provider value={{ open, setOpen: onOpenChange }}>
+      {children}
+    </PopoverContext.Provider>
+  );
+}
+
+function PopoverTrigger({ asChild, children }: PopoverTriggerProps) {
+  const { setOpen } = useContext(PopoverContext);
+  if (asChild && isValidElement(children)) {
+    return cloneElement(children as ReactElement<{ onPress?: () => void }>, {
+      onPress: () => setOpen(true),
+    });
+  }
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: this is not a DOM element — a `<button>` has no native counterpart
+    <Pressable role="button" onPress={() => setOpen(true)}>
+      {children}
+    </Pressable>
+  );
+}
+
+function PopoverContent({ className, children }: PopoverContentProps) {
+  const { open, setOpen } = useContext(PopoverContext);
+  return (
+    <Modal
+      visible={open}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setOpen(false)}
+    >
+      <View className="flex-1 items-center justify-center bg-black/60 p-6">
+        <Pressable
+          className="absolute inset-0"
+          onPress={() => setOpen(false)}
+          role="button"
+          aria-label="Close"
+        />
+        <View
+          className={cn(
+            'w-72 rounded-md border border-border bg-popover p-4',
+            className,
+          )}
+        >
+          {children}
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 export { Popover, PopoverTrigger, PopoverContent };
