@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { PgAsyncDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
@@ -71,18 +72,23 @@ const client = postgres(databaseUrl, {
     );
   },
 });
-// The exported type stays wide. Narrowing it to PostgresJsDatabase surfaces 24
-// pre-existing type errors — 9 in src/ resolvers, the rest in tests that hand a
-// PGLite instance to a `DB`-typed function — so it is tightened separately in
-// cubicecho/auto-cal#66.
-//
-// biome-ignore lint/suspicious/noExplicitAny: see the note above
-const db: any = drizzle({ client, relations });
+
+const db = drizzle({ client, relations });
 
 await migrate(db, { migrationsFolder });
 
 export { db };
-export type DB = typeof db;
+
+/**
+ * The database type shared code is written against.
+ *
+ * Deliberately the driver-agnostic base rather than `typeof db`: the server
+ * always runs on postgres.js, but `server/test/**` passes in-memory PGLite
+ * instances to the same functions, and the two drivers differ only in their
+ * query-result HKT. Widening here is what lets a resolver keep its types
+ * without the tests casting at every call site.
+ */
+export type DB = PgAsyncDatabase<PgQueryResultHKT, typeof relations>;
 
 /**
  * Close the pool. Nothing in the server needs this — the process owns the
