@@ -1,6 +1,7 @@
 import type {
   ActivityType,
   ApiKey,
+  DB,
   Habit,
   ManualEvent,
   Project,
@@ -45,15 +46,66 @@ const ENTITY_LABEL: Record<keyof OwnedRow, string> = {
 };
 
 /**
+ * Per-table `findFirst` by id.
+ *
+ * Spelled out rather than indexed generically (`db.query[table].findFirst(...)`)
+ * because indexing with a type parameter collapses the nine query builders into
+ * a union, and the argument then has to satisfy the *intersection* of nine
+ * different relation configs — which nothing does. Each entry below is a
+ * concrete call that type-checks on its own, so `loadOwned` needs no cast.
+ */
+const FIND_BY_ID: {
+  [K in keyof OwnedRow]: (
+    db: DB,
+    id: string,
+  ) => Promise<OwnedRow[K] | undefined>;
+} = {
+  activityTypes: (db, id) =>
+    db.query.activityTypes.findFirst({ where: { id } }),
+  apiKeys: (db, id) => db.query.apiKeys.findFirst({ where: { id } }),
+  habits: (db, id) => db.query.habits.findFirst({ where: { id } }),
+  manualEvents: (db, id) => db.query.manualEvents.findFirst({ where: { id } }),
+  projectNotes: (db, id) => db.query.projectNotes.findFirst({ where: { id } }),
+  projects: (db, id) => db.query.projects.findFirst({ where: { id } }),
+  timeBlocks: (db, id) => db.query.timeBlocks.findFirst({ where: { id } }),
+  todoLists: (db, id) => db.query.todoLists.findFirst({ where: { id } }),
+  todos: (db, id) => db.query.todos.findFirst({ where: { id } }),
+};
+
+/**
+ * Per-table `findMany` by id list — the batch twin of {@link FIND_BY_ID}, and
+ * spelled out for the same reason. `db.query[table].findMany(...)` with a type
+ * parameter collapses the nine builders into a union whose argument has to
+ * satisfy the intersection of nine relation configs; it only ever compiled
+ * while `db` was typed `any`.
+ */
+const FIND_BY_IDS: {
+  [K in keyof OwnedRow]: (db: DB, ids: string[]) => Promise<OwnedRow[K][]>;
+} = {
+  activityTypes: (db, ids) =>
+    db.query.activityTypes.findMany({ where: { id: { in: ids } } }),
+  apiKeys: (db, ids) =>
+    db.query.apiKeys.findMany({ where: { id: { in: ids } } }),
+  habits: (db, ids) => db.query.habits.findMany({ where: { id: { in: ids } } }),
+  manualEvents: (db, ids) =>
+    db.query.manualEvents.findMany({ where: { id: { in: ids } } }),
+  projectNotes: (db, ids) =>
+    db.query.projectNotes.findMany({ where: { id: { in: ids } } }),
+  projects: (db, ids) =>
+    db.query.projects.findMany({ where: { id: { in: ids } } }),
+  timeBlocks: (db, ids) =>
+    db.query.timeBlocks.findMany({ where: { id: { in: ids } } }),
+  todoLists: (db, ids) =>
+    db.query.todoLists.findMany({ where: { id: { in: ids } } }),
+  todos: (db, ids) => db.query.todos.findMany({ where: { id: { in: ids } } }),
+};
+
+/**
  * Load a row by id and assert the caller owns it, in the guard order CLAUDE.md
  * documents: existence (NOT_FOUND), then ownership (FORBIDDEN).
  *
  * This is the `findFirst` + {@link requireOwner} pair that every mutation
- * touching an existing row opens with. Collapsing it is worth more than the
- * line count: `context.db` is typed `any` (it is a dual-backend instance, see
- * `db/src/index.ts`), so the inline form infers the row as `any` and silently
- * gives up type-checking on everything read from it afterwards. Going through
- * here pins the row to its Drizzle type.
+ * touching an existing row opens with.
  *
  * Takes `userId` rather than re-deriving it from the context because callers
  * have already called `requireUser` — they need the id for the write itself.
@@ -64,9 +116,7 @@ export async function loadOwned<K extends keyof OwnedRow>(
   id: string,
   userId: string,
 ): Promise<OwnedRow[K]> {
-  const row = (await context.db.query[table].findFirst({ where: { id } })) as
-    | OwnedRow[K]
-    | undefined;
+  const row = await FIND_BY_ID[table](context.db, id);
   return requireOwner(row, ENTITY_LABEL[table], id, userId);
 }
 
@@ -85,9 +135,7 @@ export async function loadOwnedMany<K extends keyof OwnedRow>(
   ids: readonly string[],
   userId: string,
 ): Promise<OwnedRow[K][]> {
-  const rows = (await context.db.query[table].findMany({
-    where: { id: { in: [...ids] } },
-  })) as OwnedRow[K][];
+  const rows = await FIND_BY_IDS[table](context.db, [...ids]);
   const byId = new Map(rows.map((row) => [row.id, row]));
 
   return ids.map((id) => {
