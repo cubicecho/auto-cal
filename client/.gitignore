@@ -1,0 +1,8 @@
+# Expo local state — device history and dev-server settings, machine-specific.
+.expo/
+
+# Continuous Native Generation output. `expo prebuild` derives these from
+# app.json and the config plugins; committing them makes EAS Build stop syncing
+# every native property in app.json (icon, package, plugins, …).
+android/
+ios/

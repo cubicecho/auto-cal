@@ -32,6 +32,7 @@ npm run codegen          # generate:schema → codegen:server → client typed o
 # Build / Docker
 npm run build            # codegen + expo export --platform web + server tsc
 npm run build:docker     # docker build -t auto-cal .
+npm run build:android    # codegen + eas build -p android (see .agents/deployment.md)
 ```
 
 Prefer these `package.json` scripts over ad-hoc `npx` invocations — they wrap env loading, workspace targeting, and flag conventions.

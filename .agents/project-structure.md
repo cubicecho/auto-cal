@@ -145,9 +145,22 @@ client/src/
 └── __generated__/        # GraphQL Codegen output (gitignored)
     ├── gql.ts
     └── graphql.ts
+
+client/
+├── app.json              # Expo config: icons, android.package, plugins, splash
+├── eas.json              # EAS build profiles: development / preview / production
+├── metro.config.js       # NODE_PATH patch + workspace-root resolution + .js→.ts
+├── tailwind.config.js
+├── global.css
+└── assets/               # icon / adaptive-icon / splash-icon / favicon
+                          #   PNGs rasterised from the .svg beside each
 ```
 
 There is no `App.tsx` and no `main.tsx` — `app/_layout.tsx` is the entry point.
+There is no `client/android/` or `client/ios/` either: the native projects are
+Continuous Native Generation output, derived from `app.json` by
+`expo prebuild`, and both are gitignored. See
+[`deployment.md`](deployment.md#mobile-builds-eas).
 
 Every route is one file serving both platforms — there are no `.native.tsx`
 screens. The only platform branch is `(app)/_layout.tsx`, which picks a web

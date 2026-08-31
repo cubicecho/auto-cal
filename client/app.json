@@ -6,12 +6,42 @@
     "orientation": "portrait",
     "scheme": "autocal",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "web": {
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/favicon.png"
     },
+    "ios": {
+      "bundleIdentifier": "com.cubicecho.autocal",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.cubicecho.autocal",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f172a"
+      }
+    },
     "platforms": ["ios", "android", "web"],
-    "plugins": ["expo-router", "expo-status-bar"]
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#0f172a"
+          }
+        }
+      ]
+    ]
   }
 }
