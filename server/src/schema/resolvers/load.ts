@@ -1,6 +1,7 @@
 import type {
   ActivityType,
   ApiKey,
+  DB,
   Habit,
   ManualEvent,
   Project,
@@ -45,15 +46,38 @@ const ENTITY_LABEL: Record<keyof OwnedRow, string> = {
 };
 
 /**
+ * Per-table `findFirst` by id.
+ *
+ * Spelled out rather than indexed generically (`db.query[table].findFirst(...)`)
+ * because indexing with a type parameter collapses the nine query builders into
+ * a union, and the argument then has to satisfy the *intersection* of nine
+ * different relation configs — which nothing does. Each entry below is a
+ * concrete call that type-checks on its own, so `loadOwned` needs no cast.
+ */
+const FIND_BY_ID: {
+  [K in keyof OwnedRow]: (
+    db: DB,
+    id: string,
+  ) => Promise<OwnedRow[K] | undefined>;
+} = {
+  activityTypes: (db, id) =>
+    db.query.activityTypes.findFirst({ where: { id } }),
+  apiKeys: (db, id) => db.query.apiKeys.findFirst({ where: { id } }),
+  habits: (db, id) => db.query.habits.findFirst({ where: { id } }),
+  manualEvents: (db, id) => db.query.manualEvents.findFirst({ where: { id } }),
+  projectNotes: (db, id) => db.query.projectNotes.findFirst({ where: { id } }),
+  projects: (db, id) => db.query.projects.findFirst({ where: { id } }),
+  timeBlocks: (db, id) => db.query.timeBlocks.findFirst({ where: { id } }),
+  todoLists: (db, id) => db.query.todoLists.findFirst({ where: { id } }),
+  todos: (db, id) => db.query.todos.findFirst({ where: { id } }),
+};
+
+/**
  * Load a row by id and assert the caller owns it, in the guard order CLAUDE.md
  * documents: existence (NOT_FOUND), then ownership (FORBIDDEN).
  *
  * This is the `findFirst` + {@link requireOwner} pair that every mutation
- * touching an existing row opens with. Collapsing it is worth more than the
- * line count: `context.db` is typed `any` (it is a dual-backend instance, see
- * `db/src/index.ts`), so the inline form infers the row as `any` and silently
- * gives up type-checking on everything read from it afterwards. Going through
- * here pins the row to its Drizzle type.
+ * touching an existing row opens with.
  *
  * Takes `userId` rather than re-deriving it from the context because callers
  * have already called `requireUser` — they need the id for the write itself.
@@ -64,9 +88,7 @@ export async function loadOwned<K extends keyof OwnedRow>(
   id: string,
   userId: string,
 ): Promise<OwnedRow[K]> {
-  const row = (await context.db.query[table].findFirst({ where: { id } })) as
-    | OwnedRow[K]
-    | undefined;
+  const row = await FIND_BY_ID[table](context.db, id);
   return requireOwner(row, ENTITY_LABEL[table], id, userId);
 }
 
