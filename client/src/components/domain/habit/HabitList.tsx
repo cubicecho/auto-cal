@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw } from '@/components/ui/icons';
 import { EmptyState, PageHeader } from '@/components/ui/page';
 import { useListSection } from '@/hooks/useListSection';
+import { View } from 'react-native';
 import { HabitForm } from './HabitForm';
 import { HabitItem } from './HabitItem';
 
@@ -69,7 +70,7 @@ export function HabitList({ items, onSelect }: HabitListProps) {
           }
         />
       ) : (
-        <div className="space-y-2">
+        <View className="gap-2">
           {items.map((habit) => (
             <HabitItem
               key={habit.id}
@@ -78,7 +79,7 @@ export function HabitList({ items, onSelect }: HabitListProps) {
               onSelect={onSelect}
             />
           ))}
-        </div>
+        </View>
       )}
 
       <HabitForm

@@ -6,7 +6,7 @@ import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { Download, ListTodo, Plus } from '@/components/ui/icons';
 import { CardGrid, EmptyState, PageHeader } from '@/components/ui/page';
-import { Switch } from '@/components/ui/switch';
+import { SwitchField } from '@/components/ui/switch-field';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { TodoListCard } from './TodoListCard';
@@ -59,17 +59,12 @@ export function TodoListList({ lists, todosByListId }: TodoListListProps) {
         actions={
           <>
             {hasProjectLists && (
-              <label
-                htmlFor="hide-project-lists"
-                className="flex items-center gap-2 text-sm text-muted-foreground"
-              >
-                <Switch
-                  id="hide-project-lists"
-                  checked={hideProjectLists}
-                  onCheckedChange={setHideProjectLists}
-                />
-                Hide project lists
-              </label>
+              <SwitchField
+                id="hide-project-lists"
+                label="Hide project lists"
+                checked={hideProjectLists}
+                onCheckedChange={setHideProjectLists}
+              />
             )}
             <Link href="/import-todos" asChild>
               <Button variant="outline" size="sm">

@@ -1,4 +1,6 @@
-import { type ReactNode, createElement, useMemo } from 'react';
+import { cn } from '@/lib/utils';
+import { type ReactNode, useMemo } from 'react';
+import { Linking, Text, View } from 'react-native';
 
 // A small dependency-free markdown renderer. Covers the subset most notes use:
 // ATX headings, unordered/ordered lists, fenced + inline code, blockquotes,
@@ -22,35 +24,44 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
     const key = `${keyPrefix}-i${i++}`;
     if (token.startsWith('`')) {
       nodes.push(
-        <code
+        <Text
           key={key}
           className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]"
         >
           {token.slice(1, -1)}
-        </code>,
+        </Text>,
       );
     } else if (token.startsWith('**') || token.startsWith('__')) {
-      nodes.push(<strong key={key}>{token.slice(2, -2)}</strong>);
+      nodes.push(
+        <Text key={key} className="font-bold">
+          {token.slice(2, -2)}
+        </Text>,
+      );
     } else if (token.startsWith('[')) {
       const linkMatch = /\[([^\]]+)\]\(([^)]+)\)/.exec(token);
       if (linkMatch) {
+        const href = linkMatch[2] as string;
         nodes.push(
-          <a
+          <Text
             key={key}
-            href={linkMatch[2]}
-            target="_blank"
-            rel="noopener noreferrer"
             className="text-primary underline"
+            onPress={() => {
+              void Linking.openURL(href);
+            }}
           >
             {linkMatch[1]}
-          </a>,
+          </Text>,
         );
       } else {
         nodes.push(token);
       }
     } else {
       // single * or _ → emphasis
-      nodes.push(<em key={key}>{token.slice(1, -1)}</em>);
+      nodes.push(
+        <Text key={key} className="italic">
+          {token.slice(1, -1)}
+        </Text>,
+      );
     }
     last = match.index + token.length;
   }
@@ -174,68 +185,74 @@ export function MarkdownPreview({ content }: { content: string }) {
   const blocks = useMemo(() => parseBlocks(content), [content]);
 
   if (content.trim() === '') {
-    return <p className="text-sm text-muted-foreground">Nothing to preview.</p>;
+    return (
+      <Text className="text-sm text-muted-foreground">Nothing to preview.</Text>
+    );
   }
 
   return (
-    <div className="text-sm leading-relaxed text-foreground">
+    <View className="gap-0">
       {blocks.map((block, idx) => {
         const key = `b${idx}`;
         switch (block.kind) {
           case 'heading':
-            return createElement(
-              `h${block.level}`,
-              { key, className: HEADING_CLASSES[block.level] },
-              renderInline(block.text, key),
+            return (
+              <Text
+                key={key}
+                accessibilityRole="header"
+                className={cn('text-foreground', HEADING_CLASSES[block.level])}
+              >
+                {renderInline(block.text, key)}
+              </Text>
             );
           case 'code':
             return (
-              <pre
-                key={key}
-                className="my-2 overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs"
-              >
-                <code>{block.text}</code>
-              </pre>
+              <View key={key} className="my-2 rounded-md bg-muted p-3">
+                <Text className="font-mono text-xs text-foreground">
+                  {block.text}
+                </Text>
+              </View>
             );
           case 'quote':
             return (
-              <blockquote
-                key={key}
-                className="my-2 border-l-2 border-border pl-3 text-muted-foreground italic"
-              >
-                {renderInline(block.text, key)}
-              </blockquote>
+              <View key={key} className="my-2 border-l-2 border-border pl-3">
+                <Text className="text-muted-foreground italic">
+                  {renderInline(block.text, key)}
+                </Text>
+              </View>
             );
           case 'ul':
             return (
-              <ul key={key} className="my-2 list-disc space-y-0.5 pl-5">
+              <View key={key} className="my-2 gap-0.5 pl-5">
                 {block.items.map((item, j) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: list items are positional and may repeat
-                  <li key={`${key}-${j}`}>
+                  <Text key={`${key}-${j}`} className="text-foreground">
+                    {'\u2022  '}
                     {renderInline(item, `${key}-${j}`)}
-                  </li>
+                  </Text>
                 ))}
-              </ul>
+              </View>
             );
           case 'ol':
             return (
-              <ol key={key} className="my-2 list-decimal space-y-0.5 pl-5">
+              <View key={key} className="my-2 gap-0.5 pl-5">
                 {block.items.map((item, j) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: list items are positional and may repeat
-                  <li key={`${key}-${j}`}>
+                  <Text key={`${key}-${j}`} className="text-foreground">
+                    {`${j + 1}.  `}
                     {renderInline(item, `${key}-${j}`)}
-                  </li>
+                  </Text>
                 ))}
-              </ol>
+              </View>
             );
           default:
             return (
-              <p key={key} className="my-2">
+              <Text key={key} className="my-2 text-foreground">
                 {renderInline(block.text, key)}
-              </p>
+              </Text>
             );
         }
       })}
-    </div>
+    </View>
   );
 }

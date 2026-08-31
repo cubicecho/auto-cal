@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/toast';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
+import { Text, View } from 'react-native';
 
 const UPDATE_HABIT_LENGTH = graphql(`
   mutation UpdateHabitEstimatedLength($input: UpdateHabitArgs!) {
@@ -57,15 +58,15 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
       accentLabel={habit.activityType?.name}
     >
       <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
+        <View className="flex-row items-start justify-between">
+          <View>
             <CardTitle className="text-lg">{habit.title}</CardTitle>
             <CardDescription>
               {habit.activityType && (
-                <span>
+                <Text>
                   {habit.activityType.name}
                   {' • '}
-                </span>
+                </Text>
               )}
               <InlineLengthEdit
                 value={habit.estimatedLength}
@@ -76,7 +77,7 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
               {habit.frequencyCount}x per {habit.frequencyUnit}
               {' • '}Priority: {habit.priority}
             </CardDescription>
-          </div>
+          </View>
           <Button
             size="icon"
             variant="ghost"
@@ -88,11 +89,13 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
           >
             <Pencil className="h-4 w-4" />
           </Button>
-        </div>
+        </View>
       </CardHeader>
       {habit.description && (
         <CardContent>
-          <p className="text-sm text-muted-foreground">{habit.description}</p>
+          <Text className="text-sm text-muted-foreground">
+            {habit.description}
+          </Text>
         </CardContent>
       )}
     </Card>

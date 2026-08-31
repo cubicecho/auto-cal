@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/select';
 import { useQuery } from '@apollo/client/react';
 import { Link } from 'expo-router';
+import { Text, View } from 'react-native';
 
 const GET_ACTIVITY_TYPES = graphql(`
   query GetActivityTypesForSelect {
@@ -37,13 +38,13 @@ export function ActivityTypeSelect({
 
   if (activityTypes.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <Text className="text-sm text-muted-foreground">
         No activity types yet —{' '}
-        <Link href="/activity-types" className="underline">
+        <Link href="/activity-types" className="underline text-primary">
           create one first
         </Link>
         .
-      </p>
+      </Text>
     );
   }
 
@@ -55,10 +56,10 @@ export function ActivityTypeSelect({
             ? (() => {
                 const at = activityTypes.find((a) => a.id === value);
                 return at ? (
-                  <span className="flex items-center gap-2">
+                  <View className="flex-row items-center gap-2">
                     <ColorDot color={at.color} />
-                    {at.name}
-                  </span>
+                    <Text className="text-sm text-foreground">{at.name}</Text>
+                  </View>
                 ) : (
                   'Select an activity type'
                 );
@@ -69,10 +70,10 @@ export function ActivityTypeSelect({
       <SelectContent>
         {activityTypes.map((at) => (
           <SelectItem key={at.id} value={at.id}>
-            <span className="flex items-center gap-2">
+            <View className="flex-row items-center gap-2">
               <ColorDot color={at.color} />
-              {at.name}
-            </span>
+              <Text className="text-sm text-foreground">{at.name}</Text>
+            </View>
           </SelectItem>
         ))}
       </SelectContent>

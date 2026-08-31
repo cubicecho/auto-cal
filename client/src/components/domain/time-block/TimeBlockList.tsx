@@ -5,6 +5,7 @@ import { Clock, Plus } from '@/components/ui/icons';
 import { EmptyState, PageHeader } from '@/components/ui/page';
 import { QueryState } from '@/components/ui/query-state';
 import { useListSection } from '@/hooks/useListSection';
+import { View } from 'react-native';
 import { TimeBlockForm } from './TimeBlockForm';
 import { TimeBlockItem } from './TimeBlockItem';
 
@@ -69,11 +70,11 @@ export function TimeBlockList({ items, loading, error }: TimeBlockListProps) {
         />
       )}
       {items.length > 0 && (
-        <div className="space-y-2">
+        <View className="gap-2">
           {items.map((block) => (
             <TimeBlockItem key={block.id} timeBlock={block} onEdit={openEdit} />
           ))}
-        </div>
+        </View>
       )}
 
       <TimeBlockForm

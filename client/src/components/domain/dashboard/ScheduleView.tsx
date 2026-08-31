@@ -26,6 +26,7 @@ import {
 } from 'date-fns';
 import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
+import { ScrollView, Text, View } from 'react-native';
 
 graphql(`
   fragment ScheduledItem_ScheduleView on ScheduledItem {
@@ -188,7 +189,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4 overflow-y-auto h-full">
+    <ScrollView className="h-full" contentContainerClassName="flex-col gap-4">
       <TodoForm open={todoOpen} onOpenChange={setTodoOpen} />
 
       <Button size="sm" className="w-full" onPress={() => setTodoOpen(true)}>
@@ -197,10 +198,10 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
       </Button>
 
       {dayKeys.length === 0 && unscheduled.length === 0 && (
-        <p className="text-muted-foreground text-sm text-center py-8">
+        <Text className="text-muted-foreground text-sm text-center py-8">
           No tasks scheduled this week. Create todos or habits and assign them
           to an activity type.
-        </p>
+        </Text>
       )}
 
       {dayKeys.map((dayKey) => {
@@ -208,11 +209,11 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
         const date = parseISO(dayKey);
         const dayLabel = format(date, 'EEEE, MMM d');
         return (
-          <div key={dayKey}>
+          <View key={dayKey}>
             <SectionHeading variant="overline" className="mb-1.5">
               {dayLabel}
             </SectionHeading>
-            <div className="flex flex-col gap-1.5">
+            <View className="flex-col gap-1.5">
               {items.map((item) => (
                 <ScheduleCard
                   key={`${item.kind}-${item.id}`}
@@ -226,28 +227,28 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
                   }
                 />
               ))}
-            </div>
-          </div>
+            </View>
+          </View>
         );
       })}
 
       {unscheduled.length > 0 && (
-        <div>
+        <View>
           <SectionHeading
             variant="overline"
-            className="mb-1.5 flex items-center gap-1.5"
+            className="mb-1.5 flex-row items-center gap-1.5"
           >
             <TriangleAlert className="h-3.5 w-3.5 text-amber-500" />
             Unschedulable ({unscheduled.length})
           </SectionHeading>
-          <div className="flex flex-col gap-1.5">
+          <View className="flex-col gap-1.5">
             {unscheduled.map((item) => (
               <ScheduleCard key={`${item.kind}-${item.id}`} item={item} />
             ))}
-          </div>
-        </div>
+          </View>
+        </View>
       )}
-    </div>
+    </ScrollView>
   );
 }
 
@@ -283,8 +284,8 @@ function ScheduleCard({
       : null;
 
   return (
-    <div
-      className={`flex items-start gap-2.5 rounded-md border bg-card px-3 py-2.5 ${
+    <View
+      className={`flex-row items-start gap-2.5 rounded-md border bg-card px-3 py-2.5 ${
         !item.isScheduled ? 'border-amber-200 bg-amber-50/50' : ''
       }`}
     >
@@ -292,12 +293,12 @@ function ScheduleCard({
         color={item.activityType?.color ?? '#94a3b8'}
         className="mt-0.5 h-4 w-1"
       />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-medium leading-snug">
+      <View className="min-w-0 flex-1">
+        <View className="flex-row items-center justify-between gap-2">
+          <Text className="truncate text-sm font-medium leading-snug">
             {item.title}
-          </p>
-          <div className="flex flex-shrink-0 items-center gap-1">
+          </Text>
+          <View className="flex-row flex-shrink-0 items-center gap-1">
             {!item.isScheduled && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -312,7 +313,7 @@ function ScheduleCard({
               </Tooltip>
             )}
             {timeRange && (
-              <span className="text-xs text-muted-foreground">{timeRange}</span>
+              <Text className="text-xs text-muted-foreground">{timeRange}</Text>
             )}
             {onComplete && (
               <Button
@@ -325,22 +326,22 @@ function ScheduleCard({
                 <Check className="h-3.5 w-3.5" />
               </Button>
             )}
-          </div>
-        </div>
-        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="capitalize">{item.kind}</span>
-          <span>·</span>
-          <span>{item.estimatedLength} min</span>
-          <span>·</span>
-          <span>{priorityLabel(item.priority)}</span>
+          </View>
+        </View>
+        <View className="mt-0.5 flex-row items-center gap-2 text-xs text-muted-foreground">
+          <Text className="capitalize">{item.kind}</Text>
+          <Text>·</Text>
+          <Text>{item.estimatedLength} min</Text>
+          <Text>·</Text>
+          <Text>{priorityLabel(item.priority)}</Text>
           {item.activityType && (
             <>
-              <span>·</span>
-              <span>{item.activityType.name}</span>
+              <Text>·</Text>
+              <Text>{item.activityType.name}</Text>
             </>
           )}
-        </div>
-      </div>
-    </div>
+        </View>
+      </View>
+    </View>
   );
 }

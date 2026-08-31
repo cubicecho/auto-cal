@@ -1,10 +1,10 @@
 import type { ManualEvent_CalendarViewFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
-import { FieldWrapper, Form } from '@/components/ui/form';
+import { ColorPicker } from '@/components/ui/color-picker';
+import { FieldRow, FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Trash2 } from '@/components/ui/icons';
-import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
@@ -176,7 +176,7 @@ export function ManualEventForm({
       }
     >
       <form.AppForm>
-        <Form className="space-y-4">
+        <Form className="gap-4">
           <form.AppField name="title">
             {(field) => (
               <field.InputField label="Title" placeholder="e.g. Dentist" />
@@ -192,7 +192,7 @@ export function ManualEventForm({
             )}
           </form.AppField>
 
-          <div className="grid grid-cols-2 gap-4">
+          <FieldRow>
             <form.AppField name="startAt">
               {(field) => (
                 <field.InputField label="Start" type="datetime-local" />
@@ -203,29 +203,18 @@ export function ManualEventForm({
                 <field.InputField label="End" type="datetime-local" />
               )}
             </form.AppField>
-          </div>
+          </FieldRow>
 
           <form.AppField name="color">
             {(field) => (
               <FieldWrapper
                 label="Color"
                 control={
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                      className="h-10 w-16 cursor-pointer rounded border border-input bg-background p-1"
-                    />
-                    <Input
-                      placeholder="#3b82f6"
-                      value={field.state.value}
-                      onChangeText={(text) => field.handleChange(text)}
-                      onBlur={field.handleBlur}
-                      className="font-mono"
-                    />
-                  </div>
+                  <ColorPicker
+                    value={field.state.value}
+                    onChange={(color) => field.handleChange(color)}
+                    onBlur={field.handleBlur}
+                  />
                 }
               />
             )}

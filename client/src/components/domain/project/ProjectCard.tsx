@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Pencil } from '@/components/ui/icons';
 import { StatusChip } from '@/components/ui/status-chip';
+import { Text, View } from 'react-native';
 
 type Project = Project_ProjectListFragment;
 
@@ -21,22 +22,22 @@ type ProjectCardProps = {
 export function ProjectCard({ project, onSelect, onEdit }: ProjectCardProps) {
   return (
     <Card
-      className="flex cursor-pointer flex-col transition-colors"
+      className="cursor-pointer flex-col transition-colors"
       accentColor={project.activityType?.color}
       accentLabel={project.activityType?.name}
       onPress={() => onSelect(project)}
     >
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
+        <View className="flex-row items-start justify-between gap-2">
+          <View className="min-w-0 flex-1">
             <CardTitle className="truncate text-base">{project.name}</CardTitle>
             {project.activityType && (
               <CardDescription className="text-xs">
                 {project.activityType.name}
               </CardDescription>
             )}
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
+          </View>
+          <View className="flex-row shrink-0 items-center gap-1">
             <StatusChip status={project.status} />
             <Button
               size="icon"
@@ -50,14 +51,14 @@ export function ProjectCard({ project, onSelect, onEdit }: ProjectCardProps) {
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-          </div>
-        </div>
+          </View>
+        </View>
       </CardHeader>
       {project.list && (
         <CardContent className="pt-0">
-          <p className="text-xs text-muted-foreground">
+          <Text className="text-xs text-muted-foreground">
             List: {project.list.name}
-          </p>
+          </Text>
         </CardContent>
       )}
     </Card>

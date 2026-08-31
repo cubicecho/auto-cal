@@ -15,7 +15,7 @@ import {
   usePathname,
   useRouter,
 } from 'expo-router';
-import { Platform } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 /**
  * Catches a crash inside any signed-in screen before it reaches the root
@@ -49,18 +49,20 @@ function WebLayout() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+      <View className="h-screen flex-col overflow-hidden bg-background text-foreground">
         {!isOnboarding && (
           <header className="flex-shrink-0 border-b bg-card text-card-foreground">
-            <div className="container mx-auto px-4 py-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold leading-none">Auto Cal</h1>
-                  <p className="text-xs text-muted-foreground">
+            <View className="container mx-auto px-4 py-3">
+              <View className="flex-row items-center justify-between">
+                <View>
+                  <Text className="text-2xl font-bold leading-none">
+                    Auto Cal
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">
                     Smart todo and habit scheduling
-                  </p>
-                </div>
-                <nav className="flex items-center gap-1">
+                  </Text>
+                </View>
+                <nav className="flex-row items-center gap-1">
                   {NAV_LINKS.map(({ href, label }) => (
                     <Link
                       key={href}
@@ -104,14 +106,14 @@ function WebLayout() {
                     Sign out
                   </button>
                 </nav>
-              </div>
-            </div>
+              </View>
+            </View>
           </header>
         )}
-        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <main className="min-h-0 flex-1 flex-col overflow-hidden">
           <Slot />
         </main>
-      </div>
+      </View>
     </TooltipProvider>
   );
 }

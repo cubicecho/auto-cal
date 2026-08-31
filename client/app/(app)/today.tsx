@@ -13,11 +13,12 @@ import { Page, PageHeader } from '@/components/ui/page';
 import { useSyncTimezone } from '@/hooks/useSyncTimezone';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { isoDate, weekStart } from '@/lib/date';
-import { priorityLabel } from '@/lib/utils';
+import { HOVER_REVEAL, cn, priorityLabel } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { addDays, format, isToday, parseISO } from 'date-fns';
 import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
+import { Text, View } from 'react-native';
 
 // Reuses the ScheduledItem_ScheduleView fragment defined in ScheduleView.tsx.
 const MY_TODAY = graphql(`
@@ -134,7 +135,7 @@ export default function TodayPage() {
     <Page fill>
       <TodoForm open={todoOpen} onOpenChange={setTodoOpen} />
 
-      <div className="mx-auto w-full max-w-2xl">
+      <View className="mx-auto w-full max-w-2xl">
         <PageHeader
           title={viewingToday ? 'Today' : format(selectedDate, 'EEEE')}
           subtitle={format(selectedDate, 'EEEE, MMMM d')}
@@ -146,7 +147,7 @@ export default function TodayPage() {
           }
         />
 
-        <div className="mb-3 flex items-center gap-2">
+        <View className="mb-3 flex-row items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -176,30 +177,30 @@ export default function TodayPage() {
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-        </div>
+        </View>
 
-        <div className="rounded-xl border bg-card p-2 shadow-sm">
-          <div className="flex items-center justify-between px-3.5 py-2.5">
-            <strong className="text-sm font-semibold">Your day</strong>
-            <span className="text-xs text-muted-foreground">
+        <View className="rounded-xl border bg-card p-2 shadow-sm">
+          <View className="flex-row items-center justify-between px-3.5 py-2.5">
+            <Text className="text-sm font-semibold">Your day</Text>
+            <Text className="text-xs text-muted-foreground">
               auto-scheduled
-            </span>
-          </div>
+            </Text>
+          </View>
 
           {today.length === 0 ? (
-            <div className="border-t px-3.5 py-10 text-center">
-              <p className="text-sm text-muted-foreground">
+            <View className="border-t px-3.5 py-10 text-center">
+              <Text className="text-sm text-muted-foreground">
                 {viewingToday
                   ? 'Nothing scheduled for today.'
                   : `Nothing scheduled for ${format(selectedDate, 'EEEE, MMMM d')}.`}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              </Text>
+              <Text className="mt-1 text-xs text-muted-foreground">
                 Add a todo or habit and assign it to an activity type with a
                 matching time block.
-              </p>
-            </div>
+              </Text>
+            </View>
           ) : (
-            <div className="divide-y border-t">
+            <View className="border-t border-border">
               {today.map((item) => (
                 <TodaySlot
                   key={`${item.kind}-${item.id}`}
@@ -209,21 +210,21 @@ export default function TodayPage() {
                   }
                 />
               ))}
-            </div>
+            </View>
           )}
-        </div>
+        </View>
 
         {unscheduledCount > 0 && (
           <Link
             href="/calendar"
-            className="mt-3 flex items-center justify-center gap-1.5 text-xs text-amber-600 hover:text-amber-700 dark:text-amber-500"
+            className="mt-3 flex-row items-center justify-center gap-1.5 text-xs text-amber-600 hover:text-amber-700 dark:text-amber-500"
           >
             <TriangleAlert className="h-3.5 w-3.5" />
             {unscheduledCount} item{unscheduledCount === 1 ? '' : 's'} couldn’t
             be scheduled — open the calendar
           </Link>
         )}
-      </div>
+      </View>
     </Page>
   );
 }
@@ -247,22 +248,22 @@ function TodaySlot({
     .join(' · ');
 
   return (
-    <div className="group flex items-center gap-3.5 px-3.5 py-3">
-      <span className="w-11 shrink-0 font-mono text-xs text-muted-foreground">
+    <View className="group flex-row items-center gap-3.5 border-b border-border px-3.5 py-3">
+      <Text className="w-11 shrink-0 font-mono text-xs text-muted-foreground">
         {startTime}
-      </span>
-      <span
+      </Text>
+      <View
         className="min-h-[2.25rem] w-1 shrink-0 self-stretch rounded-full"
         style={{ backgroundColor: item.activityType?.color ?? '#94a3b8' }}
         aria-hidden
       />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-semibold leading-snug">
+      <View className="min-w-0 flex-1 flex-col">
+        <Text className="truncate text-sm font-semibold leading-snug">
           {item.title}
-        </span>
-        <span className="truncate text-xs text-muted-foreground">{meta}</span>
-      </div>
-      <span
+        </Text>
+        <Text className="truncate text-xs text-muted-foreground">{meta}</Text>
+      </View>
+      <Text
         className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
           item.kind === 'habit'
             ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400'
@@ -270,12 +271,15 @@ function TodaySlot({
         }`}
       >
         {item.kind}
-      </span>
+      </Text>
       {onComplete && (
         <Button
           size="icon"
           variant="ghost"
-          className="h-7 w-7 text-muted-foreground opacity-0 transition-opacity hover:text-green-600 group-hover:opacity-100"
+          className={cn(
+            'h-7 w-7 text-muted-foreground hover:text-green-600',
+            HOVER_REVEAL,
+          )}
           aria-label={
             item.kind === 'habit' ? 'Mark habit complete' : 'Complete todo'
           }
@@ -284,6 +288,6 @@ function TodaySlot({
           <Check className="h-4 w-4" />
         </Button>
       )}
-    </div>
+    </View>
   );
 }

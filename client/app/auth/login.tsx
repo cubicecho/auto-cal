@@ -1,7 +1,11 @@
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { FormElement } from '@/components/ui/form-element';
+import { Input } from '@/components/ui/input';
 import { useMutation } from '@apollo/client/react';
-import { type SubmitEvent, useState } from 'react';
+import { Link } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 
 const REQUEST_MAGIC_LINK = graphql(`
   mutation RequestMagicLink($email: String!) {
@@ -24,11 +28,7 @@ export default function LoginPage() {
     },
   });
 
-  // Takes an optional event because two things submit this form: the DOM
-  // submit event (Enter in the field) and the Button's onPress, which is a
-  // Pressable and raises no submit event of its own.
-  function handleSubmit(e?: SubmitEvent) {
-    e?.preventDefault();
+  function handleSubmit() {
     requestLink({ variables: { email } });
   }
 
@@ -59,29 +59,37 @@ export default function LoginPage() {
   );
 }
 
+/** Full-height centering box every state on this route shares. */
+function AuthShell({ children }: { children: React.ReactNode }) {
+  return (
+    <View className="flex-1 flex-col items-center justify-center bg-background p-4">
+      {children}
+    </View>
+  );
+}
+
 function DevMagicLink({
   email,
   magicLink,
 }: { email: string; magicLink: string }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
-      <div className="text-center max-w-sm p-8">
-        <h1 className="text-2xl font-bold mb-2">Your magic link</h1>
-        <p className="text-muted-foreground mb-4">
-          Click the link below to sign in as <strong>{email}</strong>.
-        </p>
-        <a
-          href={magicLink}
-          className="break-all rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Sign in →
-        </a>
-        <p className="mt-6 text-xs text-muted-foreground">
+    <AuthShell>
+      <View className="w-full max-w-sm items-center p-8">
+        <Text className="text-2xl font-bold mb-2 text-foreground">
+          Your magic link
+        </Text>
+        <Text className="text-muted-foreground mb-4 text-center">
+          Click the link below to sign in as {email}.
+        </Text>
+        <Link href={magicLink} asChild>
+          <Button>Sign in →</Button>
+        </Link>
+        <Text className="mt-6 text-xs text-muted-foreground text-center">
           This link is shown here because direct login is enabled on this
           server.
-        </p>
-      </div>
-    </div>
+        </Text>
+      </View>
+    </AuthShell>
   );
 }
 
@@ -90,21 +98,21 @@ function CheckEmail({
   onReset,
 }: { email: string; onReset: () => void }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
-      <div className="text-center max-w-sm p-8">
-        <h1 className="text-2xl font-bold mb-2">Check your email</h1>
-        <p className="text-muted-foreground mb-4">
-          We sent a magic link to <strong>{email}</strong>. Click it to sign in.
-        </p>
-        <button
-          type="button"
-          onClick={onReset}
-          className="text-sm underline text-muted-foreground"
-        >
-          Use a different email
-        </button>
-      </div>
-    </div>
+    <AuthShell>
+      <View className="w-full max-w-sm items-center p-8">
+        <Text className="text-2xl font-bold mb-2 text-foreground">
+          Check your email
+        </Text>
+        <Text className="text-muted-foreground mb-4 text-center">
+          We sent a magic link to {email}. Click it to sign in.
+        </Text>
+        <Pressable onPress={onReset}>
+          <Text className="text-sm underline text-muted-foreground">
+            Use a different email
+          </Text>
+        </Pressable>
+      </View>
+    </AuthShell>
   );
 }
 
@@ -119,34 +127,34 @@ function LoginForm({
   loading: boolean;
   error: Error | undefined;
   onEmailChange: (email: string) => void;
-  onSubmit: (e?: SubmitEvent) => void;
+  onSubmit: () => void;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
-      <div className="w-full max-w-sm rounded-lg border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-bold mb-1">Sign in to Auto Cal</h1>
-        <p className="text-sm text-muted-foreground mb-6">
+    <AuthShell>
+      <View className="w-full max-w-sm rounded-lg border border-border bg-card p-8">
+        <Text className="text-2xl font-bold mb-1 text-foreground">
+          Sign in to Auto Cal
+        </Text>
+        <Text className="text-sm text-muted-foreground mb-6">
           Enter your email and we'll send you a magic link.
-        </p>
-        <form onSubmit={onSubmit} className="flex flex-col gap-3">
-          <input
-            type="email"
-            required
+        </Text>
+        <FormElement onSubmit={onSubmit} className="gap-3">
+          <Input
             value={email}
-            onChange={(e) => onEmailChange(e.target.value)}
+            onChangeText={onEmailChange}
+            onSubmitEditing={onSubmit}
             placeholder="you@example.com"
-            className="rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           {error && (
-            <p className="text-sm text-destructive">
+            <Text className="text-sm text-destructive">
               {error.message.replace('Unexpected error value: ', '')}
-            </p>
+            </Text>
           )}
-          <Button disabled={loading} onPress={() => onSubmit()}>
+          <Button disabled={loading} onPress={onSubmit}>
             {loading ? 'Sending…' : 'Send magic link'}
           </Button>
-        </form>
-      </div>
-    </div>
+        </FormElement>
+      </View>
+    </AuthShell>
   );
 }

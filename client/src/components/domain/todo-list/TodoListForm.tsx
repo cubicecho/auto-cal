@@ -10,7 +10,7 @@ import type {
 import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
 import { Button } from '@/components/ui/button';
-import { FieldWrapper, Form } from '@/components/ui/form';
+import { FieldRow, FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Trash2 } from '@/components/ui/icons';
 import { useAppForm } from '@/hooks/form-hook';
@@ -173,7 +173,7 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
       }
     >
       <form.AppForm>
-        <Form className="space-y-4">
+        <Form className="gap-4">
           <form.AppField name="name">
             {(field) => (
               <field.InputField
@@ -207,7 +207,7 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
             )}
           </form.AppField>
 
-          <div className="grid grid-cols-2 gap-4">
+          <FieldRow>
             <form.AppField name="defaultPriority">
               {(field) => (
                 <field.SelectField
@@ -227,7 +227,7 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
                 />
               )}
             </form.AppField>
-          </div>
+          </FieldRow>
 
           <FormDialogFooter
             onCancel={() => onOpenChange(false)}

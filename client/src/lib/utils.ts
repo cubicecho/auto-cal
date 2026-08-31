@@ -1,4 +1,5 @@
 import { type ClassValue, clsx } from 'clsx';
+import { Platform } from 'react-native';
 import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]): string {
@@ -72,3 +73,13 @@ export function formatDuration(minutes: number): string {
   if (mins === 0) return `${hours}hr`;
   return `${hours}hr ${mins}min`;
 }
+
+/**
+ * Row actions that fade in on hover. There is no hover off web, so the class
+ * that hides them would hide them for good — on native they are simply always
+ * visible.
+ */
+export const HOVER_REVEAL =
+  Platform.OS === 'web'
+    ? 'opacity-0 transition-opacity group-hover:opacity-100'
+    : '';

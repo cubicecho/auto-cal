@@ -8,8 +8,10 @@ import type { InputHandle } from '@/components/ui/input-base';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { appendToField, evictEntity } from '@/lib/cache';
+import { HOVER_REVEAL, cn } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { useEffect, useRef, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import { MarkdownPreview } from './MarkdownPreview';
 
 export const PROJECT_NOTE_FRAGMENT = graphql(`
@@ -181,9 +183,9 @@ export function ProjectNotesEditor({
   const orderedNotes = [...notes].sort((a, b) => a.position - b.position);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[200px_1fr]">
+    <View className="flex-col gap-4 lg:flex-row">
       {/* Note list */}
-      <div className="space-y-2">
+      <View className="gap-2 lg:w-52">
         <Button
           size="sm"
           variant="outline"
@@ -195,26 +197,32 @@ export function ProjectNotesEditor({
           Add note
         </Button>
         {orderedNotes.length === 0 && (
-          <p className="py-4 text-center text-xs text-muted-foreground">
+          <Text className="py-4 text-center text-xs text-muted-foreground">
             No notes yet.
-          </p>
+          </Text>
         )}
-        <ul className="space-y-1">
+        <View className="gap-1">
           {orderedNotes.map((note, i) => (
-            <li
+            <View
               key={note.id}
-              className={`group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm ${
+              className={`group flex-row items-center gap-1 rounded-md px-2 py-1.5 ${
                 note.id === selectedId ? 'bg-muted' : 'hover:bg-muted/60'
               }`}
             >
-              <button
-                type="button"
-                className="min-w-0 flex-1 truncate text-left"
-                onClick={() => setSelectedId(note.id)}
+              <Pressable
+                className="min-w-0 flex-1"
+                onPress={() => setSelectedId(note.id)}
               >
-                {note.title || 'Untitled note'}
-              </button>
-              <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100">
+                <Text
+                  numberOfLines={1}
+                  className="text-sm text-left text-foreground"
+                >
+                  {note.title || 'Untitled note'}
+                </Text>
+              </Pressable>
+              <View
+                className={cn('flex-row shrink-0 items-center', HOVER_REVEAL)}
+              >
                 <Button
                   size="icon"
                   variant="ghost"
@@ -244,15 +252,15 @@ export function ProjectNotesEditor({
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
-              </div>
-            </li>
+              </View>
+            </View>
           ))}
-        </ul>
-      </div>
+        </View>
+      </View>
 
       {/* Editor / preview */}
       {selected ? (
-        <div className="space-y-3">
+        <View className="flex-1 gap-3">
           <Input
             ref={titleInputRef}
             value={title}
@@ -261,7 +269,7 @@ export function ProjectNotesEditor({
             className="font-medium"
           />
           <Tabs defaultValue="edit">
-            <div className="flex items-center justify-between">
+            <View className="flex-row items-center justify-between">
               <TabsList>
                 <TabsTrigger value="edit">Edit</TabsTrigger>
                 <TabsTrigger value="preview">Preview</TabsTrigger>
@@ -273,7 +281,7 @@ export function ProjectNotesEditor({
               >
                 {saving ? 'Saving…' : 'Save'}
               </Button>
-            </div>
+            </View>
             <TabsContent value="edit">
               <Textarea
                 value={content}
@@ -283,17 +291,19 @@ export function ProjectNotesEditor({
               />
             </TabsContent>
             <TabsContent value="preview">
-              <div className="min-h-[320px] rounded-md border p-4">
+              <View className="min-h-[320px] rounded-md border p-4">
                 <MarkdownPreview content={content} />
-              </div>
+              </View>
             </TabsContent>
           </Tabs>
-        </div>
+        </View>
       ) : (
-        <div className="flex items-center justify-center rounded-md border border-dashed py-16 text-sm text-muted-foreground">
-          Select or add a note to start writing.
-        </div>
+        <View className="flex-1 flex-row items-center justify-center rounded-md border border-dashed py-16">
+          <Text className="text-sm text-muted-foreground">
+            Select or add a note to start writing.
+          </Text>
+        </View>
       )}
-    </div>
+    </View>
   );
 }

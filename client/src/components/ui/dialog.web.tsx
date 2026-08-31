@@ -45,7 +45,7 @@ function DialogHeader({ className, children }: DialogSectionProps) {
   return (
     <div
       className={cn(
-        'flex flex-col space-y-1.5 text-center sm:text-left',
+        'flex flex-col gap-1.5 text-center sm:text-left',
         className,
       )}
     >
@@ -58,7 +58,7 @@ function DialogFooter({ className, children }: DialogSectionProps) {
   return (
     <div
       className={cn(
-        'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
+        'flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2',
         className,
       )}
     >

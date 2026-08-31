@@ -21,7 +21,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <Page width="narrow" className="space-y-4 py-8">
+    <Page width="narrow" className="gap-4 py-8">
       <PageHeader title="Settings" />
 
       <Card>

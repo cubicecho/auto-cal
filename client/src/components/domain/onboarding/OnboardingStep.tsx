@@ -23,6 +23,7 @@ import {
   SkipForward,
 } from '@/components/ui/icons';
 import type { ReactNode } from 'react';
+import { Text, View } from 'react-native';
 
 type OnboardingStepProps = {
   title: string;
@@ -59,10 +60,10 @@ export function OnboardingStep({
         <CardDescription>{description}</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-6">{children}</CardContent>
+      <CardContent className="gap-6">{children}</CardContent>
 
       <CardFooter
-        className={onBack ? 'flex justify-between' : 'flex justify-end'}
+        className={onBack ? 'flex-row justify-between' : 'flex-row justify-end'}
       >
         {onBack ? (
           <Button variant="outline" onPress={onBack}>
@@ -70,7 +71,7 @@ export function OnboardingStep({
             Back
           </Button>
         ) : null}
-        <div className="flex gap-2">
+        <View className="flex-row gap-2">
           {onSkip ? (
             <Button variant="ghost" onPress={onSkip}>
               <SkipForward className="mr-1 h-4 w-4" />
@@ -82,7 +83,7 @@ export function OnboardingStep({
             {nextLabel}
             {isFinal ? null : <ArrowRight className="ml-1 h-4 w-4" />}
           </Button>
-        </div>
+        </View>
       </CardFooter>
     </Card>
   );
@@ -104,20 +105,20 @@ export function CreatedList({
   if (count === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium text-muted-foreground">
+    <View className="gap-2">
+      <Text className="text-sm font-medium text-muted-foreground">
         Created ({count})
-      </p>
-      <div
+      </Text>
+      <View
         className={
           layout === 'chips'
-            ? 'flex flex-wrap gap-2'
-            : 'divide-y rounded-md border'
+            ? 'flex-row flex-wrap gap-2'
+            : 'rounded-md border border-border'
         }
       >
         {children}
-      </div>
-    </div>
+      </View>
+    </View>
   );
 }
 
@@ -138,7 +139,7 @@ export function CreatedRow({
   meta,
 }: CreatedRowProps) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2 text-sm">
+    <View className="flex-row items-center gap-3 border-b border-border px-3 py-2 last:border-b-0">
       {activityType ? (
         <ColorDot
           color={activityType.color}
@@ -146,11 +147,11 @@ export function CreatedRow({
           title={activityType.name}
         />
       ) : null}
-      <span className="font-medium">{title}</span>
-      {detail ? <span className="text-muted-foreground">{detail}</span> : null}
+      <Text className="font-medium">{title}</Text>
+      {detail ? <Text className="text-muted-foreground">{detail}</Text> : null}
       {meta ? (
-        <span className="ml-auto text-muted-foreground">{meta}</span>
+        <Text className="ml-auto text-muted-foreground">{meta}</Text>
       ) : null}
-    </div>
+    </View>
   );
 }

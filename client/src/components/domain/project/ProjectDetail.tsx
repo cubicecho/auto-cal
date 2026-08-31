@@ -14,6 +14,7 @@ import { SectionHeading } from '@/components/ui/section-heading';
 import { StatusChip } from '@/components/ui/status-chip';
 import { invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
+import { Text, View } from 'react-native';
 import { ProjectNotesEditor } from './ProjectNotesEditor';
 
 export const PROJECT_DETAIL_FRAGMENT = graphql(`
@@ -84,7 +85,7 @@ export function ProjectDetail({
   }
 
   return (
-    <div className="space-y-4">
+    <View className="gap-4">
       <DetailHeader
         onBack={onBack}
         backLabel="Back to projects"
@@ -116,23 +117,23 @@ export function ProjectDetail({
 
       {/* Notes and tasks sit side by side on medium+ screens and stack on
           narrow ones. */}
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_18rem] lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="min-w-0">
+      <View className="flex-col gap-4 md:flex-row">
+        <View className="min-w-0 flex-1">
           <SectionHeading className="mb-2">Notes</SectionHeading>
           <ProjectNotesEditor projectId={project.id} notes={project.notes} />
-        </div>
+        </View>
 
-        <div className="min-w-0">
+        <View className="min-w-0 md:w-72 lg:w-80">
           <SectionHeading className="mb-2">Tasks</SectionHeading>
           {project.list ? (
             <TodoListCard list={project.list} todos={todos} />
           ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">
+            <Text className="py-8 text-center text-sm text-muted-foreground">
               This project has no todo list.
-            </p>
+            </Text>
           )}
-        </div>
-      </div>
-    </div>
+        </View>
+      </View>
+    </View>
   );
 }

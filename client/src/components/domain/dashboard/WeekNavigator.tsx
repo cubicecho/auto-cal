@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from '@/components/ui/icons';
+import { Text, View } from 'react-native';
 
 type CalendarViewMode = 'day' | 'week' | 'month';
 
@@ -24,7 +25,7 @@ export function WeekNavigator({
   onViewChange,
 }: WeekNavigatorProps) {
   return (
-    <div className="flex items-center gap-2">
+    <View className="flex-row items-center gap-2">
       {/* Today — always rendered so nav arrows don't shift on navigate */}
       <Button
         variant="outline"
@@ -37,7 +38,7 @@ export function WeekNavigator({
       </Button>
 
       {/* View switcher */}
-      <div className="flex rounded-md border p-0.5 gap-0.5">
+      <View className="flex-row rounded-md border p-0.5 gap-0.5">
         {(['day', 'week', 'month'] as const).map((v) => (
           <Button
             key={v}
@@ -49,18 +50,18 @@ export function WeekNavigator({
             {v}
           </Button>
         ))}
-      </div>
+      </View>
 
       {/* Date navigation */}
       <Button variant="outline" size="sm" onPress={onPrev}>
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      <span className="min-w-[160px] text-center text-sm font-medium">
+      <Text className="min-w-[160px] text-center text-sm font-medium">
         {dateLabel}
-      </span>
+      </Text>
       <Button variant="outline" size="sm" onPress={onNext}>
         <ChevronRight className="h-4 w-4" />
       </Button>
-    </div>
+    </View>
   );
 }

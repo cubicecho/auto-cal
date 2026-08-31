@@ -9,10 +9,10 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { ColorPicker } from '@/components/ui/color-picker';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Trash2 } from '@/components/ui/icons';
-import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
@@ -20,6 +20,7 @@ import { DEFAULT_ACTIVITY_COLOR } from '@/lib/form-constants';
 import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { useState } from 'react';
+import { View } from 'react-native';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -174,8 +175,8 @@ export function ActivityTypeForm({
       }
     >
       <form.AppForm>
-        <Form className="space-y-4">
-          <div className="flex flex-col gap-4 py-2">
+        <Form className="gap-4">
+          <View className="flex-col gap-4 py-2">
             {/* Name */}
             <form.AppField name="name">
               {(field) => (
@@ -192,27 +193,16 @@ export function ActivityTypeForm({
                 <FieldWrapper
                   label="Color"
                   control={
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        className="h-10 w-16 cursor-pointer rounded border border-input bg-background p-1"
-                      />
-                      <Input
-                        placeholder={DEFAULT_ACTIVITY_COLOR}
-                        value={field.state.value}
-                        onChangeText={(text) => field.handleChange(text)}
-                        onBlur={field.handleBlur}
-                        className="font-mono"
-                      />
-                    </div>
+                    <ColorPicker
+                      value={field.state.value}
+                      onChange={(color) => field.handleChange(color)}
+                      onBlur={field.handleBlur}
+                    />
                   }
                 />
               )}
             </form.AppField>
-          </div>
+          </View>
 
           <FormDialogFooter
             onCancel={() => onOpenChange(false)}

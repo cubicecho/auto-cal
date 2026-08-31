@@ -9,13 +9,14 @@ import {
   OnboardingStep,
 } from '@/components/domain/onboarding/OnboardingStep';
 import { ColorDot } from '@/components/ui/color-dot';
+import { ColorPicker } from '@/components/ui/color-picker';
 import { FieldWrapper, Form } from '@/components/ui/form';
 import { Plus } from '@/components/ui/icons';
-import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { DEFAULT_ACTIVITY_COLOR } from '@/lib/form-constants';
 import { useMutation, useQuery } from '@apollo/client/react';
+import { Text } from 'react-native';
 import { z } from 'zod';
 
 const GET_MY_ACTIVITY_TYPES = graphql(`
@@ -83,7 +84,7 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
       nextDisabled={activityTypes.length === 0}
     >
       <form.AppForm>
-        <Form className="space-y-4">
+        <Form className="gap-4">
           {/* Name */}
           <form.AppField name="name">
             {(field) => (
@@ -100,22 +101,11 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
               <FieldWrapper
                 label="Color"
                 control={
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                      className="h-10 w-16 cursor-pointer rounded border border-input bg-background p-1"
-                    />
-                    <Input
-                      placeholder={DEFAULT_ACTIVITY_COLOR}
-                      value={field.state.value}
-                      onChangeText={(text) => field.handleChange(text)}
-                      onBlur={field.handleBlur}
-                      className="font-mono"
-                    />
-                  </div>
+                  <ColorPicker
+                    value={field.state.value}
+                    onChange={(color) => field.handleChange(color)}
+                    onBlur={field.handleBlur}
+                  />
                 }
               />
             )}
@@ -131,13 +121,13 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
 
       <CreatedList count={activityTypes.length} layout="chips">
         {activityTypes.map((at) => (
-          <span
+          <Text
             key={at.id}
-            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium"
+            className="flex-row items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium"
           >
             <ColorDot color={at.color} size="sm" />
             {at.name}
-          </span>
+          </Text>
         ))}
       </CreatedList>
     </OnboardingStep>

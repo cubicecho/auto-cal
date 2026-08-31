@@ -22,6 +22,7 @@ import { Slot } from '@radix-ui/react-slot';
 import { createFormHookContexts, useStore } from '@tanstack/react-form';
 import * as React from 'react';
 import type { ReactNode } from 'react';
+import { View } from 'react-native';
 
 export const { fieldContext, formContext, useFieldContext, useFormContext } =
   createFormHookContexts();
@@ -148,6 +149,24 @@ function FieldError({
     <FieldErrorPrimitive id={messageId} {...props}>
       {error}
     </FieldErrorPrimitive>
+  );
+}
+
+/**
+ * Fields side by side, two to a row — what `grid grid-cols-2 gap-4` did on web.
+ * `grid` has no native equivalent, and the `flex-1` has to sit on each cell
+ * rather than on the field, which would then only be laid out correctly inside
+ * a row. `min-w-[45%]` is what makes a third field wrap instead of squeezing.
+ */
+function FieldRow({ children }: { children: ReactNode }) {
+  return (
+    <View className="flex-row flex-wrap gap-4">
+      {React.Children.map(children, (child) =>
+        child == null || child === false ? null : (
+          <View className="min-w-[45%] flex-1">{child}</View>
+        ),
+      )}
+    </View>
   );
 }
 
@@ -305,6 +324,7 @@ export {
   FieldDescription,
   FieldError,
   FieldWrapper,
+  FieldRow,
   InputField,
   TextAreaField,
   SelectField,

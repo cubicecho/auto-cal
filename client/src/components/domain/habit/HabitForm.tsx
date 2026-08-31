@@ -10,7 +10,7 @@ import type {
 import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
 import { Button } from '@/components/ui/button';
-import { FieldWrapper, Form } from '@/components/ui/form';
+import { FieldRow, FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Trash2 } from '@/components/ui/icons';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,7 @@ import { DURATION_OPTIONS, PRIORITY_OPTIONS } from '@/lib/form-constants';
 import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { useState } from 'react';
+import { Text, View } from 'react-native';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -294,7 +295,7 @@ export function HabitForm({
       }
     >
       <form.AppForm>
-        <Form className="space-y-4">
+        <Form className="gap-4">
           {/* Title */}
           <form.AppField name="title">
             {(field) => (
@@ -345,24 +346,24 @@ export function HabitForm({
           {/* Pomodoro toggle */}
           <form.AppField name="pomodoroEnabled">
             {(field) => (
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
+              <View className="flex-row items-center justify-between rounded-lg border p-3">
+                <View>
                   <Label
                     htmlFor="pomodoro-toggle"
                     className="text-sm font-medium"
                   >
                     Auto-generate pomodoros
                   </Label>
-                  <p className="text-xs text-muted-foreground">
+                  <Text className="text-xs text-muted-foreground">
                     Fill remaining time with timed work units
-                  </p>
-                </div>
+                  </Text>
+                </View>
                 <Switch
                   id="pomodoro-toggle"
                   checked={field.state.value}
                   onCheckedChange={(checked) => field.handleChange(checked)}
                 />
-              </div>
+              </View>
             )}
           </form.AppField>
 
@@ -370,12 +371,12 @@ export function HabitForm({
           <form.Subscribe selector={(s) => s.values.pomodoroEnabled}>
             {(pomodoroEnabled) =>
               pomodoroEnabled ? (
-                <div className="space-y-3 rounded-lg border p-3">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <View className="gap-3 rounded-lg border p-3">
+                  <Text className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Pomodoro Settings
-                  </p>
+                  </Text>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <FieldRow>
                     <form.AppField name="pomodoroUnitLength">
                       {(field) => (
                         <field.InputField
@@ -431,10 +432,10 @@ export function HabitForm({
                         />
                       )}
                     </form.AppField>
-                  </div>
-                </div>
+                  </FieldRow>
+                </View>
               ) : (
-                <div className="space-y-4">
+                <View className="gap-4">
                   {/* Duration */}
                   <form.AppField name="estimatedLength">
                     {(field) => (
@@ -447,7 +448,7 @@ export function HabitForm({
                   </form.AppField>
 
                   {/* Frequency — count + unit side by side */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <FieldRow>
                     <form.AppField name="frequencyCount">
                       {(field) => (
                         <field.InputField
@@ -468,7 +469,7 @@ export function HabitForm({
                         />
                       )}
                     </form.AppField>
-                  </div>
+                  </FieldRow>
 
                   {/* Minimum time between instances */}
                   <form.AppField name="minTimeBetweenInstances">
@@ -481,7 +482,7 @@ export function HabitForm({
                       />
                     )}
                   </form.AppField>
-                </div>
+                </View>
               )
             }
           </form.Subscribe>

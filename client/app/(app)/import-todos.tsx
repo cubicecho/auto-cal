@@ -8,13 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Code } from '@/components/ui/code';
 import { ColorDot } from '@/components/ui/color-dot';
+import { FilePicker } from '@/components/ui/file-picker';
 import {
   ArrowLeft,
   CircleCheck,
   ListChecks,
   TriangleAlert,
-  Upload,
 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Page } from '@/components/ui/page';
@@ -28,7 +29,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 
 const CREATE_ACTIVITY_TYPE_IMPORT = graphql(`
   mutation CreateActivityTypeForImport($input: CreateActivityTypeArgs!) {
@@ -60,12 +62,10 @@ type ImportResult = { listsCreated: number; todosCreated: number };
 
 export default function ImportTodosPage() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [parsed, setParsed] = useState<ParsedList[] | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
 
@@ -85,32 +85,27 @@ export default function ImportTodosPage() {
       ),
   });
 
-  function loadFile(file: File): void {
+  function loadText(text: string): void {
     setError(null);
-    const reader = new FileReader();
-    reader.onerror = () => setError('Could not read that file.');
-    reader.onload = () => {
-      try {
-        const lists = parseGoogleTasks(String(reader.result ?? ''));
-        setParsed(lists);
-        setAssignments(
-          lists.map((list, i) => ({
-            mode: 'new',
-            name: list.name,
-            color: ACTIVITY_COLORS[i % ACTIVITY_COLORS.length] as string,
-          })),
-        );
-      } catch (err) {
-        setParsed(null);
-        setAssignments([]);
-        setError(
-          err instanceof GoogleTasksParseError
-            ? err.message
-            : 'Could not parse that file.',
-        );
-      }
-    };
-    reader.readAsText(file);
+    try {
+      const lists = parseGoogleTasks(text);
+      setParsed(lists);
+      setAssignments(
+        lists.map((list, i) => ({
+          mode: 'new',
+          name: list.name,
+          color: ACTIVITY_COLORS[i % ACTIVITY_COLORS.length] as string,
+        })),
+      );
+    } catch (err) {
+      setParsed(null);
+      setAssignments([]);
+      setError(
+        err instanceof GoogleTasksParseError
+          ? err.message
+          : 'Could not parse that file.',
+      );
+    }
   }
 
   function updateAssignment(index: number, next: Assignment): void {
@@ -206,17 +201,16 @@ export default function ImportTodosPage() {
 
   return (
     <Page width="narrow" className="py-8">
-      <button
-        type="button"
-        onClick={() => router.push('/settings')}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      <Pressable
+        onPress={() => router.push('/settings')}
+        className="mb-4 flex-row items-center gap-1"
       >
         <ArrowLeft className="h-4 w-4" />
-        Settings
-      </button>
+        <Text className="text-sm text-muted-foreground">Settings</Text>
+      </Pressable>
 
-      <h1 className="mb-1 text-xl font-semibold">Import todos</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
+      <Text className="mb-1 text-xl font-semibold">Import todos</Text>
+      <Text className="mb-6 text-sm text-muted-foreground">
         Import your tasks from a Google Tasks JSON export. In{' '}
         <a
           href="https://takeout.google.com/"
@@ -226,10 +220,10 @@ export default function ImportTodosPage() {
         >
           Google Takeout
         </a>
-        , select <strong>Tasks</strong>, download the archive, and upload the{' '}
-        <code className="rounded bg-muted px-1 py-0.5 text-xs">Tasks.json</code>{' '}
+        , select <Text>Tasks</Text>, download the archive, and upload the{' '}
+        <Code className="rounded bg-muted px-1 py-0.5 text-xs">Tasks.json</Code>{' '}
         file below.
-      </p>
+      </Text>
 
       {result ? (
         <ImportSuccess
@@ -239,17 +233,17 @@ export default function ImportTodosPage() {
         />
       ) : parsed ? (
         <>
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
+          <View className="mb-4 flex-row items-center justify-between">
+            <Text className="text-sm text-muted-foreground">
               {parsed.length} list{parsed.length === 1 ? '' : 's'} found. Choose
               an activity type for each.
-            </p>
+            </Text>
             <Button variant="ghost" size="sm" onPress={reset}>
               Choose another file
             </Button>
-          </div>
+          </View>
 
-          <div className="space-y-3">
+          <View className="gap-3">
             {parsed.map((list, i) => (
               <ListAssignmentCard
                 key={`${list.name}-${i}`}
@@ -258,16 +252,16 @@ export default function ImportTodosPage() {
                 onChange={(next) => updateAssignment(i, next)}
               />
             ))}
-          </div>
+          </View>
 
           {error && (
-            <p className="mt-4 flex items-center gap-1.5 text-sm text-destructive">
+            <View className="mt-4 flex-row items-center gap-1.5">
               <TriangleAlert className="h-4 w-4" />
-              {error}
-            </p>
+              <Text className="text-sm text-destructive">{error}</Text>
+            </View>
           )}
 
-          <div className="mt-6 flex items-center justify-end gap-2">
+          <View className="mt-6 flex-row items-center justify-end gap-2">
             <Button variant="outline" onPress={() => router.push('/settings')}>
               Cancel
             </Button>
@@ -279,56 +273,21 @@ export default function ImportTodosPage() {
                 ? 'Importing…'
                 : `Import ${importable.length} list${importable.length === 1 ? '' : 's'}`}
             </Button>
-          </div>
+          </View>
         </>
       ) : (
         <>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              const file = e.dataTransfer.files?.[0];
-              if (file) loadFile(file);
-            }}
-            className={cn(
-              'flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-6 py-12 text-center transition-colors',
-              dragging
-                ? 'border-primary bg-primary/5'
-                : 'border-muted-foreground/25 hover:border-muted-foreground/50',
-            )}
-          >
-            <Upload className="h-8 w-8 text-muted-foreground" />
-            <span className="font-medium text-sm">
-              Drop your Tasks.json here or click to browse
-            </span>
-            <span className="text-xs text-muted-foreground">
-              JSON files only
-            </span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
+          <FilePicker
             accept="application/json,.json"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) loadFile(file);
-              // Allow re-selecting the same file after a reset.
-              e.target.value = '';
-            }}
+            label="Drop your Tasks.json here or click to browse"
+            hint="JSON files only"
+            onPick={loadText}
           />
           {error && (
-            <p className="mt-4 flex items-center gap-1.5 text-sm text-destructive">
+            <View className="mt-4 flex-row items-center gap-1.5">
               <TriangleAlert className="h-4 w-4" />
-              {error}
-            </p>
+              <Text className="text-sm text-destructive">{error}</Text>
+            </View>
           )}
         </>
       )}
@@ -350,16 +309,16 @@ function ListAssignmentCard({
   return (
     <Card className={assignment.mode === 'skip' ? 'opacity-60' : undefined}>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2">
+        <View className="flex-row items-center justify-between gap-2">
           <CardTitle className="text-base">{list.name}</CardTitle>
-          <span className="shrink-0 text-xs text-muted-foreground">
+          <Text className="shrink-0 text-xs text-muted-foreground">
             {list.todos.length} task{list.todos.length === 1 ? '' : 's'}
             {completed > 0 ? ` · ${completed} done` : ''}
-          </span>
-        </div>
+          </Text>
+        </View>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex gap-1 rounded-md border p-0.5">
+      <CardContent className="gap-3">
+        <View className="flex-row gap-1 rounded-md border p-0.5">
           {(['new', 'existing', 'skip'] as const).map((mode) => (
             <Button
               key={mode}
@@ -386,32 +345,35 @@ function ListAssignmentCard({
                   : 'Skip'}
             </Button>
           ))}
-        </div>
+        </View>
 
         {assignment.mode === 'new' && (
-          <div className="space-y-2">
+          <View className="gap-2">
             <Input
               value={assignment.name}
               placeholder="Activity type name"
               onChangeText={(text) => onChange({ ...assignment, name: text })}
             />
-            <div className="flex flex-wrap gap-1.5">
+            <View className="flex-row flex-wrap gap-1.5">
               {ACTIVITY_COLORS.map((color) => (
-                <button
+                <Pressable
                   key={color}
-                  type="button"
-                  aria-label={`Use color ${color}`}
-                  onClick={() => onChange({ ...assignment, color })}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: assignment.color === color }}
+                  accessibilityLabel={`Use color ${color}`}
+                  onPress={() => onChange({ ...assignment, color })}
                   className={cn(
-                    'flex h-6 w-6 items-center justify-center rounded-full ring-offset-2 ring-offset-background transition',
-                    assignment.color === color && 'ring-2 ring-foreground',
+                    'h-7 w-7 flex-row items-center justify-center rounded-full border-2',
+                    assignment.color === color
+                      ? 'border-foreground'
+                      : 'border-transparent',
                   )}
                 >
                   <ColorDot color={color} size="md" />
-                </button>
+                </Pressable>
               ))}
-            </div>
-          </div>
+            </View>
+          </View>
         )}
 
         {assignment.mode === 'existing' && (
@@ -424,9 +386,9 @@ function ListAssignmentCard({
         )}
 
         {assignment.mode === 'skip' && (
-          <p className="text-sm text-muted-foreground">
+          <Text className="text-sm text-muted-foreground">
             This list will not be imported.
-          </p>
+          </Text>
         )}
       </CardContent>
     </Card>
@@ -445,10 +407,10 @@ function ImportSuccess({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
+        <View className="flex-row items-center gap-2">
           <CircleCheck className="h-5 w-5 text-green-600" />
           <CardTitle>Import complete</CardTitle>
-        </div>
+        </View>
         <CardDescription>
           Created {result.listsCreated} list
           {result.listsCreated === 1 ? '' : 's'} and {result.todosCreated} todo
@@ -456,7 +418,7 @@ function ImportSuccess({
           your calendar.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex gap-2">
+      <CardContent className="flex-row gap-2">
         <Button onPress={onDone}>
           <ListChecks className="mr-2 h-4 w-4" />
           View todos

@@ -6,15 +6,17 @@ ShadCN/Radix + NativeWind/Tailwind.
 Routes live in `client/app/`; everything else (components, hooks, lib, the
 Apollo client) lives in `client/src/` and is imported via the `@/` alias.
 
-**Web and native are separate files.** `todo-lists.tsx` is the web screen and
-`todo-lists.native.tsx` the native one; Metro resolves `.native` first on
-iOS/Android and ignores it on web. A change to a screen that exists in both
-usually has to land in both — grep for the `.native` sibling before assuming
-you are done.
+**One screen serves both platforms.** Every route under `client/app/` is a
+single react-native file; there are no `.native.tsx` screens left, and
+`components/native/` is gone. Screens are built from `components/ui/`, whose
+primitives are all cross-platform (see "Cross-Platform Primitives"). A
+`.web.tsx` sibling exists only for the handful of primitives whose web
+behaviour has no native equivalent.
 
-**Never touch `window`, `document`, or `localStorage` directly.** They do not
-exist on native. `client/src/storage.ts` is the sanctioned key-value store and
-no-ops off web.
+**Never touch `window`, `document`, `localStorage`, or `navigator` directly.**
+They do not exist on native. `client/src/storage.ts` is the sanctioned
+key-value store and no-ops off web; `client/src/lib/clipboard.ts` wraps
+`expo-clipboard` for copy-to-clipboard, which works on both.
 
 ## Installed ShadCN Components
 
@@ -25,10 +27,10 @@ ShadCN primitives (14): `button` `calendar` `card` `dialog` `field` `form` `inpu
 Custom (the rest — keep tagged as such): `color-bar` `color-dot`
 `confirm-dialog` `date-time-input` `detail-header` `detail-page`
 `form-dialog` `page` `query-state` `section-heading` `segmented`
-`status-chip`, plus:
+`status-chip` `code` `color-picker` `confirm` `file-picker` `form-element`
+`switch-field` `toggle-chip`, plus:
 - `inline-length-edit` — quick-edit duration chip used on list items
-- `route-error` — what the layouts' `ErrorBoundary` exports render; has a
-  `.native.tsx` sibling
+- `route-error` — what the layouts' `ErrorBoundary` exports render
 - `toast` — `ToastProvider` + `useToast`, for failures with nowhere else to go
 
 ## Error Handling Conventions
@@ -166,26 +168,30 @@ rather than a hand-rolled `form.Subscribe`.
 
 File-based routes under `client/app/`. `(app)` is a route group — it does not
 appear in the URL, it exists so every authenticated screen shares one layout.
-Screens marked ✕ have a `.native.tsx` sibling that must be kept in step.
+Every file below serves both platforms.
 
-| File | Path | Native | Notes |
-|------|------|--------|-------|
-| `_layout.tsx` | — | | ApolloProvider + dark mode + auth guard (→ `/auth/login`) |
-| `auth/login.tsx` | `/auth/login` | | Magic-link request form |
-| `auth/verify.tsx` | `/auth/verify` | | Consumes the token, stores the JWT, redirects |
-| `(app)/_layout.tsx` | — | | Nav (web) / tabs (native) + onboarding guard |
-| `(app)/index.tsx` | `/` | | Landing/redirect |
-| `(app)/onboarding.tsx` | `/onboarding?step=1` | | 4-step setup wizard |
-| `(app)/today.tsx` | `/today` | | Today's schedule |
-| `(app)/calendar.tsx` | `/calendar` | | Week calendar |
-| `(app)/todo-lists.tsx` | `/todo-lists` | ✕ | Lists + their todos |
-| `(app)/projects/` | `/projects`, `/projects/[projectId]` | ✕ | Project list + detail with notes |
-| `(app)/habits/` | `/habits`, `/habits/[habitId]` | ✕ | Habit list + detail (rates, periods) |
-| `(app)/time-blocks.tsx` | `/time-blocks` | ✕ | Time block management |
-| `(app)/activity-types.tsx` | `/activity-types` | ✕ | Activity type management |
-| `(app)/stats.tsx` | `/stats` | | Analytics (composite score, charts) |
-| `(app)/import-todos.tsx` | `/import-todos` | | Bulk import (Google Tasks export) |
-| `(app)/settings.tsx` | `/settings` | ✕ | iCal feed URL, API keys, re-run onboarding |
+| File | Path | Notes |
+|------|------|-------|
+| `_layout.tsx` | — | ApolloProvider + toast + confirm + dark mode + auth guard (→ `/auth/login`) |
+| `auth/login.tsx` | `/auth/login` | Magic-link request form |
+| `auth/verify.tsx` | `/auth/verify` | Consumes the token, stores the JWT, redirects |
+| `(app)/_layout.tsx` | — | Nav (web) / tabs (native) + onboarding guard |
+| `(app)/index.tsx` | `/` | Landing/redirect |
+| `(app)/onboarding.tsx` | `/onboarding?step=1` | 4-step setup wizard |
+| `(app)/today.tsx` | `/today` | Today's schedule |
+| `(app)/calendar.tsx` | `/calendar` | Week calendar |
+| `(app)/todo-lists.tsx` | `/todo-lists` | Lists + their todos |
+| `(app)/projects/` | `/projects`, `/projects/[projectId]` | Project list + detail with notes |
+| `(app)/habits/` | `/habits`, `/habits/[habitId]` | Habit list + detail (rates, periods) |
+| `(app)/time-blocks.tsx` | `/time-blocks` | Time block management |
+| `(app)/activity-types.tsx` | `/activity-types` | Activity type management |
+| `(app)/stats.tsx` | `/stats` | Analytics (composite score, charts) |
+| `(app)/import-todos.tsx` | `/import-todos` | Bulk import (Google Tasks export); the file picker itself is web-only |
+| `(app)/settings.tsx` | `/settings` | iCal feed URL, API keys, re-run onboarding |
+
+The only platform branch left in a route is `(app)/_layout.tsx`, which picks a
+web header + `<Slot/>` or a native `<Tabs>` — a genuinely different navigation
+shape, not a duplicated screen.
 
 Auth flow: `requestMagicLink` → link logged to the server console (and returned
 when `magicLinkExposed()`) → user visits `/auth/verify?token=…` →
@@ -382,10 +388,8 @@ without a catch it failed silently.
 render `RouteError` (`error` ← `error`, `reset` ← `retry`). Without them a render
 crash unmounted the app to a blank page with the error only in the console.
 
-`components/ui/route-error.tsx` renders `<div>`/`<button>`; `route-error.native.tsx`
-is its react-native counterpart, so the shared layouts can mount one component on
-both platforms. Keep both dependency-free — they render after the tree below has
-already thrown.
+`components/ui/route-error.tsx` is a single shared react-native file. Keep it
+dependency-free — it renders after the tree below it has already thrown.
 
 ## Form Pattern (TanStack Form)
 
@@ -430,7 +434,6 @@ client/src/components/
     dashboard/    — CalendarView, ScheduleView
     onboarding/   — Step*.tsx wizard panels
     CompletionDialog.tsx — shared complete-with-actual-length prompt
-  native/         — RN primitives for the .native.tsx screens (see below)
 
 client/src/
   apollo-client.ts — the single ApolloClient (link split, typePolicies)
@@ -450,7 +453,7 @@ re-implementing the same markup** — every list/detail page is built from them.
 
 | Primitive | Purpose |
 |-----------|---------|
-| `page.tsx` — `Page` | Page shell. Variants: `fill` (full-height flex col for inner-scroll views), `scroll` (default on), `width="narrow"` (max-w-2xl). Web-only (`<div>`) — do not use in `.native.tsx`. |
+| `page.tsx` — `Page` | Page shell. Variants: `fill` (full-height flex col for inner-scroll views), `scroll` (default on, renders a `ScrollView`), `width="narrow"` (max-w-2xl). |
 | `page.tsx` — `PageHeader` | Title / subtitle / actions row at the top of list pages. |
 | `page.tsx` — `EmptyState` | Centered icon / title / description / action for empty lists. |
 | `page.tsx` — `CardGrid` | Responsive 1→2→3→4 column card grid. |
@@ -460,6 +463,15 @@ re-implementing the same markup** — every list/detail page is built from them.
 | `detail-header.tsx` — `DetailHeader`, `EditButton` | Back-link header + color/badge/actions; standard pencil Edit button. |
 | `form-dialog.tsx` — `FormDialog` | Dialog wrapper for the create/edit form pattern. |
 | `status-chip.tsx`, `color-dot.tsx`, `confirm-dialog.tsx` | Status badge, activity-type color dot, destructive-action confirm. |
+| `confirm.tsx` — `ConfirmProvider`, `useConfirm()` | `await confirm({title, description})` → `boolean`. Mounted once in `app/_layout.tsx`; prefer it over a per-component `<ConfirmDialog>` + `open` state. |
+| `form-element.tsx` / `.web.tsx` — `FormElement` | The element `<Form>` renders: a real `<form>` on web (so Enter submits), a `View` on native. |
+| `form.tsx` — `FieldRow` | Fields two to a row — what `grid grid-cols-2` did on web. `grid` has no native equivalent. |
+| `toggle-chip.tsx` — `ToggleChip` | Selectable pill (day toggles, scope chips). |
+| `switch-field.tsx` — `SwitchField` | Label + `Switch`; `htmlFor` does not associate off web, so the label is a `Pressable`. |
+| `color-picker.tsx` — `ColorPicker` | Swatch row + hex field. Replaces `<input type="color">`, which has no native counterpart. |
+| `file-picker.tsx` / `.web.tsx` — `FilePicker` | Drop zone + hidden `<input type="file">` on web; a "web only" note on native until `expo-document-picker` lands. Hands the caller decoded text, never a `File`. |
+| `segmented.tsx` — `SegmentedButton` | Pressable pill for a segmented control. `segmentedItemClass` stays for expo-router `<Link>`s, which render a `Text` and so do inherit colour. |
+| `code.tsx` — `Code` | Inline monospace run. `<code>` has no native counterpart, and it appears inside sentences, so it is a `Text`. |
 
 Companion hook: `hooks/useListSection.ts` — owns the create/edit dialog open
 state (`formOpen`, `editing`, `openCreate`, `openEdit`, `handleOpenChange`) that
@@ -473,13 +485,16 @@ radix-backed ones (`popover`, `select`, `tabs`, `tooltip`, `switch`) and
 `icons`, `dialog`, `date-time-input` and the layout primitives are shared
 files. The conversion rules, which every further primitive follows:
 
-**File naming inverts.** The old convention was *plain = web, `.native.tsx` =
-native*. A converted primitive is *plain = shared*, with a `.web.tsx` **only**
-where the web behaviour genuinely has no native equivalent — `input`
+**Plain is shared; `.web.tsx` is the exception.** There are no `.native.tsx`
+files left anywhere in the client. A primitive is a plain `.tsx` unless the web
+behaviour genuinely has no native equivalent, in which case it is a
+`.tsx`/`.web.tsx` pair — `input`
 (`type="time"`/`type="number"` with `min`/`max` are real DOM input behaviour
-`TextInput` cannot reproduce), `icons`, and `dialog` (radix's focus trap, scroll
+`TextInput` cannot reproduce), `icons`, `dialog` (radix's focus trap, scroll
 lock and animations, none worth faking on a `Modal` that already owns the
-screen). Both halves export the same names, so call sites never branch.
+screen), `form-element` (a real `<form>` so Enter submits) and `file-picker`
+(`<input type="file">`). Both halves export the same names, so call sites never
+branch.
 
 **The shared contract goes in a third module.** `input-base.ts` exists because
 Metro resolves `./input` to `input.web.tsx` on web — the web file importing the
@@ -518,6 +533,20 @@ The container keeps its `text-*` class so web icons still pick up
 
 **`disabled:` and other pseudo-class variants do not apply** to a `Pressable`
 on either platform. Apply the state directly: `disabled && 'opacity-50'`.
+
+**NativeWind does not implement all of Tailwind.** These have no effect on
+native and are silently dropped, so a screen laid out with them looks right on
+web and wrong on a device:
+
+| Not supported | Use instead |
+|---------------|-------------|
+| `grid`, `grid-cols-*` | `flex-row flex-wrap` with `flex-1` on each cell (`FieldRow`), or `lg:flex-row` for a sidebar split |
+| `divide-x/y-*` | `border-b border-border` on each row |
+| `space-x/y-*` | `gap-*` on the flex container |
+| `overflow-x/y-auto` | a `ScrollView` (`horizontal` for the x axis) |
+| `min-h-screen`, `h-screen` | `flex-1` inside a `flex-1` parent |
+| `hover:`, `group-hover:` | `HOVER_REVEAL` from `@/lib/utils` — the web classes, `''` off web, so a control hidden until hover is simply always visible on native |
+| `<table>` | flex-row `View`s with fixed-width (`w-16`) and `flex-1` cells |
 
 **Give an interactive `Pressable` a `role`.** react-native-web renders one as a
 plain `<div>` otherwise — no tab stop, no Enter/Space, nothing announced. `role`
@@ -639,22 +668,6 @@ same navigator, so both platforms always show the same span.
 
 The `DateTime` scalar generates as `unknown`, so timestamps off a fragment are
 narrowed through one `asDate` helper rather than asserted at each use.
-
-## Shared Native Primitives
-
-`components/native/` is the RN-primitive equivalent of the not-yet-converted
-half of `components/ui/`, which renders `<div>`/`<button>` and cannot be used
-from a `.native.tsx` screen. Every native list screen is built from it. It is
-meant to be folded into the shared set as the conversion above proceeds.
-
-| Primitive | Purpose |
-|-----------|---------|
-| `list-screen.tsx` — `ListScreen<T>` | `FlatList` + header with a "New …" button + empty state. Pass `items={data?.myX}` **undefined, not `?? []`** — the spinner is gated on `items === undefined`, so an `?? []` default shows "no items" during the first load. `children` render above the list (modals). |
-| `form-modal.tsx` — `FormModal` | Page-sheet `Modal` with a title/Cancel row and a primary submit button. **Render it conditionally** (`{open && <FormModal …>}`) so unmounting discards field state — no manual `setName('')` resets. |
-| `field.tsx` — `FieldLabel`, `TextField` | Labelled `TextInput` with the shared border/padding and placeholder color. `containerClassName` tunes the default `mb-4` wrapper (`cn` lets `mb-0` win). |
-| `activity-type-picker.tsx` — `ActivityTypePicker` | Single-select activity-type chips. Owns its own query, so all four sheets share one cache entry, and it carries the "create one first" empty state. |
-| `row-action.tsx` — `RowAction` | Edit/Archive/Delete pill inside a pressable row. Its `onPress` receives the event because a pill inside a pressable row has to `stopPropagation` on web. |
-| `confirm.ts` — `confirmDestructive` | The `Alert.alert(title, message, [Cancel, destructive])` triple, once. |
 
 ## ShadCN + Tailwind Conventions
 

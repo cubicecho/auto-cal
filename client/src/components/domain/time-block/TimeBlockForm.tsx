@@ -7,14 +7,15 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
-import { FieldWrapper, Form } from '@/components/ui/form';
+import { FieldRow, FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
+import { ToggleChip } from '@/components/ui/toggle-chip';
 import { useAppForm } from '@/hooks/form-hook';
 import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { DAY_NAMES, WEEKDAYS, WEEKEND } from '@/lib/form-constants';
-import { cn } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
+import { Text, View } from 'react-native';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -165,7 +166,7 @@ export function TimeBlockForm({
       }
     >
       <form.AppForm>
-        <Form className="space-y-4">
+        <Form className="gap-4">
           {/* Activity Type */}
           <form.AppField name="activityTypeId">
             {(field) => (
@@ -185,40 +186,37 @@ export function TimeBlockForm({
           {/* Days of Week — toggle button group */}
           <form.AppField name="daysOfWeek">
             {(field) => (
-              <div className="space-y-2">
-                <p className="text-sm font-medium leading-none">Days of Week</p>
-                <div className="flex gap-1 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => field.handleChange([...WEEKDAYS])}
-                    className="px-2 py-1 rounded text-xs font-medium border border-border bg-background text-muted-foreground hover:bg-muted transition-colors"
+              <View className="gap-2">
+                <Text className="text-sm font-medium leading-none text-foreground">
+                  Days of Week
+                </Text>
+                <View className="flex-row gap-1 flex-wrap">
+                  <ToggleChip
+                    size="sm"
+                    onPress={() => field.handleChange([...WEEKDAYS])}
                   >
                     Weekdays
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => field.handleChange([...WEEKEND])}
-                    className="px-2 py-1 rounded text-xs font-medium border border-border bg-background text-muted-foreground hover:bg-muted transition-colors"
+                  </ToggleChip>
+                  <ToggleChip
+                    size="sm"
+                    onPress={() => field.handleChange([...WEEKEND])}
                   >
                     Weekend
-                  </button>
-                  <span className="self-center text-muted-foreground text-xs">
-                    ·
-                  </span>
-                </div>
-                <div className="flex gap-1 flex-wrap">
+                  </ToggleChip>
+                </View>
+                <View className="flex-row gap-1 flex-wrap">
                   {DAY_NAMES.map((day, index) => {
                     const current = field.state.value as number[];
                     const selected = current.includes(index);
                     const isLastSelected = selected && current.length === 1;
                     return (
-                      <button
+                      <ToggleChip
                         key={day}
-                        type="button"
+                        size="sm"
+                        selected={selected}
                         disabled={isLastSelected}
-                        onClick={() => {
+                        onPress={() => {
                           if (selected) {
-                            if (isLastSelected) return;
                             field.handleChange(
                               current.filter((d) => d !== index),
                             );
@@ -228,21 +226,14 @@ export function TimeBlockForm({
                             );
                           }
                         }}
-                        className={cn(
-                          'px-2 py-1 rounded text-sm font-medium border transition-colors',
-                          selected
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-background text-foreground border-border hover:bg-muted',
-                          isLastSelected && 'opacity-60 cursor-not-allowed',
-                        )}
                       >
                         {day}
-                      </button>
+                      </ToggleChip>
                     );
                   })}
-                </div>
+                </View>
                 {field.state.meta.errors.length > 0 && (
-                  <p className="text-sm text-destructive">
+                  <Text className="text-sm text-destructive">
                     {(() => {
                       const err = field.state.meta.errors[0];
                       if (typeof err === 'string') return err;
@@ -250,14 +241,14 @@ export function TimeBlockForm({
                         return String((err as { message: unknown }).message);
                       return String(err);
                     })()}
-                  </p>
+                  </Text>
                 )}
-              </div>
+              </View>
             )}
           </form.AppField>
 
           {/* Start + End Time — two columns */}
-          <div className="grid grid-cols-2 gap-4">
+          <FieldRow>
             {/* Start Time */}
             <form.AppField name="startTime">
               {(field) => <field.InputField label="Start Time" type="time" />}
@@ -267,7 +258,7 @@ export function TimeBlockForm({
             <form.AppField name="endTime">
               {(field) => <field.InputField label="End Time" type="time" />}
             </form.AppField>
-          </div>
+          </FieldRow>
 
           {/* Priority */}
           <form.AppField name="priority">
