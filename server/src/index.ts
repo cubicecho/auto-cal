@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { ApolloServer } from '@apollo/server';
 import { unwrapResolverError } from '@apollo/server/errors';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
-import { expressMiddleware } from '@as-integrations/express4';
+import { expressMiddleware } from '@as-integrations/express5';
 import { db } from '@auto-cal/db';
 import { apiKeys } from '@auto-cal/db/schema';
 import cors from 'cors';
@@ -23,6 +23,7 @@ import { icalHandler } from './ical-route.ts';
 import { authLog, log, logLevelName, wsLog } from './logger.ts';
 import { schema } from './schema/index.ts';
 import { startNotificationTick } from './services/notifications.ts';
+import { SPA_FALLBACK_ROUTE, spaFallback } from './spa-fallback.ts';
 
 // Read version from server/package.json (../ from src/). Works under
 // `node src/index.ts` in Docker where npm_package_version is unset.
@@ -266,9 +267,7 @@ app.use(
 app.get('/ical', icalHandler);
 
 if (clientDistExists) {
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(clientDist, 'index.html'));
-  });
+  app.get(SPA_FALLBACK_ROUTE, spaFallback(clientDist));
 }
 
 const PORT = Number(process.env.PORT ?? 3001);

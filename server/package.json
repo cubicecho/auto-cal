@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",
-    "@as-integrations/express4": "^1.1.2",
+    "@as-integrations/express5": "^1.1.2",
     "@auto-cal/db": "*",
     "@graphql-tools/utils": "^12.0.0",
     "@vantreeseba/drizzle-graphql": "^9.0.0",
@@ -18,7 +18,7 @@
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
-    "express": "^4.21.2",
+    "express": "^5.2.1",
     "graphql": "^16.9.0",
     "graphql-parse-resolve-info": "^4.13.0",
     "graphql-scalars": "^2.0.0",
