@@ -25,6 +25,7 @@ const config: CodegenConfig = {
           ApiKey: '@auto-cal/db#ApiKey as ApiKeyRow',
           Habit: '@auto-cal/db#Habit as HabitRow',
           HabitCompletion: '@auto-cal/db#HabitCompletion as HabitCompletionRow',
+          ManualEvent: '@auto-cal/db#ManualEvent as ManualEventRow',
           Project: '@auto-cal/db#Project as ProjectRow',
           ProjectNote: '@auto-cal/db#ProjectNote as ProjectNoteRow',
           TimeBlock: '@auto-cal/db#TimeBlock as TimeBlockRow',
