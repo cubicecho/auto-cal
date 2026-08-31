@@ -119,8 +119,7 @@ export function makeApiKey(overrides: Partial<ApiKey> = {}): ApiKey {
     name: 'Test key',
     keyHash: 'fakehash',
     keyPrefix: 'dGVzdGt',
-    // drizzle infers .array().$type<T[]> as T[][] at the type level
-    scopes: ['read'] as unknown as ('read' | 'write')[][],
+    scopes: ['read'],
     ...overrides,
   };
 }
