@@ -73,6 +73,34 @@ const FIND_BY_ID: {
 };
 
 /**
+ * Per-table `findMany` by id list — the batch twin of {@link FIND_BY_ID}, and
+ * spelled out for the same reason. `db.query[table].findMany(...)` with a type
+ * parameter collapses the nine builders into a union whose argument has to
+ * satisfy the intersection of nine relation configs; it only ever compiled
+ * while `db` was typed `any`.
+ */
+const FIND_BY_IDS: {
+  [K in keyof OwnedRow]: (db: DB, ids: string[]) => Promise<OwnedRow[K][]>;
+} = {
+  activityTypes: (db, ids) =>
+    db.query.activityTypes.findMany({ where: { id: { in: ids } } }),
+  apiKeys: (db, ids) =>
+    db.query.apiKeys.findMany({ where: { id: { in: ids } } }),
+  habits: (db, ids) => db.query.habits.findMany({ where: { id: { in: ids } } }),
+  manualEvents: (db, ids) =>
+    db.query.manualEvents.findMany({ where: { id: { in: ids } } }),
+  projectNotes: (db, ids) =>
+    db.query.projectNotes.findMany({ where: { id: { in: ids } } }),
+  projects: (db, ids) =>
+    db.query.projects.findMany({ where: { id: { in: ids } } }),
+  timeBlocks: (db, ids) =>
+    db.query.timeBlocks.findMany({ where: { id: { in: ids } } }),
+  todoLists: (db, ids) =>
+    db.query.todoLists.findMany({ where: { id: { in: ids } } }),
+  todos: (db, ids) => db.query.todos.findMany({ where: { id: { in: ids } } }),
+};
+
+/**
  * Load a row by id and assert the caller owns it, in the guard order CLAUDE.md
  * documents: existence (NOT_FOUND), then ownership (FORBIDDEN).
  *
@@ -107,9 +135,7 @@ export async function loadOwnedMany<K extends keyof OwnedRow>(
   ids: readonly string[],
   userId: string,
 ): Promise<OwnedRow[K][]> {
-  const rows = (await context.db.query[table].findMany({
-    where: { id: { in: [...ids] } },
-  })) as OwnedRow[K][];
+  const rows = await FIND_BY_IDS[table](context.db, [...ids]);
   const byId = new Map(rows.map((row) => [row.id, row]));
 
   return ids.map((id) => {
