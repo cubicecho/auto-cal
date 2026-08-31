@@ -1,5 +1,28 @@
 # Deployment
 
+## Node Version
+
+**Node 24 everywhere.** `engines.node` in the root `package.json` is `>=24`,
+`@types/node` is `^24` in `db` and `server`, all three GitHub workflows pin
+`node-version: '24'`, and both Dockerfile stages are `node:24-alpine`.
+
+That alignment is the point, not the number. The server has no build step — it
+runs TypeScript directly under `--experimental-strip-types` — so the Node that
+runs in production is the only thing standing between the source and the
+process, and CI is the only place that gets to find out first. Before this the
+three workflows disagreed with each other (22, 22, 24) and `@types/node` was a
+major ahead of all of them: `release.yml` built the release artifact on 22 for
+an image that ran it on 24, and `tsc` type-checked against APIs the runtime
+might not have.
+
+`>=24` rather than an exact pin because local development runs ahead (26 at time
+of writing) and nothing about that has caused trouble; the floor is what matters.
+
+The one exception is `client/eas.json`, which pins `node: "22.20.0"` for the EAS
+builders. That machine only bundles JavaScript — it never runs the server — and
+the version has to be one EAS actually provides, so it is pinned on its own
+schedule rather than following this one.
+
 ## Docker
 
 Single-stage image — build must run **outside** Docker before `docker build`:
