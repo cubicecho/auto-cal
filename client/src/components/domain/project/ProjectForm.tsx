@@ -48,7 +48,7 @@ const STATUS_OPTIONS = [
 // child type is auto-created server-side); editing exposes name + status only.
 const createSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
-  parentActivityTypeId: z.string().uuid('Pick a parent activity type'),
+  parentActivityTypeId: z.uuid('Pick a parent activity type'),
 });
 
 const editSchema = z.object({

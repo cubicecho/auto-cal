@@ -9,7 +9,7 @@ export const authMutations: MutationMap<
   'requestMagicLink' | 'verifyMagicLink'
 > = {
   requestMagicLink: async (_parent, args, context) => {
-    const email = z.string().email().parse(args.email).toLowerCase();
+    const email = z.email().parse(args.email).toLowerCase();
     const token = await signMagicToken(email);
     const magicLink = `${context.appBaseUrl}/auth/verify?token=${token}`;
 

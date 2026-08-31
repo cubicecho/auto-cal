@@ -57,7 +57,7 @@ const DELETE_TODO_LIST = graphql(`
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   description: z.string().max(2000),
-  activityTypeId: z.string().uuid('Activity type is required'),
+  activityTypeId: z.uuid('Activity type is required'),
   defaultPriority: z.string().min(1),
   defaultEstimatedLength: z.string().min(1),
 });

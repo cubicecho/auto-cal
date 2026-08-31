@@ -56,7 +56,7 @@ const UPDATE_TIME_BLOCK = graphql(`
 
 const timeBlockSchema = z
   .object({
-    activityTypeId: z.string().uuid('Activity type is required'),
+    activityTypeId: z.uuid('Activity type is required'),
     daysOfWeek: z
       .array(z.number().int().min(0).max(6))
       .min(1, 'Select at least one day')

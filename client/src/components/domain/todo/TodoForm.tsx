@@ -80,7 +80,7 @@ const COMPLETE_TODO = graphql(`
 const todoSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Max 200 characters'),
   description: z.string().max(2000, 'Max 2000 characters'),
-  listId: z.string().uuid('List is required'),
+  listId: z.uuid('List is required'),
   priority: z.string().min(1, 'Priority is required'),
   estimatedLength: z.string().min(1, 'Duration is required'),
   // Local datetime string (YYYY-MM-DDTHH:mm) from <input type="datetime-local">

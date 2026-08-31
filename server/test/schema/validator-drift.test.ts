@@ -56,7 +56,7 @@ import {
  * suffixes `Args`, the validators suffix `Input`), so the pairing has to be
  * written out; the tests below then prove it is complete in both directions.
  */
-const VALIDATORS: Record<string, z.ZodTypeAny> = {
+const VALIDATORS: Record<string, z.ZodType> = {
   CompleteHabitArgs: CompleteHabitInput,
   CreateActivityTypeArgs: CreateActivityTypeInput,
   CreateHabitArgs: CreateHabitInput,
@@ -124,13 +124,21 @@ function unwrap(type: unknown): unknown {
 }
 
 /**
- * `.refine()` wraps the object in a `ZodEffects`, which has no `.shape` —
- * `CreateTimeBlockInput` is one, and reading its keys means unwrapping first.
+ * Reads the field names off a validator.
+ *
+ * Under Zod 3 this needed the unwrap loop below: `.refine()` returned a
+ * `ZodEffects` wrapping the object, and a wrapper has no `.shape`, so
+ * `CreateTimeBlockInput` — which is refined — would have thrown. Zod 4 keeps
+ * refinements on the schema itself, so `.shape` is there directly and the loop
+ * no longer fires. It stays because it costs nothing and the wrapper types are
+ * still reachable through `.optional()` and friends, and because a validator
+ * that stops being a plain object should fail loudly rather than silently
+ * report no fields.
  */
-function keysOf(validator: z.ZodTypeAny): string[] {
-  let v = validator;
+function keysOf(validator: z.ZodType): string[] {
+  let v: z.ZodType = validator;
   while ('innerType' in v && typeof v.innerType === 'function') {
-    v = (v as unknown as { innerType(): z.ZodTypeAny }).innerType();
+    v = (v as unknown as { innerType(): z.ZodType }).innerType();
   }
   const shape = (v as unknown as { shape?: Record<string, unknown> }).shape;
   if (!shape) throw new Error('not a ZodObject');

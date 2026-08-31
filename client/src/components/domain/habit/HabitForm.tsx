@@ -106,7 +106,7 @@ const habitSchema = z
       .min(1, 'Title is required')
       .max(200, 'Max 200 characters'),
     description: z.string().max(2000, 'Max 2000 characters'),
-    activityTypeId: z.string().uuid('Activity type is required'),
+    activityTypeId: z.uuid('Activity type is required'),
     priority: z.string().min(1, 'Priority is required'),
     estimatedLength: z.string().min(1, 'Duration is required'),
     frequencyCount: z
