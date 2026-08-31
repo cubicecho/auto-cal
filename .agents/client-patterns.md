@@ -830,6 +830,14 @@ which supplies the `MockedProvider` plus the Toast, Confirm and Tooltip
 providers `app/(app)/_layout.tsx` supplies. A component that reaches for a
 missing provider throws rather than degrading — `useConfirm` is the usual one.
 
+The exception is a test *of* a provider. `client/test/components/confirm.test.tsx`
+mounts `ConfirmProvider` itself, because the contract worth pinning is invisible
+from a screen test: a screen only ever takes the happy path, while the ways
+`useConfirm()` can break are all silent — a promise nothing settles leaves the
+caller's `await` hanging forever, and a dismissal that resolved `true` deletes
+the row the user just declined to delete. One case there deliberately renders
+with no provider at all.
+
 **Mocks must reference the same DocumentNode the component uses.** Either
 export the operation from the module under test (`export const MY_TODAY = …`)
 or import the generated one (`GetTodoListsPageDocument` from
