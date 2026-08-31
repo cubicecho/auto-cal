@@ -4,12 +4,13 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ColorDot } from '@/components/ui/color-dot';
 import { Page } from '@/components/ui/page';
 import { QueryState } from '@/components/ui/query-state';
-import { segmentedItemClass } from '@/components/ui/segmented';
+import { SegmentedButton } from '@/components/ui/segmented';
 import { useQuery } from '@apollo/client/react';
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { BarChart } from 'react-native-gifted-charts';
 
 const GET_MY_STATS = graphql(`
@@ -122,8 +123,10 @@ function ScoreCard({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-2xl font-bold text-muted-foreground">—</p>
-          <p className="text-xs text-muted-foreground mt-1">No data yet</p>
+          <Text className="text-2xl font-bold text-muted-foreground">—</Text>
+          <Text className="text-xs text-muted-foreground mt-1">
+            No data yet
+          </Text>
         </CardContent>
       </Card>
     );
@@ -138,13 +141,13 @@ function ScoreCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className={`text-3xl font-bold ${scoreColor(pct)}`}>{pct}%</p>
-        <p className="text-xs text-muted-foreground mt-1">
+        <Text className={`text-3xl font-bold ${scoreColor(pct)}`}>{pct}%</Text>
+        <Text className="text-xs text-muted-foreground mt-1">
           {scoreLabel(pct)}
           {note && (
-            <span className="ml-1 text-muted-foreground/70">{note}</span>
+            <Text className="ml-1 text-muted-foreground/70">{note}</Text>
           )}
-        </p>
+        </Text>
       </CardContent>
     </Card>
   );
@@ -168,9 +171,9 @@ function HabitConsistencySection({ habits }: { habits: HabitRow[] }) {
     label: h.title.length > 10 ? `${h.title.slice(0, 9).trimEnd()}…` : h.title,
     frontColor: h.activityType?.color ?? '#94a3b8',
     topLabelComponent: () => (
-      <span style={{ fontSize: 10 }}>
+      <Text style={{ fontSize: 10 }}>
         {Math.min(Math.round(h.completionRate * 100), 100)}%
-      </span>
+      </Text>
     ),
   }));
 
@@ -181,7 +184,7 @@ function HabitConsistencySection({ habits }: { habits: HabitRow[] }) {
       </CardHeader>
       <CardContent>
         {habits.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No habits yet.</p>
+          <Text className="text-sm text-muted-foreground">No habits yet.</Text>
         ) : (
           <View
             style={{ width: '100%' }}
@@ -218,45 +221,45 @@ function HabitConsistencySection({ habits }: { habits: HabitRow[] }) {
 
 function HabitCompletionBreakdown({ habits }: { habits: HabitRow[] }) {
   return (
-    <div className="mt-5 border-t border-border pt-3">
-      <div className="flex items-center gap-2 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        <span className="w-2.5 shrink-0" />
-        <span className="flex-1">Habit</span>
-        <span className="w-24 text-right">Completed / Goal</span>
-        <span className="w-20 text-right">Cadence</span>
-      </div>
-      <div className="space-y-1">
+    <View className="mt-5 border-t border-border pt-3">
+      <View className="flex-row items-center gap-2 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <Text className="w-2.5 shrink-0" />
+        <Text className="flex-1">Habit</Text>
+        <Text className="w-24 text-right">Completed / Goal</Text>
+        <Text className="w-20 text-right">Cadence</Text>
+      </View>
+      <View className="gap-1">
         {habits.map((h) => {
           // `target` is the goal projected over the selected range (may be
           // fractional across multiple periods); round for a readable count.
           const goal = Math.max(1, Math.round(h.target));
           const met = h.completions >= goal;
           return (
-            <div
+            <View
               key={h.habitId}
-              className="flex items-center gap-2 py-0.5 text-sm"
+              className="flex-row items-center gap-2 py-0.5 text-sm"
             >
-              <span
+              <Text
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: h.activityType?.color ?? '#94a3b8' }}
               />
-              <span className="flex-1 truncate">{h.title}</span>
-              <span className="w-24 text-right tabular-nums">
-                <span
+              <Text className="flex-1 truncate">{h.title}</Text>
+              <Text className="w-24 text-right tabular-nums">
+                <Text
                   className={`font-semibold ${met ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}
                 >
                   {h.completions}
-                </span>
-                <span className="text-muted-foreground"> / {goal}</span>
-              </span>
-              <span className="w-20 text-right text-xs text-muted-foreground">
+                </Text>
+                <Text className="text-muted-foreground"> / {goal}</Text>
+              </Text>
+              <Text className="w-20 text-right text-xs text-muted-foreground">
                 {h.frequencyCount}×/{h.frequencyUnit}
-              </span>
-            </div>
+              </Text>
+            </View>
           );
         })}
-      </div>
-    </div>
+      </View>
+    </View>
   );
 }
 
@@ -271,36 +274,38 @@ function TodoThroughputSection({
       </CardHeader>
       <CardContent>
         {todos.total === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <Text className="text-sm text-muted-foreground">
             No todos due in this period.
-          </p>
+          </Text>
         ) : (
-          <div className="flex flex-wrap gap-6">
-            <div>
-              <p className="text-2xl font-bold">{todos.total}</p>
-              <p className="text-xs text-muted-foreground">Total</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+          <View className="flex-row flex-wrap gap-6">
+            <View>
+              <Text className="text-2xl font-bold">{todos.total}</Text>
+              <Text className="text-xs text-muted-foreground">Total</Text>
+            </View>
+            <View>
+              <Text className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {todos.completed}
-              </p>
-              <p className="text-xs text-muted-foreground">Completed</p>
-            </div>
+              </Text>
+              <Text className="text-xs text-muted-foreground">Completed</Text>
+            </View>
             {todos.overdue > 0 && (
-              <div>
-                <p className="text-2xl font-bold text-destructive">
+              <View>
+                <Text className="text-2xl font-bold text-destructive">
                   {todos.overdue}
-                </p>
-                <p className="text-xs text-muted-foreground">Overdue</p>
-              </div>
+                </Text>
+                <Text className="text-xs text-muted-foreground">Overdue</Text>
+              </View>
             )}
-            <div>
-              <p className="text-2xl font-bold">
+            <View>
+              <Text className="text-2xl font-bold">
                 {todoScore != null ? `${Math.round(todoScore * 100)}%` : '—'}
-              </p>
-              <p className="text-xs text-muted-foreground">Completion rate</p>
-            </div>
-          </div>
+              </Text>
+              <Text className="text-xs text-muted-foreground">
+                Completion rate
+              </Text>
+            </View>
+          </View>
         )}
       </CardContent>
     </Card>
@@ -324,58 +329,63 @@ function ActivityTypeBreakdownSection({
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <Text className="text-sm text-muted-foreground">
             No data for this period.
-          </p>
+          </Text>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-muted-foreground text-xs border-b border-border">
-                  <th className="pb-2 font-medium">Activity type</th>
-                  <th className="pb-2 font-medium text-right">Todos</th>
-                  <th className="pb-2 font-medium text-right">Completed</th>
-                  <th className="pb-2 font-medium text-right">Habits</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/50">
-                {rows.map((row) => {
-                  const color = colorById.get(row.activityTypeId) ?? '#94a3b8';
-                  const completionPct =
-                    row.totalTodos > 0
-                      ? Math.round((row.completedTodos / row.totalTodos) * 100)
-                      : null;
-                  return (
-                    <tr key={row.activityTypeId} className="py-2">
-                      <td className="py-2">
-                        <span className="flex items-center gap-2">
-                          <span
-                            className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: color }}
-                          />
-                          <span className="font-medium">
-                            {row.activityTypeName}
-                          </span>
-                        </span>
-                      </td>
-                      <td className="py-2 text-right">{row.totalTodos}</td>
-                      <td className="py-2 text-right">
-                        <span>
-                          {row.completedTodos}
-                          {completionPct !== null && (
-                            <span className="text-muted-foreground ml-1">
-                              ({completionPct}%)
-                            </span>
-                          )}
-                        </span>
-                      </td>
-                      <td className="py-2 text-right">{row.totalHabits}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <View>
+            <View className="flex-row border-b border-border pb-2">
+              <Text className="flex-1 text-xs font-medium text-muted-foreground">
+                Activity type
+              </Text>
+              <Text className="w-16 text-right text-xs font-medium text-muted-foreground">
+                Todos
+              </Text>
+              <Text className="w-24 text-right text-xs font-medium text-muted-foreground">
+                Completed
+              </Text>
+              <Text className="w-16 text-right text-xs font-medium text-muted-foreground">
+                Habits
+              </Text>
+            </View>
+            {rows.map((row) => {
+              const color = colorById.get(row.activityTypeId) ?? '#94a3b8';
+              const completionPct =
+                row.totalTodos > 0
+                  ? Math.round((row.completedTodos / row.totalTodos) * 100)
+                  : null;
+              return (
+                <View
+                  key={row.activityTypeId}
+                  className="flex-row items-center border-b border-border/50 py-2"
+                >
+                  <View className="flex-1 flex-row items-center gap-2">
+                    <ColorDot color={color} />
+                    <Text
+                      numberOfLines={1}
+                      className="text-sm font-medium text-foreground"
+                    >
+                      {row.activityTypeName}
+                    </Text>
+                  </View>
+                  <Text className="w-16 text-right text-sm text-foreground">
+                    {row.totalTodos}
+                  </Text>
+                  <Text className="w-24 text-right text-sm text-foreground">
+                    {row.completedTodos}
+                    {completionPct !== null ? (
+                      <Text className="text-muted-foreground">
+                        {` (${completionPct}%)`}
+                      </Text>
+                    ) : null}
+                  </Text>
+                  <Text className="w-16 text-right text-sm text-foreground">
+                    {row.totalHabits}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
         )}
       </CardContent>
     </Card>
@@ -405,19 +415,18 @@ export default function StatsPage() {
   const isLoading = loading || activityLoading;
 
   return (
-    <Page className="space-y-6">
-      <div className="flex gap-1 flex-wrap">
+    <Page className="gap-6">
+      <View className="flex-row gap-1 flex-wrap">
         {DATE_RANGES.map((r) => (
-          <button
+          <SegmentedButton
             key={r.key}
-            type="button"
-            onClick={() => setRange(r.key)}
-            className={segmentedItemClass(range === r.key)}
+            active={range === r.key}
+            onPress={() => setRange(r.key)}
           >
             {r.label}
-          </button>
+          </SegmentedButton>
         ))}
-      </div>
+      </View>
 
       <QueryState
         loading={isLoading}
@@ -427,7 +436,7 @@ export default function StatsPage() {
 
       {stats && (
         <>
-          <div className="flex gap-4 flex-wrap sm:flex-nowrap">
+          <View className="flex-row gap-4 flex-wrap sm:flex-nowrap">
             <ScoreCard
               label="Weighted score"
               score={stats.weightedScore}
@@ -435,7 +444,7 @@ export default function StatsPage() {
             />
             <ScoreCard label="Habit score" score={stats.habitScore} />
             <ScoreCard label="Todo score" score={stats.todoScore} />
-          </div>
+          </View>
 
           <HabitConsistencySection habits={stats.habits} />
 

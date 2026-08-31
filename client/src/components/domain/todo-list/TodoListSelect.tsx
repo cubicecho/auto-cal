@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/select';
 import { useQuery } from '@apollo/client/react';
 import { Link } from 'expo-router';
+import { Text, View } from 'react-native';
 
 const GET_TODO_LISTS = graphql(`
   query GetTodoListsForSelect {
@@ -51,13 +52,13 @@ export function TodoListSelect({
 
   if (lists.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <Text className="text-sm text-muted-foreground">
         No todo lists yet —{' '}
-        <Link href="/todo-lists" className="underline">
+        <Link href="/todo-lists" className="underline text-primary">
           create one first
         </Link>
         .
-      </p>
+      </Text>
     );
   }
 
@@ -76,12 +77,12 @@ export function TodoListSelect({
                 const l = lists.find((x) => x.id === value);
                 if (!l) return 'Select a list';
                 return (
-                  <span className="flex items-center gap-2">
-                    {l.activityType && (
+                  <View className="flex-row items-center gap-2">
+                    {l.activityType ? (
                       <ColorDot color={l.activityType.color} />
-                    )}
-                    {l.name}
-                  </span>
+                    ) : null}
+                    <Text className="text-sm text-foreground">{l.name}</Text>
+                  </View>
                 );
               })()
             : 'Select a list'}
@@ -90,10 +91,12 @@ export function TodoListSelect({
       <SelectContent>
         {lists.map((l) => (
           <SelectItem key={l.id} value={l.id}>
-            <span className="flex items-center gap-2">
-              {l.activityType && <ColorDot color={l.activityType.color} />}
-              {l.name}
-            </span>
+            <View className="flex-row items-center gap-2">
+              {l.activityType ? (
+                <ColorDot color={l.activityType.color} />
+              ) : null}
+              <Text className="text-sm text-foreground">{l.name}</Text>
+            </View>
           </SelectItem>
         ))}
       </SelectContent>

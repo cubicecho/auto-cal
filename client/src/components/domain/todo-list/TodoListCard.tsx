@@ -13,13 +13,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirm } from '@/components/ui/confirm';
 import { FolderKanban, ListX, Pencil, Plus } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/toast';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
-import { formatDuration } from '@/lib/utils';
+import { errorMessage, formatDuration } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { useState } from 'react';
+import { Text, View } from 'react-native';
 import { TodoListForm } from './TodoListForm';
 
 const QUICK_CREATE_TODO = graphql(`
@@ -48,17 +50,18 @@ type TodoListCardProps = {
 };
 
 export function TodoListCard({ list, todos }: TodoListCardProps) {
+  const confirm = useConfirm();
+  const toast = useToast();
   const [editingList, setEditingList] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [clearCompletedOpen, setClearCompletedOpen] = useState(false);
 
   const [createTodo, { loading: creating }] = useMutation(QUICK_CREATE_TODO, {
     update: (cache) => invalidate(cache, 'myTodos', ...DERIVED),
   });
 
-  const [deleteTodos, { loading: clearing }] = useMutation(DELETE_TODOS, {
+  const [deleteTodos] = useMutation(DELETE_TODOS, {
     // Returns the rows it deleted, so each one can be evicted by id rather
     // than re-fetching every list that might have held them.
     update: (cache, { data }) => {
@@ -98,33 +101,39 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
   }
 
   async function handleClearCompleted() {
+    const ok = await confirm({
+      title: 'Remove all completed?',
+      description: `${completedCount} completed ${
+        completedCount === 1 ? 'todo' : 'todos'
+      } in “${list.name}” will be permanently deleted.`,
+      confirmLabel: 'Remove all',
+    });
+    if (!ok) return;
     try {
-      await deleteTodos({
-        variables: { listId: list.id, completed: true },
-      });
-      setClearCompletedOpen(false);
+      await deleteTodos({ variables: { listId: list.id, completed: true } });
     } catch (err) {
-      // Keep the dialog open on failure so the user can retry.
-      console.error('Failed to clear completed todos', err);
+      toast(errorMessage(err, 'Could not remove the completed todos'));
     }
   }
 
   return (
     <>
       <Card
-        className="flex flex-col"
+        className="flex-col"
         accentColor={list.activityType?.color}
         accentLabel={list.activityType?.name}
       >
-        <CardHeader className="space-y-1 pb-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
+        <CardHeader className="gap-1 pb-3">
+          <View className="flex-row items-start justify-between gap-2">
+            <View className="min-w-0 flex-1">
               <CardTitle className="truncate text-base">{list.name}</CardTitle>
               {list.project && (
-                <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                  <FolderKanban className="h-3 w-3" />
-                  {list.project.name}
-                </span>
+                <View className="mt-0.5 flex-row items-center gap-1 self-start rounded-full bg-muted px-2 py-0.5">
+                  <FolderKanban className="h-3 w-3 text-muted-foreground" />
+                  <Text className="text-[11px] font-medium text-muted-foreground">
+                    {list.project.name}
+                  </Text>
+                </View>
               )}
               {list.description && (
                 <CardDescription className="line-clamp-2 text-xs">
@@ -132,16 +141,16 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
                 </CardDescription>
               )}
               {todos.length > 0 && (
-                <p className="text-xs font-normal text-muted-foreground">
+                <Text className="text-xs font-normal text-muted-foreground">
                   {formatDuration(remainingLength)}
-                  <span className="opacity-60">
+                  <Text className="opacity-60">
                     {' / '}
                     {formatDuration(totalLength)}
-                  </span>
-                </p>
+                  </Text>
+                </Text>
               )}
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
+            </View>
+            <View className="flex-row shrink-0 items-center gap-1">
               <Button
                 size="icon"
                 variant="ghost"
@@ -155,19 +164,19 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  onPress={() => setClearCompletedOpen(true)}
+                  onPress={() => void handleClearCompleted()}
                   aria-label={`Remove all completed todos from ${list.name}`}
                   className="h-7 w-7 hover:text-destructive"
                 >
                   <ListX className="h-3.5 w-3.5" />
                 </Button>
               )}
-            </div>
-          </div>
+            </View>
+          </View>
         </CardHeader>
 
-        <CardContent className="flex flex-1 flex-col gap-2 pt-0">
-          <div className="flex items-center gap-2">
+        <CardContent className="flex-1 flex-col gap-2 pt-0">
+          <View className="flex-row items-center gap-2">
             <Input
               value={newTitle}
               placeholder="Add a todo…"
@@ -175,7 +184,7 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
               onSubmitEditing={() => {
                 void handleQuickAdd();
               }}
-              className="h-8 text-sm"
+              className="h-8 flex-1 text-sm"
             />
             <Button
               size="icon"
@@ -187,19 +196,19 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
             >
               <Plus className="h-4 w-4" />
             </Button>
-          </div>
+          </View>
 
           {visibleTodos.length === 0 && completedCount === 0 && (
-            <p className="py-2 text-center text-xs text-muted-foreground">
+            <Text className="py-2 text-center text-xs text-muted-foreground">
               No todos yet
-            </p>
+            </Text>
           )}
 
-          <div className="space-y-1">
+          <View className="gap-1">
             {visibleTodos.map((todo) => (
               <TodoItem key={todo.id} todo={todo} onEdit={setEditingTodo} />
             ))}
-          </div>
+          </View>
 
           {completedCount > 0 && (
             <Button
@@ -226,22 +235,6 @@ export function TodoListCard({ list, todos }: TodoListCardProps) {
         {...(editingTodo ? { todo: editingTodo } : {})}
         open={editingTodo !== null}
         onOpenChange={(open) => !open && setEditingTodo(null)}
-      />
-
-      <ConfirmDialog
-        open={clearCompletedOpen}
-        onOpenChange={setClearCompletedOpen}
-        title="Remove all completed?"
-        description={
-          <>
-            {completedCount} completed {completedCount === 1 ? 'todo' : 'todos'}{' '}
-            in &ldquo;{list.name}
-            &rdquo; will be permanently deleted.
-          </>
-        }
-        confirmLabel="Remove all"
-        loading={clearing}
-        onConfirm={handleClearCompleted}
       />
     </>
   );

@@ -18,6 +18,7 @@ import { DetailHeader, EditButton } from '@/components/ui/detail-header';
 import { QueryState } from '@/components/ui/query-state';
 import { useQuery } from '@apollo/client/react';
 import { useMemo } from 'react';
+import { Text, View } from 'react-native';
 
 const GET_HABIT_DETAIL = graphql(`
   query GetHabitDetail($habitId: ID!, $periods: Int) {
@@ -79,7 +80,7 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
   }, [detail?.periods]);
 
   return (
-    <div className="space-y-4">
+    <View className="gap-4">
       <DetailHeader
         onBack={onBack}
         backLabel="Back to habits"
@@ -91,7 +92,7 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
       />
 
       {/* Quick-stats grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <View className="flex-row flex-wrap gap-3">
         {[
           {
             label: 'Frequency',
@@ -104,14 +105,14 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
             value: habit.activityType?.name ?? 'Unassigned',
           },
         ].map(({ label, value }) => (
-          <Card key={label} className="text-center py-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+          <Card key={label} className="min-w-[45%] flex-1 items-center py-3">
+            <Text className="text-xs text-muted-foreground uppercase tracking-wide">
               {label}
-            </p>
-            <p className="text-lg font-semibold mt-0.5">{value}</p>
+            </Text>
+            <Text className="text-lg font-semibold mt-0.5">{value}</Text>
           </Card>
         ))}
-      </div>
+      </View>
 
       {/* Loading / error states */}
       <QueryState
@@ -128,21 +129,23 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
             <CardHeader className="pb-2">
               <CardTitle className="text-base">All-time summary</CardTitle>
             </CardHeader>
-            <CardContent className="flex gap-6">
-              <div>
-                <p className="text-3xl font-bold">{detail.totalCompletions}</p>
-                <p className="text-xs text-muted-foreground">
+            <CardContent className="flex-row gap-6">
+              <View>
+                <Text className="text-3xl font-bold">
+                  {detail.totalCompletions}
+                </Text>
+                <Text className="text-xs text-muted-foreground">
                   total completions
-                </p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold">
+                </Text>
+              </View>
+              <View>
+                <Text className="text-3xl font-bold">
                   {Math.round(detail.allTimeRate * 100)}%
-                </p>
-                <p className="text-xs text-muted-foreground">
+                </Text>
+                <Text className="text-xs text-muted-foreground">
                   avg completion rate
-                </p>
-              </div>
+                </Text>
+              </View>
             </CardContent>
           </Card>
 
@@ -157,7 +160,7 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <View className="gap-2">
                 {detail.periods.map((period: HabitPeriod) => {
                   const pct = Math.min(
                     period.completions / Math.max(maxCompletions, 1),
@@ -165,14 +168,17 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
                   );
                   const met = period.completions >= period.target;
                   return (
-                    <div key={period.label} className="flex items-center gap-3">
+                    <View
+                      key={period.label}
+                      className="flex-row items-center gap-3"
+                    >
                       {/* Period label */}
-                      <span className="w-20 flex-shrink-0 text-right text-xs text-muted-foreground">
+                      <Text className="w-20 flex-shrink-0 text-right text-xs text-muted-foreground">
                         {period.label}
-                      </span>
+                      </Text>
                       {/* Progress bar */}
-                      <div className="relative flex-1 h-5 rounded bg-muted overflow-hidden">
-                        <div
+                      <View className="relative flex-1 h-5 rounded bg-muted overflow-hidden">
+                        <View
                           className="h-full rounded transition-all duration-300"
                           style={{
                             width: `${pct * 100}%`,
@@ -182,33 +188,33 @@ export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
                           }}
                         />
                         {/* Target marker */}
-                        <div
+                        <View
                           className="absolute top-0 bottom-0 w-px bg-foreground/30"
                           style={{
                             left: `${(period.target / Math.max(maxCompletions, 1)) * 100}%`,
                           }}
                         />
-                      </div>
+                      </View>
                       {/* Count label */}
-                      <span
+                      <Text
                         className={`w-12 flex-shrink-0 text-xs font-medium ${
                           met ? 'text-green-600' : 'text-muted-foreground'
                         }`}
                       >
                         {period.completions}/{period.target}
-                      </span>
-                    </div>
+                      </Text>
+                    </View>
                   );
                 })}
-              </div>
-              <p className="mt-3 text-xs text-muted-foreground">
+              </View>
+              <Text className="mt-3 text-xs text-muted-foreground">
                 Vertical line = target. Bar uses activity type color when target
                 met.
-              </p>
+              </Text>
             </CardContent>
           </Card>
         </>
       )}
-    </div>
+    </View>
   );
 }

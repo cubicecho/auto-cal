@@ -15,6 +15,7 @@ import {
   startOfMonth,
 } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { View } from 'react-native';
 
 const GET_CALENDAR_DATA = graphql(`
   query GetCalendarData {
@@ -192,20 +193,24 @@ export default function CalendarPage() {
         }
       />
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
-        <CalendarView
-          timeBlocks={calendarViewData?.myTimeBlocks ?? []}
-          schedule={scheduleData?.mySchedule ?? []}
-          manualEvents={manualEventsData?.myManualEvents ?? []}
-          date={date}
-          view={view}
-        />
-        <ScheduleView
-          schedule={scheduleData?.mySchedule ?? []}
-          view={view}
-          date={date}
-        />
-      </div>
+      <View className="min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+        <View className="min-h-0 flex-1">
+          <CalendarView
+            timeBlocks={calendarViewData?.myTimeBlocks ?? []}
+            schedule={scheduleData?.mySchedule ?? []}
+            manualEvents={manualEventsData?.myManualEvents ?? []}
+            date={date}
+            view={view}
+          />
+        </View>
+        <View className="min-h-0 lg:w-80">
+          <ScheduleView
+            schedule={scheduleData?.mySchedule ?? []}
+            view={view}
+            date={date}
+          />
+        </View>
+      </View>
     </Page>
   );
 }

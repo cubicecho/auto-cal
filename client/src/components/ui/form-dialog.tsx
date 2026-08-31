@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
+import { Text, View } from 'react-native';
 
 type FormDialogProps = {
   open: boolean;
@@ -71,20 +72,20 @@ export function FormDialogFooter({
   return (
     <>
       {error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <Text role="alert" className="text-sm text-destructive">
           {error}
-        </p>
+        </Text>
       ) : null}
       <DialogFooter
         className={cn('items-center', secondary && 'sm:justify-between')}
       >
-        {secondary ? <div>{secondary}</div> : null}
-        <div className="flex gap-2">
+        {secondary ? <View>{secondary}</View> : null}
+        <View className="flex-row gap-2">
           <Button variant="outline" onPress={onCancel}>
             {cancelLabel}
           </Button>
           {children}
-        </div>
+        </View>
       </DialogFooter>
     </>
   );

@@ -33,6 +33,9 @@ const buttonVariants = cva(
         default: 'bg-primary text-primary-foreground hover:bg-primary/90',
         destructive:
           'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        // The red-outline pill the native list rows used for Delete/Archive.
+        'destructive-outline':
+          'border border-destructive/40 bg-transparent text-destructive hover:bg-destructive/10',
         outline:
           'border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground',
         secondary:
@@ -42,6 +45,8 @@ const buttonVariants = cva(
       },
       size: {
         default: 'h-10 px-4 py-2',
+        // The pill on a list row — Edit / Delete / Archive.
+        xs: 'h-7 rounded-lg px-3',
         sm: 'h-9 rounded-md px-3',
         lg: 'h-11 rounded-md px-8',
         icon: 'h-10 w-10',
@@ -55,18 +60,26 @@ const buttonVariants = cva(
 );
 
 /** The half of each variant that has to live on the `<Text>` for native. */
-const buttonTextVariants = cva('text-sm font-medium', {
+const buttonTextVariants = cva('font-medium', {
   variants: {
+    size: {
+      default: 'text-sm',
+      xs: 'text-xs',
+      sm: 'text-sm',
+      lg: 'text-sm',
+      icon: 'text-sm',
+    },
     variant: {
       default: 'text-primary-foreground',
       destructive: 'text-destructive-foreground',
+      'destructive-outline': 'text-destructive',
       outline: 'text-foreground',
       secondary: 'text-secondary-foreground',
       ghost: 'text-muted-foreground',
       link: 'text-primary underline',
     },
   },
-  defaultVariants: { variant: 'default' },
+  defaultVariants: { variant: 'default', size: 'default' },
 });
 
 export type ButtonProps = Omit<
@@ -101,10 +114,10 @@ const Button = React.forwardRef<
     {/* Icons inside a button take the variant's text colour. On web they
         already inherit it, so `icons.web.tsx` ignores this; native has no
         inheritance and this is where the colour comes from. */}
-    <IconClassContext.Provider value={buttonTextVariants({ variant })}>
+    <IconClassContext.Provider value={buttonTextVariants({ variant, size })}>
       {React.Children.map(children, (child) =>
         typeof child === 'string' || typeof child === 'number' ? (
-          <Text className={buttonTextVariants({ variant })}>{child}</Text>
+          <Text className={buttonTextVariants({ variant, size })}>{child}</Text>
         ) : (
           child
         ),

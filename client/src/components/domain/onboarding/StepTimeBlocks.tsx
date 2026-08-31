@@ -11,13 +11,14 @@ import {
   OnboardingStep,
 } from '@/components/domain/onboarding/OnboardingStep';
 import { Button } from '@/components/ui/button';
-import { FieldWrapper, Form } from '@/components/ui/form';
+import { FieldRow, FieldWrapper, Form } from '@/components/ui/form';
 import { Plus } from '@/components/ui/icons';
+import { ToggleChip } from '@/components/ui/toggle-chip';
 import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { DAY_NAMES, WEEKDAYS, WEEKEND } from '@/lib/form-constants';
-import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@apollo/client/react';
+import { View } from 'react-native';
 import { z } from 'zod';
 
 const GET_TIME_BLOCKS = graphql(`
@@ -109,7 +110,7 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
       nextDisabled={timeBlocks.length === 0}
     >
       <form.AppForm>
-        <Form className="space-y-4">
+        <Form className="gap-4">
           {/* Activity type */}
           <form.AppField name="activityTypeId">
             {(field) => (
@@ -132,15 +133,17 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
               <FieldWrapper
                 label="Days"
                 control={
-                  <div className="space-y-2">
-                    <div className="flex gap-1">
+                  <View className="gap-2">
+                    <View className="flex-row gap-1">
                       {DAY_NAMES.map((name, i) => {
                         const selected = field.state.value.includes(i);
                         return (
-                          <button
+                          <ToggleChip
                             key={name}
-                            type="button"
-                            onClick={() =>
+                            size="sm"
+                            selected={selected}
+                            className="flex-1 items-center"
+                            onPress={() =>
                               field.handleChange(
                                 selected
                                   ? field.state.value.filter((d) => d !== i)
@@ -149,19 +152,13 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
                                     ),
                               )
                             }
-                            className={cn(
-                              'flex-1 rounded py-1.5 text-xs font-medium transition-colors border',
-                              selected
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-background text-muted-foreground border-input hover:border-foreground',
-                            )}
                           >
                             {name}
-                          </button>
+                          </ToggleChip>
                         );
                       })}
-                    </div>
-                    <div className="flex gap-2">
+                    </View>
+                    <View className="flex-row gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -176,15 +173,15 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
                       >
                         Weekend
                       </Button>
-                    </div>
-                  </div>
+                    </View>
+                  </View>
                 }
               />
             )}
           </form.AppField>
 
           {/* Start / End time */}
-          <div className="grid grid-cols-2 gap-4">
+          <FieldRow>
             <form.AppField name="startTime">
               {(field) => <field.InputField label="Start time" type="time" />}
             </form.AppField>
@@ -192,7 +189,7 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
             <form.AppField name="endTime">
               {(field) => <field.InputField label="End time" type="time" />}
             </form.AppField>
-          </div>
+          </FieldRow>
 
           <form.SubmitButton
             icon={<Plus className="mr-1 h-4 w-4" />}

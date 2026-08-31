@@ -3,6 +3,7 @@ import { storage } from '@/storage';
 import { useMutation } from '@apollo/client/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
+import { Text, View } from 'react-native';
 
 const VERIFY_MAGIC_LINK = graphql(`
   mutation VerifyMagicLink($token: String!) {
@@ -35,24 +36,24 @@ export default function VerifyPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="font-medium text-destructive">
+      <View className="flex-1 items-center justify-center">
+        <View className="text-center">
+          <Text className="font-medium text-destructive">
             {error.message.includes('expired')
               ? 'This link has expired. Please request a new one.'
               : 'Invalid magic link.'}
-          </p>
-          <a href="/auth/login" className="mt-2 block text-sm underline">
+          </Text>
+          <a href="/auth/login" className="mt-2 text-sm underline">
             Back to login
           </a>
-        </div>
-      </div>
+        </View>
+      </View>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground">Signing you in…</p>
-    </div>
+    <View className="flex-1 items-center justify-center">
+      <Text className="text-muted-foreground">Signing you in…</Text>
+    </View>
   );
 }

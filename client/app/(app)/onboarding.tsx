@@ -10,6 +10,7 @@ import { storage } from '@/storage';
 import { useQuery } from '@apollo/client/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
+import { ScrollView, Text, View } from 'react-native';
 
 const CHECK_ONBOARDED = graphql(`
   query CheckOnboarded {
@@ -63,22 +64,25 @@ export default function OnboardingPage() {
 
   if (step === 1 && loading) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-muted-foreground text-sm">Checking setup…</p>
-      </div>
+      <View className="flex-row flex-1 items-center justify-center">
+        <Text className="text-muted-foreground text-sm">Checking setup…</Text>
+      </View>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center overflow-y-auto py-8 px-4">
-      <div className="w-full max-w-2xl space-y-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">Welcome to Auto Cal</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+    <ScrollView
+      className="flex-1"
+      contentContainerClassName="items-center py-8 px-4"
+    >
+      <View className="w-full max-w-2xl gap-6">
+        <View className="flex-row items-start justify-between">
+          <View>
+            <Text className="text-2xl font-bold">Welcome to Auto Cal</Text>
+            <Text className="mt-1 text-sm text-muted-foreground">
               Let's get your schedule set up — takes about 2 minutes.
-            </p>
-          </div>
+            </Text>
+          </View>
           <Button
             variant="ghost"
             size="sm"
@@ -88,25 +92,38 @@ export default function OnboardingPage() {
             <X className="mr-1 h-3 w-3" />
             Skip setup
           </Button>
-        </div>
+        </View>
 
-        <div className="flex items-center">
+        <View className="flex-row items-center">
           {STEPS.map((s, i) => (
-            <div key={s.label} className="flex flex-1 items-center">
-              <div className="flex items-center gap-2">
-                <div
+            <View key={s.label} className="flex-row flex-1 items-center">
+              <View className="flex-row items-center gap-2">
+                <View
                   className={cn(
-                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors',
+                    'h-7 w-7 shrink-0 flex-row items-center justify-center rounded-full',
                     i + 1 === step
-                      ? 'bg-primary text-primary-foreground'
+                      ? 'bg-primary'
                       : i + 1 < step
-                        ? 'bg-primary/15 text-primary'
-                        : 'bg-muted text-muted-foreground',
+                        ? 'bg-primary/15'
+                        : 'bg-muted',
                   )}
                 >
-                  {i + 1 < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
-                </div>
-                <span
+                  {i + 1 < step ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Text
+                      className={cn(
+                        'text-xs font-semibold',
+                        i + 1 === step
+                          ? 'text-primary-foreground'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      {i + 1}
+                    </Text>
+                  )}
+                </View>
+                <Text
                   className={cn(
                     'hidden text-sm sm:block',
                     i + 1 === step
@@ -115,19 +132,19 @@ export default function OnboardingPage() {
                   )}
                 >
                   {s.label}
-                </span>
-              </div>
+                </Text>
+              </View>
               {i < STEPS.length - 1 && (
-                <div
+                <View
                   className={cn(
                     'mx-3 h-px flex-1',
                     i + 1 < step ? 'bg-primary/40' : 'bg-muted',
                   )}
                 />
               )}
-            </div>
+            </View>
           ))}
-        </div>
+        </View>
 
         {step === 1 && <StepActivityTypes onNext={() => goToStep(2)} />}
         {step === 2 && (
@@ -151,11 +168,11 @@ export default function OnboardingPage() {
           />
         )}
 
-        <p className="text-center text-xs text-muted-foreground">
+        <Text className="text-center text-xs text-muted-foreground">
           Step {step} of {STEPS.length}
           {step > 2 && ' · optional from here'}
-        </p>
-      </div>
-    </div>
+        </Text>
+      </View>
+    </ScrollView>
   );
 }

@@ -1,4 +1,6 @@
+import { Input } from '@/components/ui/input';
 import { useState } from 'react';
+import { Pressable, Text } from 'react-native';
 
 type InlineLengthEditProps = {
   value: number;
@@ -6,57 +8,57 @@ type InlineLengthEditProps = {
   onSave: (value: number) => void;
 };
 
+/**
+ * The estimated-length badge on a todo row, editable in place.
+ *
+ * The badge is a `Pressable` inside a pressable row, so the row would fire too
+ * — the caller stops that by rendering this inside a container that swallows
+ * the press, which is what `TodoItem` does.
+ */
 export function InlineLengthEdit({
   value,
   saving,
   onSave,
 }: InlineLengthEditProps) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value);
+  const [draft, setDraft] = useState(String(value));
 
   function commit() {
-    const clamped = Math.max(1, Math.min(1440, draft || 1));
+    const parsed = Number(draft);
+    const clamped = Math.max(1, Math.min(1440, parsed || 1));
     if (clamped !== value) onSave(clamped);
     setEditing(false);
   }
 
   if (editing) {
     return (
-      <input
+      <Input
         type="number"
         min={1}
         max={1440}
         value={draft}
-        // biome-ignore lint/a11y/noAutofocus: intentional focus when user activates inline edit
         autoFocus
-        className="w-16 rounded border border-input bg-background px-1 py-0 text-xs font-medium tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
-        onChange={(e) => setDraft(Number(e.target.value))}
+        className="h-6 w-16 px-1 py-0 text-xs font-medium"
+        onChangeText={setDraft}
         onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            commit();
-          }
-          if (e.key === 'Escape') setEditing(false);
-        }}
-        onClick={(e) => e.stopPropagation()}
+        onSubmitEditing={commit}
       />
     );
   }
 
   return (
-    <button
-      type="button"
-      className="cursor-text rounded px-0.5 text-xs font-medium tabular-nums hover:bg-muted disabled:opacity-50"
-      title="Click to edit estimated length"
+    <Pressable
+      className="rounded px-0.5"
+      accessibilityLabel="Edit estimated length"
       disabled={saving}
-      onClick={(e) => {
-        e.stopPropagation();
-        setDraft(value);
+      onPress={() => {
+        setDraft(String(value));
         setEditing(true);
       }}
     >
-      {saving ? '…' : `${value} min`}
-    </button>
+      <Text className={`text-xs font-medium ${saving ? 'opacity-50' : ''}`}>
+        {saving ? '…' : `${value} min`}
+      </Text>
+    </Pressable>
   );
 }

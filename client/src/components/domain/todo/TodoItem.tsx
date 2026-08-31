@@ -5,7 +5,7 @@ import {
   type CompletionDialogTarget,
 } from '@/components/domain/CompletionDialog';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirm } from '@/components/ui/confirm';
 import {
   Check,
   Pencil,
@@ -21,10 +21,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { DERIVED, evictEntity, invalidate } from '@/lib/cache';
-import { errorMessage, priorityLabel } from '@/lib/utils';
+import { HOVER_REVEAL, cn, errorMessage, priorityLabel } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { Link } from 'expo-router';
 import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 
 // Colocated here so /todo-lists doesn't depend on a deleted parent list component.
 export const TODO_LIST_FRAGMENT = graphql(`
@@ -83,10 +84,10 @@ type TodoItemProps = {
 
 export function TodoItem({ todo, onEdit }: TodoItemProps) {
   const toast = useToast();
+  const confirm = useConfirm();
   const isCompleted = todo.completedAt !== null;
   const [completionTarget, setCompletionTarget] =
     useState<CompletionDialogTarget | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Both mutations return the todo, so the lists rendering it patch
   // themselves; only the derived views have to be dropped.
@@ -100,12 +101,25 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
     { update: (cache) => invalidate(cache, ...DERIVED) },
   );
 
-  const [deleteTodo, { loading: deleting }] = useMutation(DELETE_TODO, {
+  const [deleteTodo] = useMutation(DELETE_TODO, {
     update: (cache) => {
       evictEntity(cache, 'Todo', todo.id);
       invalidate(cache, ...DERIVED);
     },
   });
+
+  async function confirmDelete() {
+    const ok = await confirm({
+      title: 'Delete todo?',
+      description: `“${todo.title}” will be permanently deleted.`,
+    });
+    if (!ok) return;
+    try {
+      await deleteTodo({ variables: { id: todo.id } });
+    } catch (err) {
+      toast(errorMessage(err, 'Could not delete this todo'));
+    }
+  }
 
   function handleSaveLength(estimatedLength: number) {
     updateTodo({
@@ -114,8 +128,8 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
   }
 
   return (
-    <div
-      className={`group flex items-start gap-2 rounded-md border bg-card px-2 py-1.5 text-sm hover:bg-muted/40 ${
+    <View
+      className={`group flex-row items-start gap-2 rounded-md border bg-card px-2 py-1.5 text-sm hover:bg-muted/40 ${
         isCompleted ? 'opacity-60' : ''
       }`}
     >
@@ -157,36 +171,41 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
         </Tooltip>
       )}
 
-      <div className="min-w-0 flex-1">
-        <div
-          className={`truncate font-medium ${
-            isCompleted ? 'line-through text-muted-foreground' : ''
+      <View className="min-w-0 flex-1">
+        <Text
+          className={`font-medium ${
+            isCompleted
+              ? 'line-through text-muted-foreground'
+              : 'text-foreground'
           }`}
         >
           {todo.title}
-        </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+        </Text>
+        <View className="mt-0.5 flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
           <InlineLengthEdit
             value={todo.estimatedLength}
             saving={updatingLength}
             onSave={handleSaveLength}
           />
-          <span>·</span>
-          <span>{priorityLabel(todo.priority)}</span>
+          <Text className="text-xs text-muted-foreground">·</Text>
+          <Text className="text-xs text-muted-foreground">
+            {priorityLabel(todo.priority)}
+          </Text>
           {todo.dueAt ? (
-            <span className="text-amber-700">
+            <Text className="text-xs text-amber-700">
               · Due {new Date(todo.dueAt as string).toLocaleDateString()}
-            </span>
+            </Text>
           ) : null}
           {!isCompleted && !todo.scheduledAt && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Link
-                  href="/time-blocks"
-                  className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
-                >
-                  <TriangleAlert className="h-3 w-3" />
-                  Unschedulable
+                <Link href="/time-blocks" asChild>
+                  <Pressable className="flex-row items-center gap-1">
+                    <TriangleAlert className="h-3 w-3 text-amber-600" />
+                    <Text className="text-xs text-amber-600">
+                      Unschedulable
+                    </Text>
+                  </Pressable>
                 </Link>
               </TooltipTrigger>
               <TooltipContent>
@@ -195,15 +214,15 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
               </TooltipContent>
             </Tooltip>
           )}
-        </div>
-      </div>
+        </View>
+      </View>
 
       <Button
         size="icon"
         variant="ghost"
         onPress={() => onEdit(todo)}
         aria-label={`Edit ${todo.title}`}
-        className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+        className={cn('h-6 w-6 shrink-0', HOVER_REVEAL)}
       >
         <Pencil className="h-3.5 w-3.5" />
       </Button>
@@ -211,35 +230,17 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
       <Button
         size="icon"
         variant="ghost"
-        onPress={() => setDeleteOpen(true)}
+        onPress={() => void confirmDelete()}
         aria-label={`Delete ${todo.title}`}
-        className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
+        className={cn('h-6 w-6 shrink-0 hover:text-destructive', HOVER_REVEAL)}
       >
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
-
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete todo?"
-        description={
-          <>&ldquo;{todo.title}&rdquo; will be permanently deleted.</>
-        }
-        confirmLabel="Delete"
-        loading={deleting}
-        onConfirm={() =>
-          deleteTodo({ variables: { id: todo.id } })
-            .then(() => setDeleteOpen(false))
-            .catch((err) =>
-              toast(errorMessage(err, 'Could not delete this todo')),
-            )
-        }
-      />
 
       <CompletionDialog
         target={completionTarget}
         onOpenChange={(open) => !open && setCompletionTarget(null)}
       />
-    </div>
+    </View>
   );
 }

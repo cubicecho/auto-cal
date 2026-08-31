@@ -7,10 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Code } from '@/components/ui/code';
 import { Key, Plus } from '@/components/ui/icons';
 import { invalidate } from '@/lib/cache';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { useState } from 'react';
+import { Text, View } from 'react-native';
 import { CreateApiKeyDialog } from './CreateApiKeyDialog';
 
 const MY_API_KEYS = graphql(`
@@ -105,21 +107,21 @@ export function ApiKeyManager() {
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
+          <View className="flex-row items-center justify-between">
+            <View>
+              <CardTitle className="flex-row items-center gap-2">
                 <Key className="h-4 w-4" />
                 API Keys
               </CardTitle>
               <CardDescription className="mt-1">
                 Personal API keys for headless integrations (e.g. Home
                 Assistant). Use{' '}
-                <code className="text-xs">
+                <Code className="text-xs">
                   Authorization: Bearer &lt;token&gt;
-                </code>{' '}
-                on requests to <code className="text-xs">/graphql</code>.
+                </Code>{' '}
+                on requests to <Code className="text-xs">/graphql</Code>.
               </CardDescription>
-            </div>
+            </View>
             <Button
               size="sm"
               variant="outline"
@@ -128,68 +130,68 @@ export function ApiKeyManager() {
               <Plus className="h-4 w-4 mr-1" />
               Generate API Key
             </Button>
-          </div>
+          </View>
         </CardHeader>
         <CardContent>
           {keys.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <Text className="text-sm text-muted-foreground">
               No API keys yet. Generate one to get started.
-            </p>
+            </Text>
           ) : (
-            <div className="space-y-3">
+            <View className="gap-3">
               {keys.map((key) => {
                 const scopes = parseScopes(key.scopes);
                 return (
-                  <div
+                  <View
                     key={key.id}
-                    className="flex items-start justify-between rounded-md border p-3 gap-4"
+                    className="flex-row items-start justify-between rounded-md border p-3 gap-4"
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">{key.name}</span>
-                        <code className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+                    <View className="min-w-0 flex-1">
+                      <View className="flex-row items-center gap-2 flex-wrap">
+                        <Text className="font-medium text-sm">{key.name}</Text>
+                        <Code className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
                           acal_{key.keyPrefix}…
-                        </code>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                        </Code>
+                      </View>
+                      <View className="flex-row items-center gap-3 mt-1.5 flex-wrap">
                         {scopes.map((scope) => (
-                          <span
+                          <Text
                             key={scope}
-                            className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                            className="flex-row items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
                           >
                             {scope}
-                          </span>
+                          </Text>
                         ))}
-                      </div>
-                      <div className="mt-1.5 text-xs text-muted-foreground space-x-3">
-                        <span>
+                      </View>
+                      <View className="mt-1.5 text-xs text-muted-foreground gap-3">
+                        <Text>
                           Last used:{' '}
-                          <span className="text-foreground">
+                          <Text className="text-foreground">
                             {formatRelative(key.lastUsedAt)}
-                          </span>
-                        </span>
+                          </Text>
+                        </Text>
                         {key.expiresAt ? (
-                          <span>
+                          <Text>
                             Expires:{' '}
-                            <span className="text-foreground">
+                            <Text className="text-foreground">
                               {formatDate(key.expiresAt)}
-                            </span>
-                          </span>
+                            </Text>
+                          </Text>
                         ) : null}
-                        <span>
+                        <Text>
                           Created:{' '}
-                          <span className="text-foreground">
+                          <Text className="text-foreground">
                             {formatDate(key.createdAt)}
-                          </span>
-                        </span>
-                      </div>
+                          </Text>
+                        </Text>
+                      </View>
                       {scopes.includes('read') && (
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <Text className="mt-1 text-xs text-muted-foreground">
                           iCal feeds available — use key token with{' '}
-                          <code className="font-mono">/ical?secret=…</code>
-                        </p>
+                          <Code className="font-mono">/ical?secret=…</Code>
+                        </Text>
                       )}
-                    </div>
+                    </View>
                     <Button
                       size="sm"
                       variant="destructive"
@@ -198,10 +200,10 @@ export function ApiKeyManager() {
                     >
                       Revoke
                     </Button>
-                  </div>
+                  </View>
                 );
               })}
-            </div>
+            </View>
           )}
         </CardContent>
       </Card>

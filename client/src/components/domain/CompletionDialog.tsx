@@ -19,6 +19,7 @@ import { DERIVED, invalidate } from '@/lib/cache';
 import type { ApolloCache } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 
 const COMPLETE_TODO = graphql(`
   mutation CompleteTodoFromDialog($id: ID!, $completedAt: String) {
@@ -119,9 +120,9 @@ export function CompletionDialog({
               : 'Mark this item complete.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="py-2">
+        <View className="py-2">
           <DateTimeInput value={completedAt} onChange={setCompletedAt} />
-        </div>
+        </View>
         <DialogFooter>
           <Button variant="outline" onPress={() => onOpenChange(false)}>
             Cancel

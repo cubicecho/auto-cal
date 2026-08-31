@@ -148,7 +148,7 @@ export function ProjectForm({ project, open, onOpenChange }: ProjectFormProps) {
     >
       {isEdit ? (
         <editForm.AppForm>
-          <Form className="space-y-4">
+          <Form className="gap-4">
             <editForm.AppField name="name">
               {(field) => (
                 <field.InputField label="Name" placeholder="Project name" />
@@ -172,7 +172,7 @@ export function ProjectForm({ project, open, onOpenChange }: ProjectFormProps) {
         </editForm.AppForm>
       ) : (
         <createForm.AppForm>
-          <Form className="space-y-4">
+          <Form className="gap-4">
             <createForm.AppField name="name">
               {(field) => (
                 <field.InputField

@@ -7,14 +7,14 @@ import type {
 import { graphql } from '@/__generated__/index.js';
 import { TodoListCard } from '@/components/domain/todo-list/TodoListCard';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirm } from '@/components/ui/confirm';
 import { DetailHeader, EditButton } from '@/components/ui/detail-header';
 import { Archive } from '@/components/ui/icons';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { StatusChip } from '@/components/ui/status-chip';
 import { invalidate } from '@/lib/cache';
 import { useMutation } from '@apollo/client/react';
-import { useState } from 'react';
+import { Text, View } from 'react-native';
 import { ProjectNotesEditor } from './ProjectNotesEditor';
 
 export const PROJECT_DETAIL_FRAGMENT = graphql(`
@@ -62,9 +62,9 @@ export function ProjectDetail({
   onBack,
   onEdit,
 }: ProjectDetailProps) {
-  const [archiveOpen, setArchiveOpen] = useState(false);
+  const confirm = useConfirm();
 
-  const [archiveProject, { loading: archiving }] = useMutation<
+  const [archiveProject] = useMutation<
     ArchiveProjectMutation,
     ArchiveProjectMutationVariables
   >(ARCHIVE_PROJECT, {
@@ -75,12 +75,17 @@ export function ProjectDetail({
   });
 
   async function handleArchive() {
+    const ok = await confirm({
+      title: 'Archive project?',
+      description: `“${project.name}” will be hidden from the default project list. Nothing is deleted.`,
+      confirmLabel: 'Archive',
+    });
+    if (!ok) return;
     await archiveProject({ variables: { id: project.id } });
-    setArchiveOpen(false);
   }
 
   return (
-    <div className="space-y-4">
+    <View className="gap-4">
       <DetailHeader
         onBack={onBack}
         backLabel="Back to projects"
@@ -100,7 +105,7 @@ export function ProjectDetail({
               <Button
                 variant="outline"
                 size="sm"
-                onPress={() => setArchiveOpen(true)}
+                onPress={() => void handleArchive()}
               >
                 <Archive className="mr-1.5 h-3.5 w-3.5" />
                 Archive
@@ -112,38 +117,23 @@ export function ProjectDetail({
 
       {/* Notes and tasks sit side by side on medium+ screens and stack on
           narrow ones. */}
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_18rem] lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="min-w-0">
+      <View className="flex-col gap-4 md:flex-row">
+        <View className="min-w-0 flex-1">
           <SectionHeading className="mb-2">Notes</SectionHeading>
           <ProjectNotesEditor projectId={project.id} notes={project.notes} />
-        </div>
+        </View>
 
-        <div className="min-w-0">
+        <View className="min-w-0 md:w-72 lg:w-80">
           <SectionHeading className="mb-2">Tasks</SectionHeading>
           {project.list ? (
             <TodoListCard list={project.list} todos={todos} />
           ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">
+            <Text className="py-8 text-center text-sm text-muted-foreground">
               This project has no todo list.
-            </p>
+            </Text>
           )}
-        </div>
-      </div>
-
-      <ConfirmDialog
-        open={archiveOpen}
-        onOpenChange={setArchiveOpen}
-        title="Archive project?"
-        description={
-          <>
-            &ldquo;{project.name}&rdquo; will be hidden from the default project
-            list. Nothing is deleted.
-          </>
-        }
-        confirmLabel="Archive"
-        loading={archiving}
-        onConfirm={handleArchive}
-      />
-    </div>
+        </View>
+      </View>
+    </View>
   );
 }

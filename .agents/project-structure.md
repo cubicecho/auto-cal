@@ -108,15 +108,15 @@ client/app/                  # File-based routes (expo-router)
     ├── calendar.tsx
     ├── stats.tsx
     ├── import-todos.tsx     # Google Tasks JSON import
-    ├── todo-lists.tsx       + todo-lists.native.tsx
-    ├── time-blocks.tsx      + time-blocks.native.tsx
-    ├── activity-types.tsx   + activity-types.native.tsx
-    ├── settings.tsx         + settings.native.tsx
-    ├── habits/              + habits.native.tsx
+    ├── todo-lists.tsx
+    ├── time-blocks.tsx
+    ├── activity-types.tsx
+    ├── settings.tsx
+    ├── habits/
     │   ├── _layout.tsx
     │   ├── index.tsx        # /habits
     │   └── [habitId].tsx    # /habits/:habitId
-    └── projects/            + projects.native.tsx
+    └── projects/
         ├── _layout.tsx
         ├── index.tsx        # /projects
         └── [projectId].tsx  # /projects/:projectId
@@ -125,11 +125,13 @@ client/src/
 ├── apollo-client.ts      # The single ApolloClient — link split, typePolicies
 ├── storage.ts            # Key-value store; no-ops off web (never touch localStorage)
 ├── lib/cache.ts          # Cache invalidation helpers (replaces refetchQueries)
-├── lib/utils.ts          # cn(), priorityLabel()
+├── lib/utils.ts          # cn(), priorityLabel(), HOVER_REVEAL
+├── lib/clipboard.ts      # copyText() over expo-clipboard
 ├── lib/google-tasks.ts   # parseGoogleTasks() — Takeout Tasks.json parser
 ├── hooks/                # form-hook, useLiveUpdates, useListSection, …
 ├── components/
 │   ├── ui/               # ShadCN primitives + custom (route-error, page, …)
+│   │                     #   a few are .tsx/.web.tsx pairs — see client-patterns.md
 │   └── domain/
 │       ├── activity-type/
 │       ├── todo/
@@ -147,9 +149,9 @@ client/src/
 
 There is no `App.tsx` and no `main.tsx` — `app/_layout.tsx` is the entry point.
 
-A screen with a `.native.tsx` sibling exists twice: Metro resolves `.native`
-first on iOS/Android and ignores it on web. Changing one usually means changing
-both.
+Every route is one file serving both platforms — there are no `.native.tsx`
+screens. The only platform branch is `(app)/_layout.tsx`, which picks a web
+header or a native `<Tabs>`.
 
 ---
 
@@ -340,27 +342,26 @@ Five are hand-written because they compute rather than filter:
 
 ## 5. Client Routes
 
-All paths are relative to `client/app/`. `✕` marks a screen with a
-`.native.tsx` sibling that has to be kept in step.
+All paths are relative to `client/app/`. Every screen serves both platforms.
 
-| Path | File | Native | Purpose |
-|------|------|--------|---------|
-| `/auth/login` | `auth/login.tsx` | | Magic-link request form |
-| `/auth/verify` | `auth/verify.tsx` | | Consumes magic-link token, stores JWT |
-| `/` | `(app)/index.tsx` | | Landing/redirect |
-| `/onboarding` | `(app)/onboarding.tsx` | | 4-step wizard (activity types → time blocks → habits → todos) |
-| `/today` | `(app)/today.tsx` | | Today's schedule + quick complete |
-| `/calendar` | `(app)/calendar.tsx` | | Week calendar + schedule sidebar |
-| `/todo-lists` | `(app)/todo-lists.tsx` | ✕ | Lists and their todos |
-| `/projects` | `(app)/projects/index.tsx` | ✕ | Project list |
-| `/projects/:projectId` | `(app)/projects/[projectId].tsx` | ✕ | Project detail + notes |
-| `/habits` | `(app)/habits/index.tsx` | ✕ | Habit list |
-| `/habits/:habitId` | `(app)/habits/[habitId].tsx` | ✕ | Habit detail (rates, periods) |
-| `/time-blocks` | `(app)/time-blocks.tsx` | ✕ | Time block CRUD |
-| `/activity-types` | `(app)/activity-types.tsx` | ✕ | Activity type CRUD |
-| `/stats` | `(app)/stats.tsx` | | Analytics surface |
-| `/import-todos` | `(app)/import-todos.tsx` | | Google Tasks JSON import |
-| `/settings` | `(app)/settings.tsx` | ✕ | iCal feed URL, API keys, re-run onboarding |
+| Path | File | Purpose |
+|------|------|---------|
+| `/auth/login` | `auth/login.tsx` | Magic-link request form |
+| `/auth/verify` | `auth/verify.tsx` | Consumes magic-link token, stores JWT |
+| `/` | `(app)/index.tsx` | Landing/redirect |
+| `/onboarding` | `(app)/onboarding.tsx` | 4-step wizard (activity types → time blocks → habits → todos) |
+| `/today` | `(app)/today.tsx` | Today's schedule + quick complete |
+| `/calendar` | `(app)/calendar.tsx` | Week calendar + schedule sidebar |
+| `/todo-lists` | `(app)/todo-lists.tsx` | Lists and their todos |
+| `/projects` | `(app)/projects/index.tsx` | Project list |
+| `/projects/:projectId` | `(app)/projects/[projectId].tsx` | Project detail + notes |
+| `/habits` | `(app)/habits/index.tsx` | Habit list |
+| `/habits/:habitId` | `(app)/habits/[habitId].tsx` | Habit detail (rates, periods) |
+| `/time-blocks` | `(app)/time-blocks.tsx` | Time block CRUD |
+| `/activity-types` | `(app)/activity-types.tsx` | Activity type CRUD |
+| `/stats` | `(app)/stats.tsx` | Analytics surface |
+| `/import-todos` | `(app)/import-todos.tsx` | Google Tasks JSON import (file picker is web-only) |
+| `/settings` | `(app)/settings.tsx` | iCal feed URL, API keys, re-run onboarding |
 
 The auth guard lives in `app/_layout.tsx` — redirects to `/auth/login` without a token. The onboarding guard lives in `app/(app)/_layout.tsx` — redirects to `/onboarding` if `onboarding_done` is unset.
 

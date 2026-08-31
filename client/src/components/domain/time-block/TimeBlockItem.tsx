@@ -13,6 +13,7 @@ import { DAY_NAMES_LONG } from '@/lib/form-constants';
 import { errorMessage } from '@/lib/utils';
 import { useMutation } from '@apollo/client/react';
 import { useState } from 'react';
+import { Text, View } from 'react-native';
 
 const DELETE_TIME_BLOCK = graphql(`
   mutation DeleteTimeBlock($id: ID!) {
@@ -58,8 +59,8 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
       accentLabel={timeBlock.activityType?.name}
     >
       <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
+        <View className="flex-row items-start justify-between gap-2">
+          <View className="flex-1">
             <CardTitle className="text-lg">
               {timeBlock.activityType?.name ?? 'Unassigned'}
             </CardTitle>
@@ -70,9 +71,9 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
               • {timeBlock.startTime} – {timeBlock.endTime}
               {timeBlock.priority > 0 && ` • Priority ${timeBlock.priority}`}
             </CardDescription>
-          </div>
+          </View>
 
-          <div className="flex items-center gap-1">
+          <View className="flex-row items-center gap-1">
             <Button
               size="icon"
               variant="ghost"
@@ -110,13 +111,13 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             )}
-          </div>
-        </div>
+          </View>
+        </View>
 
         {deleteError ? (
-          <p role="alert" className="mt-2 text-sm text-destructive">
+          <Text role="alert" className="mt-2 text-sm text-destructive">
             {deleteError}
-          </p>
+          </Text>
         ) : null}
       </CardHeader>
     </Card>

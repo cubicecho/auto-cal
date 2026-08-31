@@ -16,12 +16,15 @@ type ConfirmDialogProps = {
   description: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
-  /** Disables the confirm button while the action is in flight. */
-  loading?: boolean;
   onConfirm: () => void;
 };
 
-/** A small destructive-action confirmation dialog (Cancel + destructive button). */
+/**
+ * A small destructive-action confirmation dialog (Cancel + destructive button).
+ *
+ * Prefer `useConfirm()` from `ui/confirm` — one instance is mounted for the
+ * whole app and hands back a promise. This is the presentational half it uses.
+ */
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -29,7 +32,6 @@ export function ConfirmDialog({
   description,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
-  loading = false,
   onConfirm,
 }: ConfirmDialogProps) {
   return (
@@ -43,7 +45,7 @@ export function ConfirmDialog({
           <Button variant="outline" onPress={() => onOpenChange(false)}>
             {cancelLabel}
           </Button>
-          <Button variant="destructive" disabled={loading} onPress={onConfirm}>
+          <Button variant="destructive" onPress={onConfirm}>
             {confirmLabel}
           </Button>
         </DialogFooter>

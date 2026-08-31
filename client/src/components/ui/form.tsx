@@ -5,6 +5,8 @@ import {
   FieldLabel as FieldLabelPrimitive,
   Field as FieldPrimitive,
 } from '@/components/ui/field';
+import { FormElement } from '@/components/ui/form-element';
+import type { FormElementProps } from '@/components/ui/form-element-base';
 import type { InputProps } from '@/components/ui/input-base';
 import { Input } from '@/components/ui/input.js';
 import type { Label } from '@/components/ui/label';
@@ -15,11 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea, type TextareaProps } from '@/components/ui/textarea';
 import { Slot } from '@radix-ui/react-slot';
 import { createFormHookContexts, useStore } from '@tanstack/react-form';
 import * as React from 'react';
 import type { ReactNode } from 'react';
+import { View } from 'react-native';
 
 export const { fieldContext, formContext, useFieldContext, useFormContext } =
   createFormHookContexts();
@@ -62,18 +65,20 @@ function useFieldComponentContext() {
   }, [id, isTouched, submissionAttempts, errors]);
 }
 
-// <Form> — auto-handles submit event
-function Form({ ...props }: React.ComponentProps<'form'>) {
+// <Form> — the form body. On web this is a real `<form>` so Enter inside a
+// field still submits; on native it is a `View` and `SubmitButton` is the only
+// path to submission. Either way the submit is routed through form context.
+function Form({ className, children }: Omit<FormElementProps, 'onSubmit'>) {
   const form = useFormContext();
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
+    <FormElement
+      onSubmit={() => {
         form.handleSubmit();
       }}
-      {...props}
-    />
+      className={className}
+    >
+      {children}
+    </FormElement>
   );
 }
 
@@ -147,6 +152,24 @@ function FieldError({
   );
 }
 
+/**
+ * Fields side by side, two to a row — what `grid grid-cols-2 gap-4` did on web.
+ * `grid` has no native equivalent, and the `flex-1` has to sit on each cell
+ * rather than on the field, which would then only be laid out correctly inside
+ * a row. `min-w-[45%]` is what makes a third field wrap instead of squeezing.
+ */
+function FieldRow({ children }: { children: ReactNode }) {
+  return (
+    <View className="flex-row flex-wrap gap-4">
+      {React.Children.map(children, (child) =>
+        child == null || child === false ? null : (
+          <View className="min-w-[45%] flex-1">{child}</View>
+        ),
+      )}
+    </View>
+  );
+}
+
 type FieldWrapperProps = {
   label: ReactNode;
   control: ReactNode;
@@ -194,7 +217,7 @@ function InputField({ label, ...props }: InputFieldProps) {
 
 type TextAreaFieldProps = {
   label: string;
-} & React.ComponentProps<'textarea'>;
+} & Omit<TextareaProps, 'value' | 'onChangeText' | 'onBlur'>;
 
 function TextAreaField({ label, ...props }: TextAreaFieldProps) {
   const field = useFieldContext<string>();
@@ -207,7 +230,7 @@ function TextAreaField({ label, ...props }: TextAreaFieldProps) {
           {...props}
           value={field.state.value ?? ''}
           onBlur={field.handleBlur}
-          onChange={(e) => field.handleChange(e.target.value)}
+          onChangeText={(text) => field.handleChange(text)}
         />
       }
     />
@@ -301,6 +324,7 @@ export {
   FieldDescription,
   FieldError,
   FieldWrapper,
+  FieldRow,
   InputField,
   TextAreaField,
   SelectField,

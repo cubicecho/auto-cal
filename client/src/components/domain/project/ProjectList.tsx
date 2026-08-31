@@ -3,7 +3,7 @@ import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { FolderKanban, Plus } from '@/components/ui/icons';
 import { CardGrid, EmptyState, PageHeader } from '@/components/ui/page';
-import { Switch } from '@/components/ui/switch';
+import { SwitchField } from '@/components/ui/switch-field';
 import { useListSection } from '@/hooks/useListSection';
 import { useState } from 'react';
 import { ProjectCard } from './ProjectCard';
@@ -50,17 +50,12 @@ export function ProjectList({ items, onSelect }: ProjectListProps) {
         subtitle="Goals with dedicated notes, tasks, and reserved time blocks"
         actions={
           <>
-            <label
-              htmlFor="show-archived-projects"
-              className="flex items-center gap-2 text-sm text-muted-foreground"
-            >
-              <Switch
-                id="show-archived-projects"
-                checked={showArchived}
-                onCheckedChange={setShowArchived}
-              />
-              Show archived
-            </label>
+            <SwitchField
+              id="show-archived-projects"
+              label="Show archived"
+              checked={showArchived}
+              onCheckedChange={setShowArchived}
+            />
             <Button size="sm" onPress={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               New Project

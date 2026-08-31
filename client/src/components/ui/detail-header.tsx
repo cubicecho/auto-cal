@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { ColorDot } from '@/components/ui/color-dot';
 import { ArrowLeft, Pencil } from '@/components/ui/icons';
 import type { ReactNode } from 'react';
+import { Text, View } from 'react-native';
 
 // The outline "Edit" action shared by the detail views' header.
 export function EditButton({
@@ -47,7 +48,7 @@ export function DetailHeader({
   actions,
 }: DetailHeaderProps) {
   return (
-    <div className="flex items-center gap-3">
+    <View className="flex-row items-center gap-3">
       <Button
         variant="ghost"
         size="icon"
@@ -56,22 +57,31 @@ export function DetailHeader({
       >
         <ArrowLeft className="h-4 w-4" />
       </Button>
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
+      <View className="flex-1">
+        <View className="flex-row items-center gap-2">
           {color ? (
             <ColorDot
               color={color}
               {...(colorLabel ? { title: colorLabel } : {})}
             />
           ) : null}
-          <h2 className="text-2xl font-bold">{title}</h2>
+          <Text
+            // biome-ignore lint/a11y/useSemanticElements: this is not a DOM element — an `<h2>` has no native counterpart
+            role="heading"
+            aria-level={2}
+            className="text-2xl font-bold text-foreground"
+          >
+            {title}
+          </Text>
           {badge}
-        </div>
+        </View>
         {subtitle ? (
-          <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
+          <Text className="mt-0.5 text-sm text-muted-foreground">
+            {subtitle}
+          </Text>
         ) : null}
-      </div>
+      </View>
       {actions}
-    </div>
+    </View>
   );
 }

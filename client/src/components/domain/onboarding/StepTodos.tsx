@@ -9,7 +9,7 @@ import {
   OnboardingStep,
 } from '@/components/domain/onboarding/OnboardingStep';
 import { TodoListSelect } from '@/components/domain/todo-list/TodoListSelect';
-import { FieldWrapper, Form } from '@/components/ui/form';
+import { FieldRow, FieldWrapper, Form } from '@/components/ui/form';
 import { Plus } from '@/components/ui/icons';
 import {
   Select,
@@ -103,7 +103,7 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
       isFinal
     >
       <form.AppForm>
-        <Form className="space-y-4">
+        <Form className="gap-4">
           <form.AppField name="title">
             {(field) => (
               <field.InputField
@@ -113,7 +113,7 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
             )}
           </form.AppField>
 
-          <div className="grid grid-cols-2 gap-4">
+          <FieldRow>
             <form.AppField name="priority">
               {(field) => (
                 <FieldWrapper
@@ -153,7 +153,7 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
                 />
               )}
             </form.AppField>
-          </div>
+          </FieldRow>
 
           <form.SubmitButton
             icon={<Plus className="mr-1 h-4 w-4" />}

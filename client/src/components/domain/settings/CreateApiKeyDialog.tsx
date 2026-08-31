@@ -1,5 +1,6 @@
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { Code } from '@/components/ui/code';
 import {
   Dialog,
   DialogContent,
@@ -8,11 +9,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FormElement } from '@/components/ui/form-element';
 import { Check, Copy } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ToggleChip } from '@/components/ui/toggle-chip';
+import { copyText } from '@/lib/clipboard';
 import { useMutation } from '@apollo/client/react';
 import { useState } from 'react';
+import { Text, View } from 'react-native';
 
 const MY_CREATE_API_KEY = graphql(`
   mutation MyCreateApiKey($input: MyCreateApiKeyInput!) {
@@ -87,10 +99,9 @@ export function CreateApiKeyDialog({
     setScopeError('');
   }
 
-  // Optional event: Enter in the field raises the DOM submit, while the
-  // Button is a Pressable and calls this directly.
-  async function handleSubmit(e?: React.FormEvent) {
-    e?.preventDefault();
+  // Called two ways: `FormElement` wires it to the DOM submit event on web
+  // (Enter in the field), and the Button is a Pressable that calls it directly.
+  async function handleSubmit() {
     let hasError = false;
     if (!name.trim()) {
       setNameError('Name is required');
@@ -126,61 +137,23 @@ export function CreateApiKeyDialog({
     }
   }
 
-  function handleCopy(token: string) {
-    const finish = () => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    };
-
-    if (navigator.clipboard) {
-      navigator.clipboard
-        .writeText(token)
-        .then(finish)
-        .catch(() => {
-          legacyCopy(token);
-          finish();
-        });
-    } else {
-      legacyCopy(token);
-      finish();
-    }
+  async function handleCopy(token: string) {
+    await copyText(token);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
-  function handleCopyUrl(url: string) {
-    const finish = () => {
-      setCopiedUrl(url);
-      setTimeout(() => setCopiedUrl(null), 2000);
-    };
-    if (navigator.clipboard) {
-      navigator.clipboard
-        .writeText(url)
-        .then(finish)
-        .catch(() => {
-          legacyCopy(url);
-          finish();
-        });
-    } else {
-      legacyCopy(url);
-      finish();
-    }
-  }
-
-  function legacyCopy(text: string) {
-    const el = document.createElement('textarea');
-    el.value = text;
-    el.style.position = 'fixed';
-    el.style.opacity = '0';
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
+  async function handleCopyUrl(url: string) {
+    await copyText(url);
+    setCopiedUrl(url);
+    setTimeout(() => setCopiedUrl(null), 2000);
   }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[480px]">
         {state.phase === 'form' ? (
-          <form onSubmit={handleSubmit}>
+          <FormElement onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle>Generate API Key</DialogTitle>
               <DialogDescription>
@@ -188,8 +161,8 @@ export function CreateApiKeyDialog({
                 Assistant). The full token is shown only once after creation.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
+            <View className="gap-4 py-4">
+              <View className="gap-2">
                 <Label htmlFor="api-key-name">Name</Label>
                 <Input
                   id="api-key-name"
@@ -202,47 +175,46 @@ export function CreateApiKeyDialog({
                   maxLength={60}
                 />
                 {nameError && (
-                  <p className="text-xs text-destructive">{nameError}</p>
+                  <Text className="text-xs text-destructive">{nameError}</Text>
                 )}
-              </div>
-              <div className="space-y-2">
+              </View>
+              <View className="gap-2">
                 <Label>Scopes</Label>
-                <div className="flex gap-4">
+                <View className="flex-row gap-2">
                   {ALL_SCOPES.map((scope) => (
-                    <label
+                    <ToggleChip
                       key={scope}
-                      className="flex items-center gap-2 cursor-pointer"
+                      size="sm"
+                      selected={scopes.includes(scope)}
+                      onPress={() => toggleScope(scope)}
+                      className="capitalize"
                     >
-                      <input
-                        type="checkbox"
-                        checked={scopes.includes(scope)}
-                        onChange={() => toggleScope(scope)}
-                        className="h-4 w-4 rounded border-input"
-                      />
-                      <span className="text-sm capitalize">{scope}</span>
-                    </label>
+                      {scope}
+                    </ToggleChip>
                   ))}
-                </div>
+                </View>
                 {scopeError && (
-                  <p className="text-xs text-destructive">{scopeError}</p>
+                  <Text className="text-xs text-destructive">{scopeError}</Text>
                 )}
-              </div>
-              <div className="space-y-2">
+              </View>
+              <View className="gap-2">
                 <Label htmlFor="api-key-expiry">Expiry</Label>
-                <select
-                  id="api-key-expiry"
-                  value={expiry}
-                  onChange={(e) => setExpiry(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  {EXPIRY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+                <Select value={expiry} onValueChange={setExpiry}>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {EXPIRY_OPTIONS.find((o) => o.value === expiry)?.label}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EXPIRY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </View>
+            </View>
             <DialogFooter>
               <Button variant="outline" onPress={() => handleClose(false)}>
                 Cancel
@@ -256,7 +228,7 @@ export function CreateApiKeyDialog({
                 {loading ? 'Generating…' : 'Generate Key'}
               </Button>
             </DialogFooter>
-          </form>
+          </FormElement>
         ) : (
           <>
             <DialogHeader>
@@ -265,22 +237,22 @@ export function CreateApiKeyDialog({
                 Copy your token now — you won't be able to see it again.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="rounded-md bg-amber-50 border border-amber-200 p-3 dark:bg-amber-950 dark:border-amber-800">
-                <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+            <View className="gap-4 py-4">
+              <View className="rounded-md bg-amber-50 border border-amber-200 p-3 dark:bg-amber-950 dark:border-amber-800">
+                <Text className="text-sm text-amber-800 dark:text-amber-200 font-medium">
                   Store this token securely. It will not be shown again.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 truncate rounded-md bg-muted px-3 py-2 text-xs font-mono">
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-2">
+                <Code className="flex-1 truncate rounded-md bg-muted px-3 py-2 text-xs font-mono">
                   {state.token}
-                </code>
+                </Code>
                 <Button
                   variant="outline"
                   size="sm"
-                  onPress={() =>
-                    state.phase === 'reveal' && handleCopy(state.token)
-                  }
+                  onPress={() => {
+                    if (state.phase === 'reveal') void handleCopy(state.token);
+                  }}
                 >
                   {copied ? (
                     <Check className="h-4 w-4 text-green-600" />
@@ -288,12 +260,12 @@ export function CreateApiKeyDialog({
                     <Copy className="h-4 w-4" />
                   )}
                 </Button>
-              </div>
+              </View>
               {scopes.includes('read') && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">
+                <View className="gap-2">
+                  <Text className="text-xs font-medium text-muted-foreground">
                     iCal feeds (copy now — token won't be shown again)
-                  </p>
+                  </Text>
                   {[
                     {
                       label: 'Schedule',
@@ -304,17 +276,17 @@ export function CreateApiKeyDialog({
                       url: `${typeof window !== 'undefined' ? window.location.origin : ''}/ical?secret=${state.token}&view=blocks`,
                     },
                   ].map(({ label, url }) => (
-                    <div key={label} className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground w-20 shrink-0">
+                    <View key={label} className="flex-row items-center gap-2">
+                      <Text className="text-xs text-muted-foreground w-20 shrink-0">
                         {label}
-                      </span>
-                      <code className="flex-1 truncate rounded-md bg-muted px-2 py-1.5 text-xs font-mono">
+                      </Text>
+                      <Code className="flex-1 truncate rounded-md bg-muted px-2 py-1.5 text-xs font-mono">
                         {url}
-                      </code>
+                      </Code>
                       <Button
                         variant="outline"
                         size="sm"
-                        onPress={() => handleCopyUrl(url)}
+                        onPress={() => void handleCopyUrl(url)}
                       >
                         {copiedUrl === url ? (
                           <Check className="h-4 w-4 text-green-600" />
@@ -322,11 +294,11 @@ export function CreateApiKeyDialog({
                           <Copy className="h-4 w-4" />
                         )}
                       </Button>
-                    </div>
+                    </View>
                   ))}
-                </div>
+                </View>
               )}
-            </div>
+            </View>
             <DialogFooter>
               <Button onPress={() => handleClose(false)}>Done</Button>
             </DialogFooter>

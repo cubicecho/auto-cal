@@ -10,7 +10,7 @@ import {
   CreatedRow,
   OnboardingStep,
 } from '@/components/domain/onboarding/OnboardingStep';
-import { FieldWrapper, Form } from '@/components/ui/form';
+import { FieldRow, FieldWrapper, Form } from '@/components/ui/form';
 import { Plus } from '@/components/ui/icons';
 import { useAppForm } from '@/hooks/form-hook';
 import { DERIVED, invalidate } from '@/lib/cache';
@@ -98,7 +98,7 @@ export function StepHabits({ onBack, onNext, onSkip }: StepHabitsProps) {
       onNext={onNext}
     >
       <form.AppForm>
-        <Form className="space-y-4">
+        <Form className="gap-4">
           {/* Title */}
           <form.AppField name="title">
             {(field) => (
@@ -110,7 +110,7 @@ export function StepHabits({ onBack, onNext, onSkip }: StepHabitsProps) {
           </form.AppField>
 
           {/* Frequency */}
-          <div className="grid grid-cols-2 gap-4">
+          <FieldRow>
             <form.AppField name="frequencyCount">
               {(field) => (
                 <field.InputField
@@ -133,7 +133,7 @@ export function StepHabits({ onBack, onNext, onSkip }: StepHabitsProps) {
                 />
               )}
             </form.AppField>
-          </div>
+          </FieldRow>
 
           {/* Activity type */}
           <form.AppField name="activityTypeId">

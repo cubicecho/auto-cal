@@ -1,3 +1,5 @@
+import { Text } from 'react-native';
+
 // Inline loading / error text for a query whose data may still render
 // alongside it. Renders the error (priority) or the loading line, else null.
 export function QueryState({
@@ -13,13 +15,15 @@ export function QueryState({
 }) {
   if (error) {
     return (
-      <p className="text-sm text-destructive">
+      <Text className="text-sm text-destructive">
         {errorLabel}: {error.message}
-      </p>
+      </Text>
     );
   }
   if (loading) {
-    return <p className="text-sm text-muted-foreground">{loadingLabel}</p>;
+    return (
+      <Text className="text-sm text-muted-foreground">{loadingLabel}</Text>
+    );
   }
   return null;
 }

@@ -11,7 +11,7 @@ import {
   TodoListSelect,
 } from '@/components/domain/todo-list/TodoListSelect';
 import { Button } from '@/components/ui/button';
-import { FieldWrapper, Form } from '@/components/ui/form';
+import { FieldRow, FieldWrapper, Form } from '@/components/ui/form';
 import { FormDialog, FormDialogFooter } from '@/components/ui/form-dialog';
 import { Check } from '@/components/ui/icons';
 import { useAppForm } from '@/hooks/form-hook';
@@ -19,6 +19,7 @@ import { useResetOnOpen } from '@/hooks/useResetOnOpen';
 import { DERIVED, invalidate } from '@/lib/cache';
 import { DURATION_OPTIONS, PRIORITY_OPTIONS } from '@/lib/form-constants';
 import { useMutation } from '@apollo/client/react';
+import { Text } from 'react-native';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -220,7 +221,7 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
       }
     >
       <form.AppForm>
-        <Form className="space-y-4">
+        <Form className="gap-4">
           <form.AppField name="title">
             {(field) => (
               <field.InputField
@@ -257,7 +258,7 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
             )}
           </form.AppField>
 
-          <div className="grid grid-cols-2 gap-4">
+          <FieldRow>
             <form.AppField name="priority">
               {(field) => (
                 <field.SelectField
@@ -277,7 +278,7 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
                 />
               )}
             </form.AppField>
-          </div>
+          </FieldRow>
 
           <form.AppField name="dueAt">
             {(field) => (
@@ -305,9 +306,9 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
                   Mark Complete
                 </Button>
               ) : isEdit && !!todo?.completedAt ? (
-                <span className="text-sm text-muted-foreground">
+                <Text className="text-sm text-muted-foreground">
                   ✓ Completed
-                </span>
+                </Text>
               ) : undefined
             }
           >
