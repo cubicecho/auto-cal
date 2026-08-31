@@ -15,7 +15,7 @@ import {
   usePathname,
   useRouter,
 } from 'expo-router';
-import { Platform, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 
 /**
  * Catches a crash inside any signed-in screen before it reaches the root
@@ -51,7 +51,7 @@ function WebLayout() {
     <TooltipProvider>
       <View className="h-screen flex-col overflow-hidden bg-background text-foreground">
         {!isOnboarding && (
-          <header className="flex-shrink-0 border-b bg-card text-card-foreground">
+          <View className="flex-shrink-0 border-b bg-card text-card-foreground">
             <View className="container mx-auto px-4 py-3">
               <View className="flex-row items-center justify-between">
                 <View>
@@ -62,7 +62,7 @@ function WebLayout() {
                     Smart todo and habit scheduling
                   </Text>
                 </View>
-                <nav className="flex-row items-center gap-1">
+                <View className="flex-row items-center gap-1">
                   {NAV_LINKS.map(({ href, label }) => (
                     <Link
                       key={href}
@@ -72,20 +72,21 @@ function WebLayout() {
                       {label}
                     </Link>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => setDark(!dark)}
+                  <Pressable
+                    onPress={() => setDark(!dark)}
+                    // biome-ignore lint/a11y/useSemanticElements: a Pressable is a <div> without it
+                    role="button"
                     aria-label={
                       dark ? 'Switch to light mode' : 'Switch to dark mode'
                     }
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   >
                     {dark ? (
                       <Sun className="h-4 w-4" />
                     ) : (
                       <Moon className="h-4 w-4" />
                     )}
-                  </button>
+                  </Pressable>
                   <Link
                     href="/settings"
                     className={cn(
@@ -98,21 +99,24 @@ function WebLayout() {
                   >
                     <Settings className="h-4 w-4" />
                   </Link>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  <Pressable
+                    onPress={handleLogout}
+                    // biome-ignore lint/a11y/useSemanticElements: a Pressable is a <div> without it
+                    role="button"
+                    className="rounded-md px-3 py-1.5 transition-colors hover:bg-muted"
                   >
-                    Sign out
-                  </button>
-                </nav>
+                    <Text className="text-sm font-medium text-muted-foreground">
+                      Sign out
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </header>
+          </View>
         )}
-        <main className="min-h-0 flex-1 flex-col overflow-hidden">
+        <View className="min-h-0 flex-1 flex-col overflow-hidden">
           <Slot />
-        </main>
+        </View>
       </View>
     </TooltipProvider>
   );
