@@ -22,6 +22,7 @@ import { ErrorCode } from './errors.ts';
 import { icalHandler } from './ical-route.ts';
 import { authLog, log, logLevelName, wsLog } from './logger.ts';
 import { schema } from './schema/index.ts';
+import { startNotificationTick } from './services/notifications.ts';
 
 // Read version from server/package.json (../ from src/). Works under
 // `node src/index.ts` in Docker where npm_package_version is unset.
@@ -279,6 +280,9 @@ httpServer.listen(PORT, '0.0.0.0', () => {
       `log=${logLevelName} | port=${PORT} | pid=${process.pid}`,
   );
   log.info(`Server ready at http://0.0.0.0:${PORT}/graphql`);
+  // No-op (and says so) unless the VAPID keys are set, so a deploy without
+  // them boots normally and simply never notifies.
+  startNotificationTick(db);
   if (clientDistExists) {
     log.info('Client served from', clientDist);
   }

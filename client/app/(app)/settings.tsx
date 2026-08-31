@@ -1,4 +1,5 @@
 import { ApiKeyManager } from '@/components/domain/settings/ApiKeyManager';
+import { NotificationSettings } from '@/components/domain/settings/NotificationSettings';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -57,6 +58,8 @@ export default function SettingsPage() {
           </Link>
         </CardContent>
       </Card>
+
+      <NotificationSettings />
 
       <ApiKeyManager />
     </Page>

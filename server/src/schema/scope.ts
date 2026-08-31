@@ -58,6 +58,9 @@ export const TABLE_SCOPE: ScopeConfig<Context> = {
   projectNotes: (context) => ({
     project: { userId: { eq: requireUser(context) } },
   }),
+  notificationPreferences: ownedByUser,
+  pushSubscriptions: ownedByUser,
+  sentNotifications: ownedByUser,
 };
 
 /**
@@ -109,6 +112,14 @@ export const QUERY_SCOPE: Record<string, ScopedField> = {
  * root fields today, and each is already reachable — correctly scoped — by
  * traversing a relation from something that is.
  *
+ * `pushSubscriptions` and `sentNotifications` are server-side bookkeeping: the
+ * first holds a browser's push keys, the second what the tick has already sent.
+ * Neither has a caller. Push subscriptions are written through
+ * `myRegisterPushSubscription` and read only by the notification service, and
+ * `notificationPreference` is unexposed for a different reason: it is served,
+ * but by a hand-written `myNotificationPreferences` that materialises the row
+ * on first read, so callers never have to treat "never saved" as a null.
+ *
  * The single-row variants are redundant with their list form plus a `where`.
  * `users` is the plural of the one table that scopes by `id`. `projectNotes` and
  * `habitCompletions` are leaves owned by a parent (`Project.notes`,
@@ -120,6 +131,12 @@ export const QUERY_SCOPE: Record<string, ScopedField> = {
  */
 export const UNEXPOSED: ReadonlySet<string> = new Set([
   'activityType',
+  'notificationPreference',
+  'notificationPreferences',
+  'pushSubscription',
+  'pushSubscriptions',
+  'sentNotification',
+  'sentNotifications',
   'apiKey',
   'habitCompletions',
   'habitCompletion',

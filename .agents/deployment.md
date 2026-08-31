@@ -31,6 +31,33 @@ node --experimental-strip-types server/src/index.ts
 | `NODE_ENV` | No | `production` / `development` |
 | `EXPOSE_MAGIC_LINK` | No | `1`/`true`/`yes` returns the magic link directly in the `requestMagicLink` response (dev-style passwordless login) even in production. For local/secure networks only — never enable on a public deployment. |
 | `BYPASS_AUTH_UUID` | No | An existing user UUID accepted as a Bearer token in any environment; passwordless access for that one user. Local/secure networks only. |
+| `VAPID_PUBLIC_KEY` | No | Web Push application server key, base64url. The client fetches it via `myPushPublicKey`. |
+| `VAPID_PRIVATE_KEY` | No | Its private half. Never leaves the server. |
+| `VAPID_SUBJECT` | No | Contact URL the push services require, e.g. `mailto:admin@example.com`. |
+| `NOTIFICATION_TICK_SECONDS` | No | How often the notification tick runs (default `60`). Also the width of the window each pass covers. |
+
+### Push Notifications
+
+All three `VAPID_*` variables must be set together. With any of them missing the
+server boots normally, logs `[notifications] VAPID keys not set`, starts no tick,
+and `myPushPublicKey` returns null — which is how the client knows to hide the
+notification card rather than offering a button that cannot work.
+
+Generate a key pair once and keep it: rotating it invalidates every registered
+browser subscription, which silently stops delivery until each user re-enables
+notifications.
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+The tick is a `setInterval` inside the API process, not a separate worker. It is
+`unref`ed, so it never holds the process open, and it is idempotent through the
+unique constraint on `sent_notifications` — but that idempotency is per-database,
+not per-process. **Running more than one replica means each replica ticks**;
+overlapping ticks will not double-send (the loser of the insert sends nothing),
+so this is safe, merely redundant.
+
 
 ## Docker Compose Files
 

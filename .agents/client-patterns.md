@@ -122,6 +122,29 @@ entity, so Apollo has normalized it before the handler runs — an `updated`
 event only has to drop `DERIVED`. Membership changes also evict the list field,
 and deletes evict the entity.
 
+## Notifications
+
+Two unrelated halves, both switched on from the same settings card
+(`components/domain/settings/NotificationSettings.tsx`):
+
+**Browser push** goes through `client/src/lib/push.ts`, wrapped the way
+`src/storage.ts` wraps localStorage — every entry point is safe to call
+anywhere and reports "unsupported" off web rather than throwing on a missing
+global. `client/public/sw.js` is the service worker; it is served verbatim from
+the site root (a worker's scope cannot be broader than its own path), so it is
+**not** bundled by Metro and must stay plain JavaScript with no imports.
+
+The card renders nothing when `myPushPublicKey` is null — a server with no VAPID
+keys cannot deliver anything, and a toggle that silently does nothing is worse
+than an absent one.
+
+**The in-app habit digest** is `hooks/useHabitDigest.ts`: one toast a day naming
+the habits still scheduled for today. It reads the schedule the Today screen has
+already fetched rather than querying for itself, so the digest cannot disagree
+with what is on screen, and it is keyed by local date in `storage` so a reload
+does not re-nag. It is web-only for that reason — off web `storage` always reads
+null, which would fire the toast on every mount.
+
 ## Nav Structure
 
 Top nav (hidden during onboarding): **Dashboard · Todos · Todo Lists · Habits · Time Blocks · Activity Types · Stats** + Settings icon + Sign out + dark mode toggle.

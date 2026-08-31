@@ -30,6 +30,7 @@ import type { LucideIcon, LucideProps } from 'lucide-react-native';
 import ArchiveSource from 'lucide-react-native/icons/archive';
 import ArrowLeftSource from 'lucide-react-native/icons/arrow-left';
 import ArrowRightSource from 'lucide-react-native/icons/arrow-right';
+import BellSource from 'lucide-react-native/icons/bell';
 import CalendarSource from 'lucide-react-native/icons/calendar';
 import CheckSource from 'lucide-react-native/icons/check';
 import ChevronDownSource from 'lucide-react-native/icons/chevron-down';
@@ -91,6 +92,7 @@ function icon(Source: LucideIcon) {
 export const Archive = icon(ArchiveSource);
 export const ArrowLeft = icon(ArrowLeftSource);
 export const ArrowRight = icon(ArrowRightSource);
+export const Bell = icon(BellSource);
 export const Calendar = icon(CalendarSource);
 export const Check = icon(CheckSource);
 export const ChevronDown = icon(ChevronDownSource);

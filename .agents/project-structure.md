@@ -271,6 +271,42 @@ Full column definitions live in `db/src/models/`. Summary:
 | position | integer | notNull, default 0 — manual ordering |
 | createdAt / updatedAt | timestamp | |
 
+**`notification_preferences`**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| userId | uuid | FK users (cascade delete), **unique** — one row per user |
+| enabled | boolean | notNull, default true |
+| leadTimeMinutes | integer | notNull, default 10 — how far ahead of a slot to notify |
+| quietHoursStart / quietHoursEnd | text | nullable local `HH:MM`; the window may wrap midnight |
+| activityTypeIds | uuid[] | notNull, default `[]` — empty means every type |
+| habitDigest | boolean | notNull, default true — the in-app "habits due today" toast |
+| createdAt / updatedAt | timestamp | |
+
+**`push_subscriptions`**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| userId | uuid | FK users (cascade delete) |
+| endpoint | text | notNull, **unique** — the browser's own identifier, so re-registering upserts |
+| p256dh / auth | text | notNull — push credentials; excluded from the GraphQL surface |
+| userAgent | text | nullable |
+| expiredAt | timestamp | set when a push service answers 404/410 |
+| createdAt | timestamp | |
+
+**`sent_notifications`**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| userId | uuid | FK users (cascade delete) |
+| itemKey | text | notNull — `todos.id`, or the habit-completion row's id |
+| scheduledFor | timestamp | notNull |
+| sentAt | timestamp | defaultNow |
+| — | unique | `(userId, itemKey, scheduledFor)` — the tick's idempotency key |
+
 Conventions: all PKs use `uuid`+`defaultRandom`; user-owned tables cascade-delete; required references to activity-type / list use `onDelete: 'restrict'`; timestamps are `timestamp` (not `timestamptz`). Types are inferred via `$inferSelect` / `$inferInsert` — never duplicated.
 
 ---
@@ -295,7 +331,7 @@ Nine come from `QUERY_SCOPE` in `server/src/schema/scope.ts` — generated resol
 | `myProject` | Single `Project`; `null` for a foreign or missing id, never `FORBIDDEN` |
 | `myApiKeys` | Revoked keys are excluded by the scope itself |
 
-Five are hand-written because they compute rather than filter:
+The rest are hand-written because they compute, or because a generated query would return null before the user has saved anything:
 
 | Query | Notes |
 |-------|-------|
@@ -304,6 +340,8 @@ Five are hand-written because they compute rather than filter:
 | `myHabitDetail(habitId, periods)` | Per-period rates for a habit |
 | `myActivityTypeStats(startDate, endDate)` | |
 | `myHabitStats(habitId, startDate, endDate)` | |
+| `myNotificationPreferences` | Materialises the row on first read, so it is never null |
+| `myPushPublicKey` | VAPID public key, or null when push is not configured |
 
 ### Mutations (`my*` scoped)
 
@@ -312,14 +350,15 @@ Five are hand-written because they compute rather than filter:
 | Profile | `myUpdateProfile` |
 | Activity types | `myCreateActivityType`, `myUpdateActivityType`, `myDeleteActivityType` |
 | Todo lists | `myCreateTodoList`, `myUpdateTodoList`, `myDeleteTodoList` |
-| Todos | `myCreateTodo`, `myUpdateTodo`, `myCompleteTodo`, `myDeleteTodo`, `myDeleteTodos` |
-| Habits | `myCreateHabit`, `myUpdateHabit`, `myDeleteHabit`, `myCompleteHabit`, `myUncompleteHabit` |
+| Todos | `myCreateTodo`, `myUpdateTodo`, `myCompleteTodo`, `myCompleteTodos`, `myUnscheduleTodo`, `myDeleteTodo`, `myDeleteTodos`, `myDeleteTodosById` |
+| Habits | `myCreateHabit`, `myUpdateHabit`, `myDeleteHabit`, `myCompleteHabit`, `myUncompleteHabit`, `mySkipHabit`, `myUnskipHabit` |
 | Time blocks | `myCreateTimeBlock`, `myUpdateTimeBlock`, `myDeleteTimeBlock` |
 | Projects | `myCreateProject`, `myUpdateProject`, `myArchiveProject` |
 | Project notes | `myCreateProjectNote`, `myUpdateProjectNote`, `myReorderProjectNotes`, `myDeleteProjectNote` |
 | API keys | `myCreateApiKey`, `myRevokeApiKey` (both throw when called *with* an API key) |
 | Import | `myImportTodos` |
 | Schedule | `myReschedule` (only mutation that **awaits** the writeback) |
+| Notifications | `myUpdateNotificationPreferences`, `myRegisterPushSubscription`, `myUnregisterPushSubscription` |
 
 ### Public mutations (no auth)
 

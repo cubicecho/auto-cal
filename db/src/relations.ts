@@ -35,6 +35,32 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.users.id,
       to: r.projects.userId,
     }),
+    notificationPreferences: r.one.notificationPreferences({
+      from: r.users.id,
+      to: r.notificationPreferences.userId,
+    }),
+    pushSubscriptions: r.many.pushSubscriptions({
+      from: r.users.id,
+      to: r.pushSubscriptions.userId,
+    }),
+  },
+  notificationPreferences: {
+    user: r.one.users({
+      from: r.notificationPreferences.userId,
+      to: r.users.id,
+    }),
+  },
+  pushSubscriptions: {
+    user: r.one.users({
+      from: r.pushSubscriptions.userId,
+      to: r.users.id,
+    }),
+  },
+  sentNotifications: {
+    user: r.one.users({
+      from: r.sentNotifications.userId,
+      to: r.users.id,
+    }),
   },
   apiKeys: {
     user: r.one.users({

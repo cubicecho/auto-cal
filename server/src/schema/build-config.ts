@@ -72,8 +72,16 @@ export const buildSchemaConfig: BuildSchemaConfig = {
   // so generated inserts for 'apiKeys' can never succeed" at build time. It does
   // not apply here — `features.insert` is off, so there are no generated inserts
   // — and there is no flag to silence it.
+  //
+  // The push subscription keys are excluded for the same reason: `p256dh` and
+  // `auth` are the credentials for pushing to that browser, and the table is
+  // written through a hand-written resolver and read only by the notification
+  // service. Nothing should be able to select, filter, or order by them.
   exclude: {
-    columns: { apiKeys: ['keyHash'] },
+    columns: {
+      apiKeys: ['keyHash'],
+      pushSubscriptions: ['p256dh', 'auth'],
+    },
   },
 
   // Presentation order, declared once on the server instead of by every caller.
@@ -119,5 +127,6 @@ export const buildSchemaConfig: BuildSchemaConfig = {
         createdAt: { direction: 'asc', priority: 0 },
       },
     },
+    pushSubscriptions: { orderBy: { createdAt: 'desc' } },
   },
 };

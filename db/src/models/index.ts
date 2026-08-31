@@ -10,3 +10,6 @@ export * from './time_blocks.ts';
 export * from './manual_events.ts';
 export * from './habit_completions.ts';
 export * from './api_keys.ts';
+export * from './notification_preferences.ts';
+export * from './push_subscriptions.ts';
+export * from './sent_notifications.ts';

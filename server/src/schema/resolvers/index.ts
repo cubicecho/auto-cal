@@ -18,6 +18,7 @@ import { authMutations } from './auth.ts';
 import { habitMutations, habitQueries } from './habits.ts';
 import { importMutations } from './import.ts';
 import { manualEventMutations } from './manual-events.ts';
+import { notificationMutations, notificationQueries } from './notifications.ts';
 import { profileMutations } from './profile.ts';
 import { projectFields, projectMutations } from './projects.ts';
 import { scheduleMutations, scheduleQueries } from './schedule.ts';
@@ -398,6 +399,13 @@ const extensionSDL = `
     myHabitDetail(habitId: ID!, periods: Int): HabitDetail!
     myStats(startDate: String, endDate: String): StatsOverview!
     mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!
+    myNotificationPreferences: NotificationPreference!
+    """
+    VAPID public key for \`PushManager.subscribe\`. Null when the server has no
+    keys configured — the client hides the notification settings entirely
+    rather than offering a button that cannot work.
+    """
+    myPushPublicKey: String
   }
 
   # Declared, not extended: build-config disables every generated mutation, so
@@ -444,6 +452,28 @@ const extensionSDL = `
     myUpdateProjectNote(input: UpdateProjectNoteArgs!): ProjectNote!
     myReorderProjectNotes(input: ReorderProjectNotesArgs!): [ProjectNote!]!
     myDeleteProjectNote(id: ID!): Boolean!
+    myUpdateNotificationPreferences(input: UpdateNotificationPreferencesArgs!): NotificationPreference!
+    myRegisterPushSubscription(input: RegisterPushSubscriptionArgs!): Boolean!
+    myUnregisterPushSubscription(endpoint: String!): Boolean!
+  }
+
+  input UpdateNotificationPreferencesArgs {
+    enabled: Boolean
+    "Minutes before the slot starts. 1–120."
+    leadTimeMinutes: Int
+    "Local HH:MM. Both null disables quiet hours; the window may wrap midnight."
+    quietHoursStart: String
+    quietHoursEnd: String
+    "Activity types to notify about. Empty means every type."
+    activityTypeIds: [ID!]
+    habitDigest: Boolean
+  }
+
+  input RegisterPushSubscriptionArgs {
+    endpoint: String!
+    p256dh: String!
+    auth: String!
+    userAgent: String
   }
 
   type RequestMagicLinkResult {
@@ -561,6 +591,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     ...habitQueries,
     ...statsQueries,
     ...scheduleQueries,
+    ...notificationQueries,
   });
   attach(mutationType, {
     ...profileMutations,
@@ -575,6 +606,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     ...apiKeyMutations,
     ...importMutations,
     ...manualEventMutations,
+    ...notificationMutations,
   });
   attach(subscriptionType, subscriptionResolvers);
 
