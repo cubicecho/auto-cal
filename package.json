@@ -13,6 +13,8 @@
     "build:client": "cd client && npx expo export --platform web",
     "build:server": "npm run build -w @auto-cal/server",
     "build:docker": "docker build -t auto-cal .",
+    "build:android": "npm run codegen && cd client && npx eas-cli@latest build --platform android",
+    "build:android:local": "npm run codegen && cd client && npx eas-cli@latest build --platform android --local",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
@@ -26,7 +28,8 @@
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "db:up": "docker compose -f docker-compose.dev.yml up -d",
-    "db:down": "docker compose -f docker-compose.dev.yml down"
+    "db:down": "docker compose -f docker-compose.dev.yml down",
+    "eas-build-post-install": "npm run generate:schema && npm run codegen:client"
   },
   "keywords": ["scheduling", "todo", "habits", "calendar", "productivity"],
   "author": "",

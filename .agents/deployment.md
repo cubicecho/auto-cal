@@ -22,6 +22,105 @@ node --experimental-strip-types server/src/index.ts
 
 The separate `db/src/migrator.ts` script is redundant in Docker — the server migrates on boot — but it is safe to run. It used to hang forever (postgres.js holds the event loop open until the pool is closed, so the script printed `Migrations complete` and never exited, which would have stalled an `&&`-chained CMD before the server started); it now calls `closeDb()` and exits.
 
+## Mobile Builds (EAS)
+
+The Android and iOS apps are **CNG** — there is no `client/android/` or
+`client/ios/` in the repo, and both are gitignored. Every native setting is
+derived from `client/app.json` plus its config plugins, and `expo prebuild`
+regenerates the native projects on demand. Committing the generated folders
+would make EAS Build stop syncing `icon`, `android`, `ios`, `plugins` and the
+rest from `app.json`, so don't.
+
+```bash
+npm run build:android              # codegen, then eas build -p android
+npm run build:android:local        # the same, built on this machine (needs the Android SDK)
+cd client && npx eas-cli build --platform android --profile preview
+```
+
+**One-time setup, per Expo account.** `client/app.json` carries no
+`extra.eas.projectId` because the id belongs to whoever owns the build. Run
+`cd client && npx eas-cli login && npx eas-cli init` once; it writes the id
+back into `app.json`.
+
+### Build profiles
+
+`client/eas.json` defines three, all extending a shared `base`:
+
+| Profile | Artifact | Distribution | For |
+|---------|----------|--------------|-----|
+| `development` | APK, dev client | internal | Running against a local Metro server |
+| `preview` | APK | internal | Installable test build against a deployed API |
+| `production` | AAB | store | Play Store upload |
+
+`appVersionSource: "remote"` means EAS owns `versionCode`/`buildNumber`, so
+nothing in the repo has to be bumped by hand; `production` sets
+`autoIncrement`. `runtimeVersion` follows the `appVersion` policy, so a
+native-level change requires a `version` bump in `app.json`.
+
+### `EXPO_PUBLIC_API_URL` per profile
+
+`client/src/apollo-client.ts` reads `EXPO_PUBLIC_API_URL` and falls back to
+`''`, which resolves to a relative `/graphql`. That is correct on web — the same
+Express server serves the bundle — and meaningless in a native binary, which has
+no origin to be relative to. So a native build must be told where the API is,
+and the value is inlined at bundle time, not read at launch.
+
+- **`development`** sets it in `eas.json` to `http://10.0.2.2:3001`, the Android
+  emulator's alias for the host loopback. On a physical device, the dev client
+  bundles from your machine's Metro server and picks up `client/.env` instead,
+  so set your LAN address there.
+- **`preview` and `production`** deliberately set *nothing* in `eas.json`. Auto
+  Cal is self-hosted; there is no canonical API host to hard-code, and an `env`
+  entry in `eas.json` takes precedence over EAS's stored environment variables,
+  so a placeholder there would block the mechanism that is supposed to supply
+  the real value. Both profiles bind to an EAS environment instead:
+
+  ```bash
+  cd client
+  npx eas-cli env:create --environment preview \
+    --name EXPO_PUBLIC_API_URL --value https://autocal.example.org --visibility plaintext
+  ```
+
+  A build with the variable unset produces an APK that installs and launches but
+  cannot reach any API — the failure is at the first query, not at build time.
+
+### Codegen on the builder
+
+`client/src/__generated__/graphql.ts` is gitignored, and the client cannot
+compile without it. Rather than teach EAS to upload ignored files, the root
+`package.json` defines an `eas-build-post-install` hook that regenerates it on
+the builder after `npm ci`:
+
+```json
+"eas-build-post-install": "npm run generate:schema && npm run codegen:client"
+```
+
+`generate:schema` needs no database (it builds the SDL over an in-memory
+PGlite), and EAS installs devDependencies, so both halves have what they need.
+`npm run build:android` also runs the full `codegen` locally first, so a broken
+schema fails on your machine rather than eight minutes into a remote build.
+
+### Monorepo resolution
+
+The most likely first failure, and it does not happen: `npx expo export
+--platform android` bundles 2818 modules cleanly from this workspace layout.
+`client/metro.config.js` patches `NODE_PATH` and points `watchFolders` /
+`nodeModulesPaths` at the workspace root using paths relative to `__dirname`, so
+the same arrangement holds in an EAS checkout. EAS detects the npm workspaces at
+the repository root and runs `npm ci` there.
+
+### Assets
+
+`client/assets/` holds the icon set, each PNG rasterised from the `.svg`
+checked in beside it (`rsvg-convert -w 1024 -h 1024 icon.svg -o icon.png`):
+
+| File | Size | Notes |
+|------|------|-------|
+| `icon.png` | 1024² | Opaque — iOS renders transparency as black |
+| `adaptive-icon.png` | 1024² | Android foreground, transparent, artwork inside the centre 66% safe zone; `android.adaptiveIcon.backgroundColor` fills behind it |
+| `splash-icon.png` | 1024² | Rounded card on its own dark ground, so it reads on both the light and dark splash backgrounds |
+| `favicon.png` | 48² | Web |
+
 ## Environment Variables
 
 | Variable | Required | Description |

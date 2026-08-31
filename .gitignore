@@ -14,3 +14,11 @@ pgdata-codegen
 .claude/worktrees/
 .claude/scheduled_tasks.lock
 coverage/
+
+# Expo
+.expo/
+# Continuous Native Generation: android/ and ios/ are prebuild output, derived
+# from app.json + plugins. Committing them would make EAS Build stop syncing
+# every native property in app.json (icon, package, plugins, ...).
+client/android/
+client/ios/
