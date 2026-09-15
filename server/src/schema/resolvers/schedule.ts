@@ -16,6 +16,8 @@ import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import {
   type TodoWithActivityType,
   computeSchedule,
+  owedHabitInstances,
+  settledCounts,
   startOfISOWeek,
   startOfISOWeekStr,
   startOfLocalMonth,
@@ -207,37 +209,11 @@ export const scheduleQueries: QueryMap<'mySchedule'> = {
       userActivityTypes.map((at) => [at.id, at]),
     );
 
-    const weekCompletionCounts = new Map<string, number>();
-    for (const c of [...weekCompletions, ...weekSkips]) {
-      weekCompletionCounts.set(
-        c.habitId,
-        (weekCompletionCounts.get(c.habitId) ?? 0) + 1,
-      );
-    }
-    const monthCompletionCounts = new Map<string, number>();
-    for (const c of [...monthCompletions, ...monthSkips]) {
-      monthCompletionCounts.set(
-        c.habitId,
-        (monthCompletionCounts.get(c.habitId) ?? 0) + 1,
-      );
-    }
-
-    const habitInstances: Array<
-      (typeof userHabits)[number] & { instanceIndex: number }
-    > = [];
-    for (const h of userHabits) {
-      if (!h.activityTypeId) continue;
-      const counts =
-        h.frequencyUnit === 'week'
-          ? weekCompletionCounts
-          : monthCompletionCounts;
-      const done = counts.get(h.id) ?? 0;
-      const deficit = h.frequencyCount - done;
-      if (deficit <= 0) continue;
-      for (let i = 0; i < deficit; i++) {
-        habitInstances.push({ ...h, instanceIndex: i });
-      }
-    }
+    const habitInstances = owedHabitInstances(
+      userHabits,
+      settledCounts(weekCompletions, weekSkips, weekStart, weekEnd),
+      settledCounts(monthCompletions, monthSkips, monthStart, monthEnd),
+    );
 
     const items = computeSchedule(
       weekStartStr,

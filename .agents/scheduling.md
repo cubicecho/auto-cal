@@ -50,6 +50,8 @@ Todos with `manuallyScheduled: true` are excluded from the scheduler entirely un
 
 For each habit, the writeback counts how many completions (actual + tentative + **skipped**) exist in the current week/month and computes a deficit (`frequencyCount - done`). That many instances are passed to `computeSchedule` with an `instanceIndex` suffix on the ID.
 
+There is exactly one implementation, in `services/scheduler.ts`: `settledCounts(completions, skips, start, end)` counts real completions (by `completedAt`) plus skips (by `scheduledAt`) in `[start, end)`, and `owedHabitInstances(habits, weekCounts, monthCounts)` turns the counts into instances (habits without an activity type are dropped, and pomodoro habits get a single entry). The writeback, `mySchedule` and the iCal feed all go through both functions. The writeback also adds its own tentative placements from earlier weeks to the counts. `server/test/habit-instance-agreement.test.ts` pins that iCal and `mySchedule` agree. Never re-derive the deficit inline.
+
 ## Skipped Instances
 
 `mySkipHabit` declines one placed instance. It writes a `habit_completions` row with `completedAt` null, `scheduledAt` set to the slot, and `skipped: true` — the same shape as a tentative row, plus the flag, and that flag is what makes it behave differently in three places:

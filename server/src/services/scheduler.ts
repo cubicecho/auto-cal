@@ -1,6 +1,7 @@
 import type {
   ActivityType,
   Habit,
+  HabitCompletion,
   ManualEvent,
   TimeBlock,
   Todo,
@@ -131,6 +132,96 @@ export function startOfLocalMonth(ref: Date): Date {
   const y = ref.getFullYear();
   const m = String(ref.getMonth() + 1).padStart(2, '0');
   return new Date(`${y}-${m}-01T00:00:00`);
+}
+
+type HabitRow = Pick<HabitCompletion, 'habitId'> &
+  Partial<Pick<HabitCompletion, 'completedAt' | 'scheduledAt' | 'skipped'>>;
+
+/** Count rows by habitId whose `field` timestamp falls within [start, end) */
+export function countByPeriod(
+  rows: HabitRow[],
+  field: 'completedAt' | 'scheduledAt',
+  start: Date,
+  end: Date,
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    const ts = r[field];
+    if (!ts) continue;
+    if (ts >= start && ts < end) {
+      counts.set(r.habitId, (counts.get(r.habitId) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+/** Merge count maps (add values for the same key) */
+export function addCounts(
+  ...maps: Array<Map<string, number>>
+): Map<string, number> {
+  const result = new Map<string, number>();
+  for (const m of maps) {
+    for (const [k, v] of m) result.set(k, (result.get(k) ?? 0) + v);
+  }
+  return result;
+}
+
+/**
+ * Instances of each habit settled within [start, end): real completions
+ * (by `completedAt`) plus skips (by `scheduledAt`). A skip settles an instance
+ * exactly as a completion does, so it is never handed back as owed.
+ */
+export function settledCounts(
+  completions: HabitRow[],
+  skips: HabitRow[],
+  start: Date,
+  end: Date,
+): Map<string, number> {
+  return addCounts(
+    countByPeriod(
+      completions.filter((c) => c.completedAt),
+      'completedAt',
+      start,
+      end,
+    ),
+    countByPeriod(
+      skips.filter((s) => s.skipped),
+      'scheduledAt',
+      start,
+      end,
+    ),
+  );
+}
+
+/**
+ * Expand habits into the instances still owed for a period: frequencyCount
+ * minus what `weekCounts` / `monthCounts` already settle. The single source of
+ * habit instance generation — the writeback, `mySchedule` and the iCal feed all
+ * go through it so they cannot disagree.
+ *
+ * Habits without an activity type are dropped (they have nowhere to go).
+ * Pomodoro habits get exactly one entry: computeSchedule fills them by
+ * capacity, not frequency, and only needs to see the habit config.
+ */
+export function owedHabitInstances<H extends Habit>(
+  habits: H[],
+  weekCounts: Map<string, number>,
+  monthCounts: Map<string, number>,
+): Array<H & { instanceIndex: number }> {
+  const instances: Array<H & { instanceIndex: number }> = [];
+  for (const h of habits) {
+    if (!h.activityTypeId) continue;
+    if (h.pomodoroEnabled) {
+      instances.push({ ...h, instanceIndex: 0 });
+      continue;
+    }
+    const counts = h.frequencyUnit === 'week' ? weekCounts : monthCounts;
+    const deficit = h.frequencyCount - (counts.get(h.id) ?? 0);
+    for (let i = 0; i < deficit; i++) {
+      instances.push({ ...h, instanceIndex: i });
+    }
+  }
+  return instances;
 }
 
 /**

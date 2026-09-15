@@ -1,6 +1,7 @@
 import { db } from '@auto-cal/db';
 import type {
   ActivityType,
+  DB,
   Habit,
   HabitCompletion,
   TimeBlock,
@@ -16,6 +17,8 @@ import { hashApiKey, isApiKey } from './api-keys.ts';
 import {
   type TodoWithActivityType,
   computeSchedule,
+  owedHabitInstances,
+  settledCounts,
   startOfISOWeek,
   startOfISOWeekStr,
   startOfLocalMonth,
@@ -99,8 +102,10 @@ function buildTimeBlocksCal(
 
 /**
  * Generate iCal events for the computed schedule (todos + habits) over 2 weeks.
+ * Exported (with `db` injected) so tests can check it against `mySchedule`.
  */
-async function buildScheduleCal(
+export async function buildScheduleCal(
+  db: Pick<DB, 'query'>,
   timezone: string,
   weekStartStr: string,
   timeBlocks: TimeBlock[],
@@ -110,6 +115,40 @@ async function buildScheduleCal(
 ): Promise<ReturnType<typeof ical>> {
   const cal = ical({ name: 'Auto Cal — Schedule' });
   const habitIds = habits.map((h) => h.id);
+
+  // One fetch covering every week and month window the loop below counts over.
+  // The first month starts before (or with) the first week; the last week ends
+  // before (or with) the end of the month after it starts.
+  const rangeStart = startOfLocalMonth(
+    startOfISOWeek(new Date(`${weekStartStr}T00:00:00`)),
+  );
+  const lastWeekStart = startOfISOWeek(
+    new Date(`${addWeeks(weekStartStr, 1)}T00:00:00`),
+  );
+  const rangeEnd = new Date(
+    lastWeekStart.getFullYear(),
+    lastWeekStart.getMonth() + 2,
+    1,
+  );
+
+  const [completions, skips]: [HabitCompletion[], HabitCompletion[]] =
+    habitIds.length === 0
+      ? [[], []]
+      : await Promise.all([
+          db.query.habitCompletions.findMany({
+            where: {
+              habitId: { in: habitIds },
+              completedAt: { isNotNull: true, gte: rangeStart, lt: rangeEnd },
+            },
+          }),
+          db.query.habitCompletions.findMany({
+            where: {
+              habitId: { in: habitIds },
+              skipped: true,
+              scheduledAt: { gte: rangeStart, lt: rangeEnd },
+            },
+          }),
+        ]);
 
   for (let w = 0; w < 2; w++) {
     const ws = addWeeks(weekStartStr, w);
@@ -123,48 +162,11 @@ async function buildScheduleCal(
       1,
     );
 
-    const [weekCompletions, monthCompletions]: [
-      HabitCompletion[],
-      HabitCompletion[],
-    ] =
-      habitIds.length === 0
-        ? [[], []]
-        : await Promise.all([
-            db.query.habitCompletions.findMany({
-              where: {
-                habitId: { in: habitIds },
-                completedAt: { isNotNull: true, gte: weekStart, lte: weekEnd },
-              },
-            }),
-            db.query.habitCompletions.findMany({
-              where: {
-                habitId: { in: habitIds },
-                completedAt: {
-                  isNotNull: true,
-                  gte: monthStart,
-                  lte: monthEnd,
-                },
-              },
-            }),
-          ]);
-
-    const weekCounts = new Map<string, number>();
-    for (const c of weekCompletions)
-      weekCounts.set(c.habitId, (weekCounts.get(c.habitId) ?? 0) + 1);
-
-    const monthCounts = new Map<string, number>();
-    for (const c of monthCompletions)
-      monthCounts.set(c.habitId, (monthCounts.get(c.habitId) ?? 0) + 1);
-
-    const habitInstances: Array<Habit & { instanceIndex: number }> = [];
-    for (const h of habits) {
-      const counts = h.frequencyUnit === 'week' ? weekCounts : monthCounts;
-      const done = counts.get(h.id) ?? 0;
-      const deficit = h.frequencyCount - done;
-      if (deficit <= 0) continue;
-      for (let i = 0; i < deficit; i++)
-        habitInstances.push({ ...h, instanceIndex: i });
-    }
+    const habitInstances = owedHabitInstances(
+      habits,
+      settledCounts(completions, skips, weekStart, weekEnd),
+      settledCounts(completions, skips, monthStart, monthEnd),
+    );
 
     const items = computeSchedule(
       ws,
@@ -281,6 +283,7 @@ export async function icalHandler(req: Request, res: Response): Promise<void> {
     }));
 
     cal = await buildScheduleCal(
+      db,
       timezone,
       weekStartStr,
       timeBlocks,

@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   type TodoWithActivityType,
   computeSchedule,
+  owedHabitInstances,
+  settledCounts,
   startOfISOWeek,
   startOfISOWeekStr,
   startOfLocalMonth,
@@ -900,5 +902,101 @@ describe('computeSchedule — pomodoro auto-fill', () => {
     );
 
     expect(units).toEqual([]);
+  });
+});
+
+// ─── settledCounts / owedHabitInstances ──────────────────────────────────────
+
+describe('settledCounts', () => {
+  const start = new Date('2026-05-04T00:00:00');
+  const end = new Date('2026-05-11T00:00:00');
+
+  it('counts completions by completedAt and skips by scheduledAt in [start, end)', () => {
+    const counts = settledCounts(
+      [
+        { habitId: 'h1', completedAt: new Date('2026-05-05T09:00:00') },
+        { habitId: 'h1', completedAt: new Date('2026-05-11T00:00:00') }, // end is exclusive
+        { habitId: 'h1', completedAt: null }, // placeholder, not a completion
+      ],
+      [
+        {
+          habitId: 'h1',
+          skipped: true,
+          completedAt: null,
+          scheduledAt: new Date('2026-05-06T09:00:00'),
+        },
+        {
+          habitId: 'h2',
+          skipped: false, // placeholder, not a skip
+          completedAt: null,
+          scheduledAt: new Date('2026-05-06T09:00:00'),
+        },
+      ],
+      start,
+      end,
+    );
+    expect(counts).toEqual(new Map([['h1', 2]]));
+  });
+});
+
+describe('owedHabitInstances', () => {
+  it('returns frequencyCount minus settled instances for weekly habits', () => {
+    const habit = makeHabit({
+      id: 'h1',
+      frequencyCount: 3,
+      frequencyUnit: 'week',
+    });
+    const instances = owedHabitInstances(
+      [habit],
+      new Map([['h1', 1]]),
+      new Map([['h1', 5]]),
+    );
+    expect(instances.map((i) => i.instanceIndex)).toEqual([0, 1]);
+  });
+
+  it('uses the month counts for monthly habits', () => {
+    const habit = makeHabit({
+      id: 'h1',
+      frequencyCount: 2,
+      frequencyUnit: 'month',
+    });
+    expect(
+      owedHabitInstances([habit], new Map([['h1', 2]]), new Map([['h1', 1]])),
+    ).toHaveLength(1);
+  });
+
+  it('returns nothing once the period is met or exceeded', () => {
+    const habit = makeHabit({
+      id: 'h1',
+      frequencyCount: 2,
+      frequencyUnit: 'week',
+    });
+    expect(
+      owedHabitInstances([habit], new Map([['h1', 3]]), new Map()),
+    ).toEqual([]);
+  });
+
+  it('drops habits without an activity type', () => {
+    // Not representable in the row type, but the writeback guards it anyway
+    const habit = {
+      ...makeHabit({ id: 'h1' }),
+      activityTypeId: null,
+    } as unknown as Habit;
+    expect(owedHabitInstances([habit], new Map(), new Map())).toEqual([]);
+  });
+
+  it('gives pomodoro habits exactly one entry regardless of counts', () => {
+    const habit = makeHabit({
+      id: 'h1',
+      frequencyCount: 4,
+      frequencyUnit: 'week',
+      pomodoroEnabled: true,
+    });
+    const instances = owedHabitInstances(
+      [habit],
+      new Map([['h1', 9]]),
+      new Map(),
+    );
+    expect(instances.map((i) => i.instanceIndex)).toEqual([0]);
   });
 });

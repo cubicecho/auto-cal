@@ -13,7 +13,11 @@ import { and, eq, inArray, isNull } from 'drizzle-orm';
 import {
   type TodoWithActivityType,
   activityTypeAndAncestors,
+  addCounts,
   computeSchedule,
+  countByPeriod,
+  owedHabitInstances,
+  settledCounts,
   startOfISOWeek,
   startOfLocalMonth,
 } from './scheduler.ts';
@@ -23,28 +27,6 @@ const HORIZON_MONTHS = 2;
 /** Format a Date as "YYYY-MM-DD" using local date parts */
 function dateToWeekStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-/** Count habit completions by habitId within [start, end) using the given timestamp field */
-function countByPeriod(
-  completions: Array<{
-    habitId: string;
-    completedAt: Date | null;
-    scheduledAt: Date | null;
-  }>,
-  field: 'completedAt' | 'scheduledAt',
-  start: Date,
-  end: Date,
-): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const c of completions) {
-    const ts = c[field];
-    if (!ts) continue;
-    if (ts >= start && ts < end) {
-      counts.set(c.habitId, (counts.get(c.habitId) ?? 0) + 1);
-    }
-  }
-  return counts;
 }
 
 /**
@@ -78,18 +60,6 @@ function isScheduledAtValid(
     const blockEnd = endH * 60 + endM;
     return scheduledMins >= blockStart && scheduledMins < blockEnd;
   });
-}
-
-/** Merge two count maps (add values for same key) */
-function addCounts(
-  a: Map<string, number>,
-  b: Map<string, number>,
-): Map<string, number> {
-  const result = new Map(a);
-  for (const [k, v] of b) {
-    result.set(k, (result.get(k) ?? 0) + v);
-  }
-  return result;
 }
 
 export async function runSchedulerWriteback(
@@ -229,80 +199,33 @@ export async function runSchedulerWriteback(
       1,
     );
 
-    const actualWeek = countByPeriod(
-      allActualCompletions as Array<{
-        habitId: string;
-        completedAt: Date | null;
-        scheduledAt: Date | null;
-      }>,
-      'completedAt',
-      weekCursor,
-      weekEnd,
-    );
-    const actualMonth = countByPeriod(
-      allActualCompletions as Array<{
-        habitId: string;
-        completedAt: Date | null;
-        scheduledAt: Date | null;
-      }>,
-      'completedAt',
-      monthStart,
-      monthEnd,
-    );
-
-    const tentativeWeek = countByPeriod(
-      newTentativeCompletions,
-      'scheduledAt',
-      weekCursor,
-      weekEnd,
-    );
-    const tentativeMonth = countByPeriod(
-      newTentativeCompletions,
-      'scheduledAt',
-      monthStart,
-      monthEnd,
-    );
-
-    const skipWeek = countByPeriod(
-      allSkips,
-      'scheduledAt',
-      weekCursor,
-      weekEnd,
-    );
-    const skipMonth = countByPeriod(
-      allSkips,
-      'scheduledAt',
-      monthStart,
-      monthEnd,
-    );
-
+    // Settled = real completions + skips; tentative = instances this run has
+    // already placed in earlier weeks, which count toward a month that spans
+    // several weeks.
     const weekCounts = addCounts(
-      addCounts(actualWeek, tentativeWeek),
-      skipWeek,
+      settledCounts(allActualCompletions, allSkips, weekCursor, weekEnd),
+      countByPeriod(
+        newTentativeCompletions,
+        'scheduledAt',
+        weekCursor,
+        weekEnd,
+      ),
     );
     const monthCounts = addCounts(
-      addCounts(actualMonth, tentativeMonth),
-      skipMonth,
+      settledCounts(allActualCompletions, allSkips, monthStart, monthEnd),
+      countByPeriod(
+        newTentativeCompletions,
+        'scheduledAt',
+        monthStart,
+        monthEnd,
+      ),
     );
 
-    const habitInstances: Array<
-      (typeof userHabits)[number] & { instanceIndex: number }
-    > = [];
-    for (const h of userHabits) {
-      if (!h.activityTypeId) continue;
-      if (h.pomodoroEnabled) {
-        // Pomodoro habits don't use frequency-based instances — pass one entry
-        // so computeSchedule's pomodoro fill phase can see the habit config.
-        habitInstances.push({ ...h, instanceIndex: 0 });
-        continue;
-      }
-      const counts = h.frequencyUnit === 'week' ? weekCounts : monthCounts;
-      const done = counts.get(h.id) ?? 0;
-      const deficit = h.frequencyCount - done;
-      for (let i = 0; i < deficit; i++) {
-        habitInstances.push({ ...h, instanceIndex: i });
-      }
-    }
+    const habitInstances = owedHabitInstances(
+      userHabits,
+      weekCounts,
+      monthCounts,
+    );
 
     // Build pre-scheduled times from all instances placed in prior weeks
     // so the gap constraint is enforced across period boundaries

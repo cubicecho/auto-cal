@@ -272,10 +272,12 @@ describe('icalHandler', () => {
 
     it('suppresses habit events when deficit is zero', async () => {
       const habit = makeHabit({ frequencyCount: 2, frequencyUnit: 'week' });
-      const completions = [
-        makeHabitCompletion(habit.id),
-        makeHabitCompletion(habit.id),
-      ];
+      // Two completions in each of the feed's two weeks
+      const completions = [0, 0, 7, 7].map((days) => {
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        return makeHabitCompletion(habit.id, { completedAt: d });
+      });
       vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
@@ -296,7 +298,7 @@ describe('icalHandler', () => {
       expect(res.body).not.toContain('BEGIN:VEVENT');
     });
 
-    it('queries habit completions for both week and month windows', async () => {
+    it('fetches habit completions and skips once for the whole feed', async () => {
       const habit = makeHabit();
       vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
@@ -312,8 +314,40 @@ describe('icalHandler', () => {
       vi.mocked(db.query.habitCompletions.findMany).mockResolvedValue([]);
 
       await icalHandler(makeReq({ secret: VALID_API_KEY }), makeRes());
-      // Called twice per week loop iteration (week + month window), across 2 weeks = 4 total
-      expect(db.query.habitCompletions.findMany).toHaveBeenCalledTimes(4);
+      // One query for completions and one for skips, covering both weeks and months
+      expect(db.query.habitCompletions.findMany).toHaveBeenCalledTimes(2);
+    });
+
+    it('counts a skip toward the period, like mySchedule', async () => {
+      const habit = makeHabit({ frequencyCount: 1, frequencyUnit: 'week' });
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
+      vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
+      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
+        makeTimeBlock(),
+      ]);
+      vi.mocked(db.query.todos.findMany).mockResolvedValue([]);
+      vi.mocked(db.query.todoLists.findMany).mockResolvedValue([]);
+      vi.mocked(db.query.habits.findMany).mockResolvedValue([habit]);
+      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([
+        makeActivityType(),
+      ]);
+      // Each week has its own skip; the feed covers two weeks
+      const skips = [0, 7].map((days) => {
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        return makeHabitCompletion(habit.id, {
+          completedAt: null,
+          skipped: true,
+          scheduledAt: d,
+        });
+      });
+      vi.mocked(db.query.habitCompletions.findMany).mockImplementation(((args: {
+        where: { skipped?: boolean };
+      }) => Promise.resolve(args.where.skipped ? skips : [])) as never);
+
+      const res = makeRes();
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
+      expect(res.body).not.toContain('Morning run');
     });
 
     it('accepts a non-UTC user timezone without error', async () => {
