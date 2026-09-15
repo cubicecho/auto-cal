@@ -423,7 +423,7 @@ The auth guard lives in `app/_layout.tsx` — redirects to `/auth/login` without
 
 ```
 Request
-  → Apollo context: extract Bearer token → JWT verify → fall back to raw-UUID (dev-only) → set context.userId
+  → Apollo context: extract Bearer token → JWT verify → API key → set context.userId (no raw-UUID fallback)
   → Resolver entry
     → Guard: if (!context.userId) throw 'Not authenticated'
     → For mutations on existing rows: fetch row, check ownership, throw 'Forbidden' if mismatch

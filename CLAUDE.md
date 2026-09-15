@@ -113,7 +113,7 @@ exporting typed maps, and spread them into the `attach()` calls in
 
 Since `todos.activityTypeId` does not exist on the DB row, callers of `computeSchedule` fetch `todoLists` alongside `todos`, build a `Map<listId, activityTypeId>`, and enrich each todo before passing it in.
 
-**Auth chain** (in `server/src/index.ts`): Bearer JWT → API key (if `isApiKey(raw)` prefix check) → `BYPASS_AUTH_UUID` → raw-UUID fallback. The raw-UUID fallback is guarded by `NODE_ENV !== 'production'`. `BYPASS_AUTH_UUID` is **not** — setting it to a user id grants passwordless access to that account in any environment, production included. It logs a warning on boot; never set it on a deployed instance.
+**Auth chain** (`buildContext` in `server/src/auth-context.ts`): Bearer session JWT → API key (if `isApiKey(raw)` prefix check) → unauthenticated. Nothing else is a credential: a raw user id is rejected in every environment. The only session issuers are `verifyMagicLink` and, when `AUTH_MAGIC_LINK=false`, `requestMagicLink` itself (it signs the email straight in — secure local networks only; the server warns on boot). `server/src/preflight.ts` is the first import of `index.ts` and exits in production if `JWT_SECRET` is unset or the dev default. Tests pass `userId` directly in the GraphQL context and never go through `buildContext`.
 
 **API keys:** format `acal_<base64url>`. Only the SHA-256 hash is stored (`api_keys.keyHash`). Token is returned once on creation. `context.apiKey` is set when an API key is used; `myCreateApiKey` / `myRevokeApiKey` throw if `context.apiKey` is set (keys can't manage keys).
 

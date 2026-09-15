@@ -2,8 +2,9 @@ import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { FormElement } from '@/components/ui/form-element';
 import { Input } from '@/components/ui/input';
+import { storage } from '@/storage';
 import { useMutation } from '@apollo/client/react';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -12,17 +13,25 @@ const REQUEST_MAGIC_LINK = graphql(`
     requestMagicLink(email: $email) {
       ok
       magicLink
+      token
     }
   }
 `);
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [magicLink, setMagicLink] = useState<string | null>(null);
 
   const [requestLink, { loading, error }] = useMutation(REQUEST_MAGIC_LINK, {
     onCompleted(data) {
+      // AUTH_MAGIC_LINK=false: the server signed us straight in.
+      if (data.requestMagicLink.token) {
+        storage.setItem('auth_token', data.requestMagicLink.token);
+        router.replace('/(app)/today');
+        return;
+      }
       setMagicLink(data.requestMagicLink.magicLink ?? null);
       setSubmitted(true);
     },

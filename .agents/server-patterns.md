@@ -15,29 +15,19 @@ This gives the dev-style passwordless login on local/secure-network deployments
 that have no email provider. In production without the flag, the link is only
 logged server-side and the response returns `magicLink: null`.
 
-## Auth — UUID Bearer Fallback (Dev Only)
+## Auth — Direct Sign-in (`AUTH_MAGIC_LINK=false`)
 
-The server context accepts a raw UUID as a Bearer token (dev convenience). The check lives in `server/src/index.ts` after JWT and API-key verification both fail:
+There is no raw-UUID Bearer fallback and no `BYPASS_AUTH_UUID`; both were
+removed (#84). A context gets a `userId` only from a session JWT or an API key
+(`server/src/auth-context.ts`).
 
-```typescript
-// Env-var bypass: accept one specific UUID in ANY environment, production
-// included. Logs a warning on boot.
-const bypassUuid = process.env.BYPASS_AUTH_UUID;
-if (bypassUuid && rawToken === bypassUuid)
-  return { db, userId: rawToken, loaders, appBaseUrl: baseUrl };
-
-// General fallback: any UUID is a user id — dev and test only.
-if (process.env.NODE_ENV !== 'production' && /^[0-9a-f-]{36}$/i.test(rawToken))
-  return { db, userId: rawToken, loaders, appBaseUrl: baseUrl };
-```
-
-The general fallback is production-guarded. `BYPASS_AUTH_UUID` deliberately is
-not — it exists for local/secure-network deployments with no email provider,
-the same niche `EXPOSE_MAGIC_LINK` serves. It is a single-account password
-sitting in an env var: anyone who learns the value is logged in as that user
-with no second factor and no expiry. Never set it on an internet-facing
-instance, and do not "fix" the missing guard by adding one — the flag has no
-purpose in an environment where it would be guarded off.
+For a secure local network with no mail provider, set `AUTH_MAGIC_LINK=false`
+(`magicLinkRequired()` in `config.ts`). `requestMagicLink` then finds or creates
+the user and returns a normal 30-day session JWT in `token`/`userId`, and the
+login screen stores it and goes straight to Today. Anyone who can reach the
+port can sign in as any address, so never set it on an internet-facing
+instance. `EXPOSE_MAGIC_LINK` is the softer option: it still issues a 15-minute
+link, but returns it in the response.
 
 ## mySchedule vs DB scheduledAt
 
@@ -431,7 +421,7 @@ The server still reads and writes the column through Drizzle directly (`auth`, `
 - `hashApiKey(raw)` — SHA-256 hex
 - `constantTimeEqual(a, b)` — timing-safe comparison
 
-**Auth chain (in `index.ts`):** JWT → API key (if `isApiKey(raw)`) → `BYPASS_AUTH_UUID` → UUID fallback (dev only). On a valid key hit, `lastUsedAt` is updated fire-and-forget and the context gains `apiKey: { id, scopes }`.
+**Auth chain (in `auth-context.ts`):** JWT → API key (if `isApiKey(raw)`) → unauthenticated. On a valid key hit, `lastUsedAt` is updated fire-and-forget and the context gains `apiKey: { id, scopes }`.
 
 **No-self-management guard:** `myCreateApiKey` and `myRevokeApiKey` both throw `'API keys cannot manage other keys'` when `context.apiKey` is set. API key holders cannot create or revoke keys — only interactive (JWT) sessions can.
 

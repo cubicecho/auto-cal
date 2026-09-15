@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { magicLinkExposed } from '../src/config.ts';
+import { magicLinkExposed, magicLinkRequired } from '../src/config.ts';
 
 describe('magicLinkExposed', () => {
   afterEach(() => {
@@ -31,6 +31,34 @@ describe('magicLinkExposed', () => {
     for (const v of ['', '0', 'false', 'no', 'off']) {
       vi.stubEnv('EXPOSE_MAGIC_LINK', v);
       expect(magicLinkExposed()).toBe(false);
+    }
+  });
+});
+
+describe('magicLinkRequired', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('is required when AUTH_MAGIC_LINK is unset, in any environment', () => {
+    vi.stubEnv('AUTH_MAGIC_LINK', undefined);
+    for (const env of ['development', 'production']) {
+      vi.stubEnv('NODE_ENV', env);
+      expect(magicLinkRequired()).toBe(true);
+    }
+  });
+
+  it('is off only for explicit falsy values', () => {
+    for (const v of ['0', 'false', 'FALSE', 'no', ' No ']) {
+      vi.stubEnv('AUTH_MAGIC_LINK', v);
+      expect(magicLinkRequired()).toBe(false);
+    }
+  });
+
+  it('stays required for truthy, empty or unknown values', () => {
+    for (const v of ['', '1', 'true', 'off', 'disabled']) {
+      vi.stubEnv('AUTH_MAGIC_LINK', v);
+      expect(magicLinkRequired()).toBe(true);
     }
   });
 });

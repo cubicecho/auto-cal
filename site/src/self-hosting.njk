@@ -113,7 +113,7 @@ docker compose -f docker-compose.pglite.yml up -d</code></pre>
               <tr><td><code>JWT_SECRET</code></td><td>Secret for signing session tokens</td><td>auto-generated</td></tr>
               <tr><td><code>MAGIC_LINK_SECRET</code></td><td>Secret for signing magic-link tokens</td><td>auto-generated</td></tr>
               <tr><td><code>EXPOSE_MAGIC_LINK</code></td><td>Return the magic link in the API response instead of emailing it — trusted networks only</td><td>off outside prod</td></tr>
-              <tr><td><code>BYPASS_AUTH_UUID</code></td><td>A user UUID accepted directly as a Bearer token — trusted networks only</td><td>—</td></tr>
+              <tr><td><code>AUTH_MAGIC_LINK</code></td><td>Set to <code>false</code> to sign in by email alone, with no link — trusted networks only</td><td>on</td></tr>
             </tbody>
           </table>
         </div>
@@ -127,8 +127,8 @@ docker compose -f docker-compose.pglite.yml up -d</code></pre>
           signs you in — the session token is a JWT stored in the browser.</p>
         <p>Without an email provider configured, set <code>EXPOSE_MAGIC_LINK=true</code> and the link is returned
           directly in the <code>requestMagicLink</code> API response so you can copy it and sign in. This is
-          intended for local or secure-network deployments only. For a single trusted user you can instead set
-          <code>BYPASS_AUTH_UUID</code> to that user's UUID and use the UUID as a Bearer token.</p>
+          intended for local or secure-network deployments only. On a network you fully trust you can instead set
+          <code>AUTH_MAGIC_LINK=false</code>: entering an email signs you straight in, with no link at all.</p>
 
         <h2 id="ical">Calendar feed</h2>
         <p>Auto Cal exposes your computed schedule as a read-only iCal feed, so you can see it inside Google
@@ -160,7 +160,7 @@ docker compose -f docker-compose.postgres.yml up -d</code></pre>
           <li><strong>Set your own secrets.</strong> Provide <code>JWT_SECRET</code> and
             <code>MAGIC_LINK_SECRET</code> so tokens survive restarts, and change the Postgres password from the
             default.</li>
-          <li><strong><code>EXPOSE_MAGIC_LINK</code> and <code>BYPASS_AUTH_UUID</code> are trusted-network
+          <li><strong><code>EXPOSE_MAGIC_LINK</code> and <code>AUTH_MAGIC_LINK=false</code> are trusted-network
             escape hatches.</strong> Either one lets someone sign in without receiving an email — never enable
             them on a public deployment.</li>
           <li><strong>Treat API keys and the iCal <code>secret</code> like passwords.</strong> Only the SHA-256

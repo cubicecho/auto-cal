@@ -167,7 +167,8 @@ checked in beside it (`rsvg-convert -w 1024 -h 1024 icon.svg -o icon.png`):
 | `DATABASE_CONNECT_TIMEOUT` | No | Seconds to wait for a connection before failing (default `10`) |
 | `NODE_ENV` | No | `production` / `development` |
 | `EXPOSE_MAGIC_LINK` | No | `1`/`true`/`yes` returns the magic link directly in the `requestMagicLink` response (dev-style passwordless login) even in production. For local/secure networks only — never enable on a public deployment. |
-| `BYPASS_AUTH_UUID` | No | An existing user UUID accepted as a Bearer token in any environment; passwordless access for that one user. Local/secure networks only. |
+| `JWT_SECRET` | **Yes** in production | Signs session and magic-link tokens. The server refuses to boot in production if it is unset or the dev default. Generate with `openssl rand -hex 32`. |
+| `AUTH_MAGIC_LINK` | No | `0`/`false`/`no` skips the magic link: `requestMagicLink` signs the email straight in and returns a session JWT. Secure local networks only — anyone who can reach the port can sign in as anyone. |
 | `VAPID_PUBLIC_KEY` | No | Web Push application server key, base64url. The client fetches it via `myPushPublicKey`. |
 | `VAPID_PRIVATE_KEY` | No | Its private half. Never leaves the server. |
 | `VAPID_SUBJECT` | No | Contact URL the push services require, e.g. `mailto:admin@example.com`. |

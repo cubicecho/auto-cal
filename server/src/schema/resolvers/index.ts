@@ -476,9 +476,16 @@ const extensionSDL = `
     userAgent: String
   }
 
+  """
+  The outcome of a sign-in request. With AUTH_MAGIC_LINK=false there is no link
+  to follow, so a live session comes back immediately in token/userId. With
+  magic links on, magicLink is filled in only where exposing it is enabled.
+  """
   type RequestMagicLinkResult {
     ok: Boolean!
     magicLink: String
+    token: String
+    userId: ID
   }
 
   type VerifyMagicLinkResult {

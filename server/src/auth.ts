@@ -1,7 +1,10 @@
 import { SignJWT, jwtVerify } from 'jose';
 
+/** The fallback secret. preflight.ts refuses to boot production with it. */
+export const DEV_JWT_SECRET = 'dev-secret-change-in-production';
+
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET ?? 'dev-secret-change-in-production',
+  process.env.JWT_SECRET ?? DEV_JWT_SECRET,
 );
 
 // Issue a magic link token (short-lived, 15 minutes)
